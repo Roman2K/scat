@@ -1,0 +1,6 @@
+hash: 2625c412dabf0fb75fbb6dd2176d3a08e944b0edae4fccbb285a83ea2e4ae283
+updated: 2016-12-14T10:24:00.390868+01:00
+imports:
+- name: github.com/restic/chunker
+  version: 50428e727f50c16e1bcb3050209fc2758427a6af
+testImports: []

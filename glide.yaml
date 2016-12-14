@@ -1,0 +1,3 @@
+package: ded3
+import:
+- package: github.com/restic/chunker
