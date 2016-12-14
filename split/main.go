@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/restic/chunker"
+
+	"ded3/meta"
 )
 
 func main() {
@@ -20,7 +23,6 @@ func start() (err error) {
 	out := os.Stdout
 	c := chunker.New(os.Stdin, chunker.Pol(0x3DA3358B4DC173))
 	buf := make([]byte, chunker.MaxSize)
-	lenBuf := make([]byte, binary.MaxVarintLen64)
 	for {
 		chunk, err := c.Next(buf)
 		if err != nil {
@@ -29,8 +31,11 @@ func start() (err error) {
 			}
 			return err
 		}
-		written := binary.PutVarint(lenBuf, int64(len(chunk.Data)))
-		_, err = out.Write(lenBuf[:written])
+		meta := meta.Split{
+			Size:   int64(len(chunk.Data)),
+			Sha256: sha256.Sum256(chunk.Data),
+		}
+		err = binary.Write(out, binary.LittleEndian, meta)
 		if err != nil {
 			return err
 		}

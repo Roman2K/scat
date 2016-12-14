@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"ded3/meta"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -18,43 +18,35 @@ func main() {
 }
 
 func start() error {
-	r := bufio.NewReader(os.Stdin)
+	r := os.Stdin
 	buf := make([]byte, chunker.MaxSize)
-
-	// TMP
-	fnum := uint(0)
-	// TMP
-
+	var meta meta.Split
 	for {
-		chunkLen, err := binary.ReadVarint(r)
+		err := binary.Read(r, binary.LittleEndian, &meta)
 		if err != nil {
 			if err == io.EOF {
 				return nil
 			}
 			return err
 		}
-		if chunkLen > int64(len(buf)) {
+		if meta.Size > int64(len(buf)) {
 			return io.ErrShortBuffer
 		}
-		readBuf := buf[:chunkLen]
+		readBuf := buf[:meta.Size]
 		err = fill(readBuf, r)
 		if err != nil {
 			return err
 		}
-		_, err = write(fnum, readBuf)
+		_, err = write(meta.Sha256[:], readBuf)
 		if err != nil {
 			return err
 		}
-
-		// TEMP
-		fnum++
-		// TEMP
 	}
 	return nil
 }
 
-func write(fnum uint, buf []byte) (n int, err error) {
-	f, err := os.Create(fmt.Sprintf("%03d", fnum))
+func write(csum, buf []byte) (n int, err error) {
+	f, err := os.Create(fmt.Sprintf("%x", csum))
 	if err != nil {
 		return
 	}
