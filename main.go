@@ -134,7 +134,7 @@ func (i *index) setOrder(cks checksum, num int) {
 	defer i.orderMu.Unlock()
 	if minLen := num + 1; len(i.order) < minLen {
 		if cap(i.order) < minLen {
-			resized := make([]*checksum, minLen, len(i.order)*2+1)
+			resized := make([]*checksum, minLen, num*2+1)
 			copy(resized, i.order)
 			i.order = resized
 		}
