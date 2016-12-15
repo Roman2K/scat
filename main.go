@@ -18,137 +18,24 @@ func main() {
 	}
 }
 
-func start() error {
-	f, err := os.Open("/Users/roman/tmp/100m")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func start() (err error) {
+	split := newSplitter(os.Stdin)
 
-	splitters := newMultiChunkIt([]chunkIterator{
-		newSplitter(os.Stdin),
-		// newSplitter(f),
-	})
-	// splitters := newSplitter(f)
-	defer splitters.Close()
-
-	procPool := newProcPool([]processor{
+	chain := procChain{
 		newIndex(),
 		&localStore{"."},
-		// &stats{start: time.Now()},
-	})
+	}
+
+	procPool := newProcPool(chain)
 	defer procPool.Close()
 
-	return process(splitters, procPool)
-}
-
-type multiChunkIt struct {
-	chunks chan *Chunk
-	errors chan error
-	done   chan struct{}
-	chunk  *Chunk
-	err    error
-}
-
-var _ chunkIterator = (*multiChunkIt)(nil)
-
-func newMultiChunkIt(its []chunkIterator) *multiChunkIt {
-	chunks := make(chan *Chunk)
-	errors := make(chan error)
-	done := make(chan struct{})
-
-	wg := &sync.WaitGroup{}
-	wg.Add(len(its))
-
-	sendChunks := func(it chunkIterator) {
-		defer wg.Done()
-		for it.Next() {
-			select {
-			case chunks <- it.Chunk():
-			case <-done:
-				return
-			}
-		}
-		if err := it.Err(); err != nil {
-			errors <- err
-		}
+	err = process(split, procPool)
+	if err != nil {
+		return
 	}
 
-	for _, it := range its {
-		go sendChunks(it)
-	}
-
-	go func() {
-		defer close(chunks)
-		defer close(errors)
-		wg.Wait()
-	}()
-
-	return &multiChunkIt{
-		chunks: chunks,
-		errors: errors,
-		done:   done,
-	}
+	return chain.Finish()
 }
-
-func (mit *multiChunkIt) Next() bool {
-	chunksDone, errsDone := false, false
-	for !chunksDone || !errsDone {
-		select {
-		case chunk, ok := <-mit.chunks:
-			if !ok {
-				chunksDone = true
-				continue
-			}
-			mit.chunk = chunk
-			return true
-		case err, ok := <-mit.errors:
-			if !ok {
-				errsDone = true
-				continue
-			}
-			mit.err = err
-			close(mit.done)
-			return false
-		}
-	}
-	return false
-}
-
-func (mit *multiChunkIt) Chunk() *Chunk {
-	return mit.chunk
-}
-
-func (mit *multiChunkIt) Err() error {
-	return mit.err
-}
-
-func (mit *multiChunkIt) Close() {
-	select {
-	case <-mit.done:
-	default:
-		close(mit.done)
-	}
-	for range mit.chunks {
-	}
-	for range mit.errors {
-	}
-}
-
-// type stats struct {
-// 	start time.Time
-// 	n     float64
-// }
-
-// func (s *stats) Process(c *Chunk) error {
-// 	if s.n > 0 {
-// 		fmt.Printf("\r")
-// 	}
-// 	s.n += float64(len(c.Data)) / 1024.0 / 1024.0
-// 	speed := s.n / time.Now().Sub(s.start).Seconds()
-// 	fmt.Printf("speed: %d MB/s", uint64(speed))
-// 	return nil
-// }
 
 func process(it chunkIterator, ppool procPool) error {
 	chunks := make(chan *Chunk)
@@ -206,9 +93,10 @@ func process(it chunkIterator, ppool procPool) error {
 }
 
 type index struct {
-	seen   map[checksum]struct{}
-	seenMu sync.Mutex
-	// TODO order []*checksum
+	seen    map[checksum]struct{}
+	seenMu  sync.Mutex
+	order   []*checksum
+	orderMu sync.Mutex
 }
 
 func newIndex() *index {
@@ -219,11 +107,12 @@ func newIndex() *index {
 
 func (i *index) Process(c *Chunk) error {
 	c.Checksum = sha256.Sum256(c.Data)
+	i.setOrder(c.Checksum, c.Num)
 	if i.getSeen(c.Checksum) {
 		c.Data = nil
 		return nil
 	}
-	// TODO i.order = append(i.order, &cks)
+	i.setSeen(c.Checksum)
 	return nil
 }
 
@@ -240,17 +129,43 @@ func (i *index) setSeen(cks checksum) {
 	i.seen[cks] = struct{}{}
 }
 
+func (i *index) setOrder(cks checksum, num int) {
+	i.orderMu.Lock()
+	defer i.orderMu.Unlock()
+	if minLen := num + 1; len(i.order) < minLen {
+		if cap(i.order) < minLen {
+			resized := make([]*checksum, minLen, len(i.order)*2+1)
+			copy(resized, i.order)
+			i.order = resized
+		}
+		i.order = i.order[:minLen]
+	}
+	i.order[num] = &cks
+}
+
+func (i *index) Finish() error {
+	var w io.Writer = os.Stdout
+	for num, cks := range i.order {
+		if cks == nil {
+			return fmt.Errorf("missing chunk %d", num)
+		}
+	}
+	for _, cks := range i.order {
+		fmt.Fprintf(w, "%x\n", *cks)
+	}
+	return nil
+}
+
 type chunkIterator interface {
 	Next() bool
 	Chunk() *Chunk
 	Err() error
-	Close()
 }
 
 type splitter struct {
 	chunker *chunker.Chunker
 	buf     []byte
-	num     uint
+	num     int // int for use as slice index
 	chunk   *Chunk
 	err     error
 }
@@ -289,11 +204,8 @@ func (s *splitter) Err() error {
 	return s.err
 }
 
-func (s *splitter) Close() {
-}
-
 type Chunk struct {
-	Num      uint
+	Num      int
 	Data     []byte
 	Checksum checksum
 }
@@ -302,6 +214,7 @@ type checksum [sha256.Size]byte
 
 type processor interface {
 	Process(*Chunk) error
+	Finish() error
 }
 
 type localStore struct {
@@ -311,7 +224,6 @@ type localStore struct {
 var _ processor = (*localStore)(nil)
 
 func (s *localStore) Process(c *Chunk) (err error) {
-	return nil
 	path := filepath.Join(s.Dir, fmt.Sprintf("%x", c.Checksum))
 	f, err := os.Create(path)
 	if err != nil {
@@ -319,6 +231,49 @@ func (s *localStore) Process(c *Chunk) (err error) {
 	}
 	defer f.Close()
 	_, err = f.Write(c.Data)
+	return
+}
+
+func (s *localStore) Finish() error {
+	return nil
+}
+
+type procChain []processor
+
+var _ processor = procChain(nil)
+
+func (c procChain) Process(chunk *Chunk) error {
+	for _, p := range c {
+		if err := p.Process(chunk); err != nil {
+			return err
+		}
+		if chunk.Data == nil {
+			break
+		}
+	}
+	return nil
+}
+
+func (c procChain) Finish() (err error) {
+	results := make(chan error)
+	wg := sync.WaitGroup{}
+	wg.Add(len(c))
+	closeProc := func(p processor) {
+		defer wg.Done()
+		results <- p.Finish()
+	}
+	for _, p := range c {
+		go closeProc(p)
+	}
+	go func() {
+		defer close(results)
+		wg.Wait()
+	}()
+	for e := range results {
+		if e != nil && err == nil {
+			err = e
+		}
+	}
 	return
 }
 
@@ -332,28 +287,19 @@ type procTask struct {
 	res   chan error
 }
 
-func newProcPool(procs []processor) procPool {
+func newProcPool(proc processor) procPool {
 	const nworkers = 1
-
 	tasks := make(chan procTask)
 	wg := &sync.WaitGroup{}
 	wg.Add(nworkers)
-
 	for i := 0; i < nworkers; i++ {
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				for _, p := range procs {
-					if err := p.Process(task.chunk); err != nil {
-						task.res <- err
-						break
-					}
-				}
-				task.res <- nil
+				task.res <- proc.Process(task.chunk)
 			}
 		}()
 	}
-
 	return procPool{tasks: tasks, wg: wg}
 }
 
