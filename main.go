@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -22,8 +24,9 @@ func start() (err error) {
 	split := newSplitter(os.Stdin)
 
 	chain := procChain{
-		newIndex(),
-		&localStore{"."},
+		newIndex(os.Stdout),
+		&compress{},
+		// &localStore{"."},
 	}
 
 	procPool := newProcPool(chain)
@@ -92,15 +95,53 @@ func process(it chunkIterator, ppool procPool) error {
 	return err
 }
 
+// type procFunc func(*Chunk) error
+
+// func (fn procFunc) Process(c *Chunk) error {
+// 	return fn(c)
+// }
+
+// func (fn procFunc) Finish() error {
+// 	return nil
+// }
+
+// func computeChecksum(c *Chunk) error {
+// 	c.Checksum = sha256.Sum256(c.Data)
+// 	return nil
+// }
+
+type compress struct{}
+
+func (*compress) Process(c *Chunk) (err error) {
+	buf := bytes.Buffer{}
+	w := gzip.NewWriter(&buf)
+	_, err = w.Write(c.Data)
+	if err != nil {
+		return
+	}
+	err = w.Close()
+	if err != nil {
+		return
+	}
+	c.Data = buf.Bytes()
+	return
+}
+
+func (*compress) Finish() error {
+	return nil
+}
+
 type index struct {
+	w       io.Writer
 	seen    map[checksum]struct{}
 	seenMu  sync.Mutex
 	order   []*checksum
 	orderMu sync.Mutex
 }
 
-func newIndex() *index {
+func newIndex(w io.Writer) *index {
 	return &index{
+		w:    w,
 		seen: make(map[checksum]struct{}),
 	}
 }
@@ -144,14 +185,13 @@ func (i *index) setOrder(cks checksum, num int) {
 }
 
 func (i *index) Finish() error {
-	var w io.Writer = os.Stdout
 	for num, cks := range i.order {
 		if cks == nil {
 			return fmt.Errorf("missing chunk %d", num)
 		}
 	}
 	for _, cks := range i.order {
-		fmt.Fprintf(w, "%x\n", *cks)
+		fmt.Fprintf(i.w, "%x\n", *cks)
 	}
 	return nil
 }
@@ -170,8 +210,6 @@ type splitter struct {
 	err     error
 }
 
-var _ chunkIterator = (*splitter)(nil)
-
 func newSplitter(r io.Reader) *splitter {
 	return &splitter{
 		chunker: chunker.New(r, chunker.Pol(0x3DA3358B4DC173)),
@@ -188,11 +226,18 @@ func (s *splitter) Next() bool {
 		s.err = err
 		return false
 	}
+
 	s.chunk = &Chunk{
 		Num:  s.num,
 		Data: c.Data,
 	}
-	s.num++ // TODO check overflow
+	s.num++
+
+	// Check for overflow: uint resets to 0, int resets to -minInt
+	if s.num <= 0 {
+		panic("overflow")
+	}
+
 	return true
 }
 
@@ -221,8 +266,6 @@ type localStore struct {
 	Dir string
 }
 
-var _ processor = (*localStore)(nil)
-
 func (s *localStore) Process(c *Chunk) (err error) {
 	path := filepath.Join(s.Dir, fmt.Sprintf("%x", c.Checksum))
 	f, err := os.Create(path)
@@ -239,8 +282,6 @@ func (s *localStore) Finish() error {
 }
 
 type procChain []processor
-
-var _ processor = procChain(nil)
 
 func (c procChain) Process(chunk *Chunk) error {
 	for _, p := range c {
