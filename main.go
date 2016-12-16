@@ -83,7 +83,7 @@ func join() error {
 	process := procChain{
 		(&localStore{"out"}).Unprocess,
 		(&compress{}).Unprocess,
-		(&verify{}).Unprocess,
+		verify,
 		(&out{w}).Unprocess,
 	}.Process
 	for iter.Next() {
@@ -129,9 +129,7 @@ func (it *indexIterator) Err() error {
 	return it.err
 }
 
-type verify struct{}
-
-func (*verify) Unprocess(c *Chunk) error {
+func verify(c *Chunk) error {
 	if got := checksum.Sum(c.Data); got != c.Hash {
 		return fmt.Errorf("integrity check failed for chunk #%d: got %x, want %x",
 			c.Num, got, c.Hash)
@@ -203,7 +201,9 @@ func process(it chunkIterator, proc asyncProcFunc) error {
 	return err
 }
 
-type compress struct{}
+type compress struct {
+	// TODO level
+}
 
 func (*compress) Process(c *Chunk) (err error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(c.Data)))
