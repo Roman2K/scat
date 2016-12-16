@@ -1,3 +1,6 @@
 package: secdice
 import:
 - package: github.com/restic/chunker
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert

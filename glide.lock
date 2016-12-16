@@ -1,6 +1,18 @@
-hash: 3791a4839601fdc2912cacd98fe7d82835a1f12ed5952a019d4b351fb2eab879
-updated: 2016-12-15T23:05:46.834326297+01:00
+hash: df8fb8b864caafc8aa169d8326d34f4f5eff797b722082820b5027254898c7c5
+updated: 2016-12-16T14:06:06.865981925+01:00
 imports:
 - name: github.com/restic/chunker
   version: 50428e727f50c16e1bcb3050209fc2758427a6af
-testImports: []
+- name: github.com/stretchr/testify
+  version: 18a02ba4a312f95da08ff4cfc0055750ce50ae9e
+  subpackages:
+  - assert
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
