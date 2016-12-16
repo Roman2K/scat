@@ -41,41 +41,92 @@ func start() error {
 
 func split() (err error) {
 	split := newSplitter(os.Stdin)
-	ppool := newProcPool(2, procChain{
-		newIndex(os.Stdout),
-		&compress{},
-		&localStore{"."},
-	})
-	err = process(split, ppool)
+	index := newIndex(os.Stdout)
+	ppool := newProcPool(8, procChain{
+		index.Process,
+		(&compress{}).Process,
+		(&localStore{"out"}).Process,
+	}.Process)
+	err = process(split, ppool.Process)
 	if err != nil {
 		return
 	}
-	return ppool.Finish()
+	return parallel(index.Finish, ppool.Finish)
+}
+
+func parallel(fns ...func() error) (err error) {
+	results := make(chan error)
+	wg := sync.WaitGroup{}
+	wg.Add(len(fns))
+	call := func(fn func() error) {
+		defer wg.Done()
+		results <- fn()
+	}
+	for _, fn := range fns {
+		go call(fn)
+	}
+	go func() {
+		defer close(results)
+		wg.Wait()
+	}()
+	for e := range results {
+		if e != nil && err == nil {
+			err = e
+		}
+	}
+	return
 }
 
 func join() error {
 	w := os.Stdout
-	chain := []unprocessor{
-		&localStore{"."},
-		&compress{},
-		&out{w},
-	}
-	scan := checksum.NewScanner(os.Stdin)
-	num := 0
-	for scan.Scan() {
-		chunk := &Chunk{Num: num, Checksum: scan.Checksum}
-		for _, p := range chain {
-			err := p.Unprocess(chunk)
-			if err != nil {
-				return err
-			}
+	iter := newIndexIterator(os.Stdin)
+	// TODO proc pool, respect order from index iterator
+	process := procChain{
+		(&localStore{"out"}).Unprocess,
+		(&compress{}).Unprocess,
+		(&out{w}).Unprocess,
+	}.Process
+	for iter.Next() {
+		err := process(iter.Chunk())
+		if err != nil {
+			return err
 		}
-		num++
 	}
-	if err := scan.Err; err != nil {
-		return err
+	return iter.Err()
+}
+
+type indexIterator struct {
+	r     io.Reader
+	scan  *checksum.Scanner
+	num   int
+	chunk *Chunk
+	err   error
+}
+
+func newIndexIterator(r io.Reader) *indexIterator {
+	return &indexIterator{scan: checksum.NewScanner(r)}
+}
+
+func (it *indexIterator) Next() bool {
+	ok := it.scan.Scan()
+	if !ok {
+		it.err = it.scan.Err
+		return false
 	}
-	return nil
+	it.chunk = &Chunk{
+		Num:      it.num,
+		Checksum: it.scan.Checksum,
+	}
+	it.num++ // TODO check overflow
+	return true
+}
+
+func (it *indexIterator) Chunk() *Chunk {
+	return it.chunk
+}
+
+func (it *indexIterator) Err() error {
+	return it.err
 }
 
 type out struct {
@@ -87,7 +138,7 @@ func (out *out) Unprocess(c *Chunk) (err error) {
 	return
 }
 
-func process(it chunkIterator, proc asyncProcessor) error {
+func process(it chunkIterator, proc asyncProcFunc) error {
 	chunks := make(chan *Chunk)
 	results := make(chan error)
 	done := make(chan struct{})
@@ -111,7 +162,7 @@ func process(it chunkIterator, proc asyncProcessor) error {
 	go func() {
 		defer resultSends.Done()
 		for c := range chunks {
-			ch := proc.AsyncProcess(c)
+			ch := proc(c)
 			resultSends.Add(1)
 			go func() {
 				defer resultSends.Done()
@@ -166,10 +217,6 @@ func (*compress) Unprocess(c *Chunk) (err error) {
 	}
 	c.Data, err = ioutil.ReadAll(r)
 	return
-}
-
-func (*compress) Finish() error {
-	return nil
 }
 
 type index struct {
@@ -314,20 +361,6 @@ type Chunk struct {
 	Checksum checksum.Sum
 }
 
-type processor interface {
-	Process(*Chunk) error
-	Finish() error
-}
-
-type asyncProcessor interface {
-	AsyncProcess(*Chunk) <-chan error
-	Finish() error
-}
-
-type unprocessor interface {
-	Unprocess(*Chunk) error
-}
-
 type localStore struct {
 	Dir string
 }
@@ -341,10 +374,6 @@ func (s *localStore) Process(c *Chunk) (err error) {
 	defer f.Close()
 	_, err = f.Write(c.Data)
 	return
-}
-
-func (s *localStore) Finish() error {
-	return nil
 }
 
 func (s *localStore) Unprocess(c *Chunk) (err error) {
@@ -362,11 +391,14 @@ func (s *localStore) path(c *Chunk) string {
 	return filepath.Join(s.Dir, fmt.Sprintf("%x", c.Checksum))
 }
 
-type procChain []processor
+type procFunc func(*Chunk) error
+type asyncProcFunc func(*Chunk) <-chan error
+
+type procChain []procFunc
 
 func (c procChain) Process(chunk *Chunk) error {
-	for _, p := range c {
-		if err := p.Process(chunk); err != nil {
+	for _, process := range c {
+		if err := process(chunk); err != nil {
 			return err
 		}
 		if chunk.Data == nil {
@@ -376,33 +408,9 @@ func (c procChain) Process(chunk *Chunk) error {
 	return nil
 }
 
-func (c procChain) Finish() (err error) {
-	results := make(chan error)
-	wg := sync.WaitGroup{}
-	wg.Add(len(c))
-	finish := func(p processor) {
-		defer wg.Done()
-		results <- p.Finish()
-	}
-	for _, p := range c {
-		go finish(p)
-	}
-	go func() {
-		defer close(results)
-		wg.Wait()
-	}()
-	for e := range results {
-		if e != nil && err == nil {
-			err = e
-		}
-	}
-	return
-}
-
 type procPool struct {
 	wg    *sync.WaitGroup
 	tasks chan procTask
-	proc  processor
 }
 
 type procTask struct {
@@ -410,7 +418,7 @@ type procTask struct {
 	res   chan<- error
 }
 
-func newProcPool(size int, proc processor) procPool {
+func newProcPool(size int, proc procFunc) procPool {
 	tasks := make(chan procTask)
 	wg := &sync.WaitGroup{}
 	wg.Add(size)
@@ -418,14 +426,14 @@ func newProcPool(size int, proc processor) procPool {
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				task.res <- proc.Process(task.chunk)
+				task.res <- proc(task.chunk)
 			}
 		}()
 	}
-	return procPool{tasks: tasks, wg: wg, proc: proc}
+	return procPool{wg: wg, tasks: tasks}
 }
 
-func (p procPool) AsyncProcess(c *Chunk) <-chan error {
+func (p procPool) Process(c *Chunk) <-chan error {
 	res := make(chan error)
 	p.tasks <- procTask{chunk: c, res: res}
 	return res
@@ -434,5 +442,5 @@ func (p procPool) AsyncProcess(c *Chunk) <-chan error {
 func (p procPool) Finish() error {
 	close(p.tasks)
 	p.wg.Wait()
-	return p.proc.Finish()
+	return nil
 }
