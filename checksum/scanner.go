@@ -7,15 +7,15 @@ import (
 )
 
 type Scanner struct {
-	r        io.Reader
-	buf      []byte
-	Err      error
-	Checksum Sum
+	r    io.Reader
+	buf  []byte
+	Err  error
+	Hash Hash
 }
 
 func NewScanner(r io.Reader) (s *Scanner) {
 	s = &Scanner{r: r}
-	s.buf = make([]byte, len(s.Checksum))
+	s.buf = make([]byte, len(s.Hash))
 	return
 }
 
@@ -39,8 +39,8 @@ func (s *Scanner) scan() error {
 	if n != 1 {
 		return fmt.Errorf("failed to read checksum hex")
 	}
-	n = copy(s.Checksum[:], s.buf)
-	if n != len(s.Checksum) {
+	n = copy(s.Hash[:], s.buf)
+	if n != len(s.Hash) {
 		return errors.New("invalid checksum length")
 	}
 	return nil

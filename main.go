@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -84,6 +83,7 @@ func join() error {
 	process := procChain{
 		(&localStore{"out"}).Unprocess,
 		(&compress{}).Unprocess,
+		(&verify{}).Unprocess,
 		(&out{w}).Unprocess,
 	}.Process
 	for iter.Next() {
@@ -114,8 +114,8 @@ func (it *indexIterator) Next() bool {
 		return false
 	}
 	it.chunk = &Chunk{
-		Num:      it.num,
-		Checksum: it.scan.Checksum,
+		Num:  it.num,
+		Hash: it.scan.Hash,
 	}
 	it.num++ // TODO check overflow
 	return true
@@ -127,6 +127,16 @@ func (it *indexIterator) Chunk() *Chunk {
 
 func (it *indexIterator) Err() error {
 	return it.err
+}
+
+type verify struct{}
+
+func (*verify) Unprocess(c *Chunk) error {
+	if got := checksum.Sum(c.Data); got != c.Hash {
+		return fmt.Errorf("integrity check failed for chunk #%d: got %x, want %x",
+			c.Num, got, c.Hash)
+	}
+	return nil
 }
 
 type out struct {
@@ -221,65 +231,65 @@ func (*compress) Unprocess(c *Chunk) (err error) {
 
 type index struct {
 	w       io.Writer
-	seen    map[checksum.Sum]struct{}
+	seen    map[checksum.Hash]struct{}
 	seenMu  sync.Mutex
-	order   []*checksum.Sum
+	order   []*checksum.Hash
 	orderMu sync.Mutex
 }
 
 func newIndex(w io.Writer) *index {
 	return &index{
 		w:    w,
-		seen: make(map[checksum.Sum]struct{}),
+		seen: make(map[checksum.Hash]struct{}),
 	}
 }
 
 func (i *index) Process(c *Chunk) error {
-	c.Checksum = sha256.Sum256(c.Data)
-	i.setOrder(c.Checksum, c.Num)
-	if i.getSeen(c.Checksum) {
+	c.Hash = checksum.Sum(c.Data)
+	i.setOrder(c.Hash, c.Num)
+	if i.getSeen(c.Hash) {
 		c.Data = nil
 		return nil
 	}
-	i.setSeen(c.Checksum)
+	i.setSeen(c.Hash)
 	return nil
 }
 
-func (i *index) getSeen(cks checksum.Sum) (ok bool) {
+func (i *index) getSeen(hash checksum.Hash) (ok bool) {
 	i.seenMu.Lock()
 	defer i.seenMu.Unlock()
-	_, ok = i.seen[cks]
+	_, ok = i.seen[hash]
 	return
 }
 
-func (i *index) setSeen(cks checksum.Sum) {
+func (i *index) setSeen(hash checksum.Hash) {
 	i.seenMu.Lock()
 	defer i.seenMu.Unlock()
-	i.seen[cks] = struct{}{}
+	i.seen[hash] = struct{}{}
 }
 
-func (i *index) setOrder(cks checksum.Sum, num int) {
+func (i *index) setOrder(hash checksum.Hash, num int) {
 	i.orderMu.Lock()
 	defer i.orderMu.Unlock()
 	if minLen := num + 1; len(i.order) < minLen {
 		if cap(i.order) < minLen {
-			resized := make([]*checksum.Sum, minLen, num*2+1)
+			resized := make([]*checksum.Hash, minLen, num*2+1)
 			copy(resized, i.order)
 			i.order = resized
 		}
 		i.order = i.order[:minLen]
 	}
-	i.order[num] = &cks
+	i.order[num] = &hash
 }
 
 func (i *index) Finish() (err error) {
-	for num, cks := range i.order {
-		if cks == nil {
+	for num, hash := range i.order {
+		if hash == nil {
 			return fmt.Errorf("missing chunk %d", num)
 		}
 	}
-	for _, cks := range i.order {
-		_, err = checksum.Write(i.w, *cks)
+	for _, hash := range i.order {
+		_, err = checksum.Write(i.w, *hash)
 		if err != nil {
 			return
 		}
@@ -356,9 +366,9 @@ func (s *splitter) Err() error {
 }
 
 type Chunk struct {
-	Num      int
-	Data     []byte
-	Checksum checksum.Sum
+	Num  int
+	Data []byte
+	Hash checksum.Hash
 }
 
 type localStore struct {
@@ -388,7 +398,7 @@ func (s *localStore) Unprocess(c *Chunk) (err error) {
 }
 
 func (s *localStore) path(c *Chunk) string {
-	return filepath.Join(s.Dir, fmt.Sprintf("%x", c.Checksum))
+	return filepath.Join(s.Dir, fmt.Sprintf("%x", c.Hash))
 }
 
 type procFunc func(*Chunk) error
