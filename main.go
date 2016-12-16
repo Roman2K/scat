@@ -43,8 +43,8 @@ func split() (err error) {
 	index := newIndex(os.Stdout)
 	ppool := newProcPool(8, procChain{
 		index.Process,
-		(&compress{}).Process,
-		(&localStore{"out"}).Process,
+		inplace((&compress{}).ProcessInplace).Process,
+		inplace((&localStore{"out"}).ProcessInplace).Process,
 	}.Process)
 	err = process(split, ppool.Process)
 	if err != nil {
@@ -81,15 +81,15 @@ func join() error {
 	iter := newIndexIterator(os.Stdin)
 	// TODO proc pool, respect order from index iterator
 	process := procChain{
-		(&localStore{"out"}).Unprocess,
-		(&compress{}).Unprocess,
-		verify,
-		(&out{w}).Unprocess,
+		inplace((&localStore{"out"}).UnprocessInplace).Process,
+		inplace((&compress{}).UnprocessInplace).Process,
+		inplace(verify).Process,
+		inplace((&out{w}).UnprocessInplace).Process,
 	}.Process
 	for iter.Next() {
-		err := process(iter.Chunk())
-		if err != nil {
-			return err
+		res := process(iter.Chunk())
+		if e := res.err; e != nil {
+			return e
 		}
 	}
 	return iter.Err()
@@ -141,7 +141,7 @@ type out struct {
 	w io.Writer
 }
 
-func (out *out) Unprocess(c *Chunk) (err error) {
+func (out *out) UnprocessInplace(c *Chunk) (err error) {
 	_, err = out.w.Write(c.Data)
 	return
 }
@@ -174,8 +174,8 @@ func process(it chunkIterator, proc asyncProcFunc) error {
 			resultSends.Add(1)
 			go func() {
 				defer resultSends.Done()
-				err := <-ch
-				results <- err
+				res := <-ch
+				results <- res.err
 			}()
 		}
 	}()
@@ -201,11 +201,18 @@ func process(it chunkIterator, proc asyncProcFunc) error {
 	return err
 }
 
+type inplace func(*Chunk) error
+
+func (fn inplace) Process(c *Chunk) outChunk {
+	err := fn(c)
+	return outChunk{out: []*Chunk{c}, err: err}
+}
+
 type compress struct {
 	// TODO level
 }
 
-func (*compress) Process(c *Chunk) (err error) {
+func (*compress) ProcessInplace(c *Chunk) (err error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(c.Data)))
 	w := gzip.NewWriter(buf)
 	_, err = w.Write(c.Data)
@@ -220,7 +227,7 @@ func (*compress) Process(c *Chunk) (err error) {
 	return
 }
 
-func (*compress) Unprocess(c *Chunk) (err error) {
+func (*compress) UnprocessInplace(c *Chunk) (err error) {
 	r, err := gzip.NewReader(bytes.NewReader(c.Data))
 	if err != nil {
 		return
@@ -244,15 +251,14 @@ func newIndex(w io.Writer) *index {
 	}
 }
 
-func (i *index) Process(c *Chunk) error {
+func (i *index) Process(c *Chunk) outChunk {
 	c.Hash = checksum.Sum(c.Data)
 	i.setOrder(c.Hash, c.Num)
 	if i.getSeen(c.Hash) {
-		c.Data = nil
-		return nil
+		return outChunk{out: []*Chunk{}}
 	}
 	i.setSeen(c.Hash)
-	return nil
+	return outChunk{out: []*Chunk{c}}
 }
 
 func (i *index) getSeen(hash checksum.Hash) (ok bool) {
@@ -371,11 +377,19 @@ type Chunk struct {
 	Hash checksum.Hash
 }
 
+type procFunc func(*Chunk) outChunk
+type asyncProcFunc func(*Chunk) <-chan outChunk
+
+type outChunk struct {
+	out []*Chunk
+	err error
+}
+
 type localStore struct {
 	Dir string
 }
 
-func (s *localStore) Process(c *Chunk) (err error) {
+func (s *localStore) ProcessInplace(c *Chunk) (err error) {
 	path := s.path(c)
 	f, err := os.Create(path)
 	if err != nil {
@@ -386,7 +400,7 @@ func (s *localStore) Process(c *Chunk) (err error) {
 	return
 }
 
-func (s *localStore) Unprocess(c *Chunk) (err error) {
+func (s *localStore) UnprocessInplace(c *Chunk) (err error) {
 	path := s.path(c)
 	f, err := os.Open(path)
 	if err != nil {
@@ -401,21 +415,20 @@ func (s *localStore) path(c *Chunk) string {
 	return filepath.Join(s.Dir, fmt.Sprintf("%x", c.Hash))
 }
 
-type procFunc func(*Chunk) error
-type asyncProcFunc func(*Chunk) <-chan error
-
 type procChain []procFunc
 
-func (c procChain) Process(chunk *Chunk) error {
-	for _, process := range c {
-		if err := process(chunk); err != nil {
-			return err
-		}
-		if chunk.Data == nil {
-			break
+func (chain procChain) Process(chunk *Chunk) outChunk {
+	chunks := []*Chunk{chunk}
+	for _, process := range chain {
+		for _, chunk := range chunks {
+			res := process(chunk)
+			if res.err != nil {
+				return res
+			}
+			chunks = res.out
 		}
 	}
-	return nil
+	return outChunk{out: chunks}
 }
 
 type procPool struct {
@@ -425,7 +438,7 @@ type procPool struct {
 
 type procTask struct {
 	chunk *Chunk
-	res   chan<- error
+	res   chan<- outChunk
 }
 
 func newProcPool(size int, proc procFunc) procPool {
@@ -443,8 +456,8 @@ func newProcPool(size int, proc procFunc) procPool {
 	return procPool{wg: wg, tasks: tasks}
 }
 
-func (p procPool) Process(c *Chunk) <-chan error {
-	res := make(chan error)
+func (p procPool) Process(c *Chunk) <-chan outChunk {
+	res := make(chan outChunk)
 	p.tasks <- procTask{chunk: c, res: res}
 	return res
 }
