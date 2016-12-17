@@ -1,4 +1,4 @@
-package: secdice
+package: secsplit
 import:
 - package: github.com/restic/chunker
 - package: github.com/stretchr/testify
