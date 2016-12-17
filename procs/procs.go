@@ -24,6 +24,10 @@ type AsyncProcFinisher interface {
 	Finisher
 }
 
+type ender interface {
+	end(*ss.Chunk, []*ss.Chunk)
+}
+
 type Res struct {
 	Chunks []*ss.Chunk
 	Err    error

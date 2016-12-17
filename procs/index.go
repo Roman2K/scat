@@ -10,17 +10,46 @@ import (
 )
 
 type index struct {
-	w       io.Writer
-	order   []*checksum.Hash
-	orderMu sync.Mutex
+	w        io.Writer
+	order    []*checksum.Hash
+	orderMu  sync.Mutex
+	finals   map[checksum.Hash][]*checksum.Hash
+	finalsMu sync.Mutex
 }
 
 func NewIndex(w io.Writer) ProcFinisher {
-	return &index{w: w}
+	return &index{
+		w:      w,
+		finals: make(map[checksum.Hash][]*checksum.Hash),
+	}
 }
 
 func (i *index) Process(c *ss.Chunk) Res {
-	return Res{Chunks: []*ss.Chunk{c}}
+	return inplaceProcFunc(i.process).Process(c)
+}
+
+func (i *index) process(c *ss.Chunk) error {
+	i.setOrder(c.Hash, c.Num)
+	return nil
+}
+
+func (i *index) end(c *ss.Chunk, finals []*ss.Chunk) {
+	i.finalsMu.Lock()
+	defer i.finalsMu.Unlock()
+	// We can't just check for i.finals and return if present. Chunks are
+	// potentially processed out of order so for example, when deduping,
+	// a duplicate might land here before the first occurrence, registering no
+	// finals. However, we want to register the finals of the first occurrence
+	// only.
+	if len(finals) < len(i.finals[c.Hash]) {
+		return
+	}
+	hashes := make([]*checksum.Hash, len(finals))
+	for i, fc := range finals {
+		hashes[i] = &fc.Hash
+	}
+
+	i.finals[c.Hash] = hashes
 }
 
 func (i *index) setOrder(hash checksum.Hash, num int) {
@@ -44,10 +73,18 @@ func (i *index) Finish() (err error) {
 		}
 	}
 	for _, hash := range i.order {
-		_, err = checksum.Write(i.w, *hash)
-		if err != nil {
-			return
+		for _, fh := range i.getFinals(*hash) {
+			_, err = checksum.Write(i.w, *fh)
+			if err != nil {
+				return
+			}
 		}
 	}
-	return nil
+	return
+}
+
+func (i *index) getFinals(hash checksum.Hash) []*checksum.Hash {
+	i.finalsMu.Lock()
+	defer i.finalsMu.Unlock()
+	return i.finals[hash]
 }

@@ -19,16 +19,12 @@ func NewDedup() Proc {
 }
 
 func (d *dedup) Process(c *ss.Chunk) Res {
-	return inplaceProcFunc(d.process).Process(c)
-}
-
-func (d *dedup) process(c *ss.Chunk) error {
-	if d.getSeen(c.Hash) {
-		c.Dup = true
-	} else {
+	chunks := make([]*ss.Chunk, 0, 1)
+	if !d.getSeen(c.Hash) {
 		d.setSeen(c.Hash)
+		chunks = append(chunks, c)
 	}
-	return nil
+	return Res{Chunks: chunks}
 }
 
 func (d *dedup) getSeen(hash checksum.Hash) (ok bool) {

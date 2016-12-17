@@ -6,7 +6,6 @@ type Chunk struct {
 	Num  int
 	Data []byte
 	Hash checksum.Hash
-	Dup  bool
 }
 
 type ChunkIterator interface {

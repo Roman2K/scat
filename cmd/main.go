@@ -33,17 +33,17 @@ func start() error {
 
 func cmdSplit() (err error) {
 	splitter := split.NewSplitter(os.Stdin)
-	// index := procs.NewIndex(os.Stdout)
-	chain := procs.Chain{
+	index := procs.NewIndex(os.Stdout)
+	chain := procs.NewChain([]procs.Proc{
 		procs.Checksum{}.Proc(),
+		index,
 		procs.NewDedup(),
 		procs.Split(),
 		procs.Checksum{}.Proc(),
 		// (&procs.Compress{}).Proc(),
 		// (&paritySplit{data: 2, parity: 1}).Process,
 		(&procs.LocalStore{"out"}).Proc(),
-		// index.Process,
-	}
+	})
 	ppool := procs.NewPool(8, chain)
 	defer ppool.Finish()
 	err = procs.Process(splitter, ppool)
@@ -55,14 +55,15 @@ func cmdSplit() (err error) {
 
 // func cmdJoin() error {
 // 	w := os.Stdout
-// 	iter := newIndexScanner(os.Stdin)
+// 	scan := indexscan.NewScanner(os.Stdin)
 // 	// TODO proc pool, respect order from index iterator
-// 	process := procChain{
-// 		inplace((&localStore{"out"}).UnprocessInplace).Process,
-// 		// inplace((&compress{}).UnprocessInplace).Process,
-// 		inplace(verify).Process,
-// 		inplace((&out{w}).UnprocessInplace).Process,
-// 	}.Process
+// 	chain := procs.Chain{
+// 		(&procs.LocalStore{"out"}).Unproc(),
+// 		// inplace((&localStore{"out"}).UnprocessInplace).Process,
+// 		// // inplace((&compress{}).UnprocessInplace).Process,
+// 		// inplace(verify).Process,
+// 		// inplace((&out{w}).UnprocessInplace).Process,
+// 	}
 // 	for iter.Next() {
 // 		res := process(iter.Chunk())
 // 		if e := res.err; e != nil {
