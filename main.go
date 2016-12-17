@@ -40,17 +40,40 @@ func start() error {
 
 func split() (err error) {
 	split := newSplitter(os.Stdin)
-	index := newIndex(os.Stdout)
+	index := &index{w: os.Stdout}
+
 	ppool := newProcPool(8, procChain{
-		index.Process,
+		inplace(computeChecksum).Process,
+		inplace(newDedup().ProcessInplace).Process,
+		splitChunk,
+		inplace(computeChecksum).Process,
 		inplace((&compress{}).ProcessInplace).Process,
+		// (&paritySplit{data: 2, parity: 1}).Process,
 		inplace((&localStore{"out"}).ProcessInplace).Process,
+		index.Process,
 	}.Process)
+
 	err = process(split, ppool.Process)
 	if err != nil {
 		return
 	}
+
 	return parallel(index.Finish, ppool.Finish)
+}
+
+func splitChunk(c *Chunk) outChunk {
+	const num = 2
+	offset := len(c.Data) / num
+	boundaries := [num][2]int{{0, offset}, {offset, len(c.Data)}}
+	chunks := make([]*Chunk, len(boundaries))
+	for i, bds := range boundaries {
+		start, end := bds[0], bds[1]
+		data := make([]byte, end-start)
+		copy(data, c.Data[start:end])
+		// TODO check overflow
+		chunks[i] = &Chunk{Num: c.Num*num + i, Data: data}
+	}
+	return outChunk{out: chunks}
 }
 
 func parallel(fns ...func() error) (err error) {
@@ -78,11 +101,11 @@ func parallel(fns ...func() error) (err error) {
 
 func join() error {
 	w := os.Stdout
-	iter := newIndexIterator(os.Stdin)
+	iter := newIndexScanner(os.Stdin)
 	// TODO proc pool, respect order from index iterator
 	process := procChain{
 		inplace((&localStore{"out"}).UnprocessInplace).Process,
-		inplace((&compress{}).UnprocessInplace).Process,
+		// inplace((&compress{}).UnprocessInplace).Process,
 		inplace(verify).Process,
 		inplace((&out{w}).UnprocessInplace).Process,
 	}.Process
@@ -95,7 +118,7 @@ func join() error {
 	return iter.Err()
 }
 
-type indexIterator struct {
+type indexScanner struct {
 	r     io.Reader
 	scan  *checksum.Scanner
 	num   int
@@ -103,39 +126,58 @@ type indexIterator struct {
 	err   error
 }
 
-func newIndexIterator(r io.Reader) *indexIterator {
-	return &indexIterator{scan: checksum.NewScanner(r)}
+func newIndexScanner(r io.Reader) *indexScanner {
+	return &indexScanner{scan: checksum.NewScanner(r)}
 }
 
-func (it *indexIterator) Next() bool {
-	ok := it.scan.Scan()
+func (s *indexScanner) Next() bool {
+	ok := s.scan.Scan()
 	if !ok {
-		it.err = it.scan.Err
+		s.err = s.scan.Err
 		return false
 	}
-	it.chunk = &Chunk{
-		Num:  it.num,
-		Hash: it.scan.Hash,
+	s.chunk = &Chunk{
+		Num:  s.num,
+		Hash: s.scan.Hash,
 	}
-	it.num++ // TODO check overflow
+	s.num++ // TODO check overflow
 	return true
 }
 
-func (it *indexIterator) Chunk() *Chunk {
-	return it.chunk
+func (s *indexScanner) Chunk() *Chunk {
+	return s.chunk
 }
 
-func (it *indexIterator) Err() error {
-	return it.err
+func (s *indexScanner) Err() error {
+	return s.err
 }
 
 func verify(c *Chunk) error {
-	if got := checksum.Sum(c.Data); got != c.Hash {
-		return fmt.Errorf("integrity check failed for chunk #%d: got %x, want %x",
-			c.Num, got, c.Hash)
+	if checksum.Sum(c.Data) != c.Hash {
+		return fmt.Errorf("integrity check failed for chunk %d")
 	}
 	return nil
 }
+
+// type paritySplit struct {
+// 	rs reedsolomon.Encoder
+// }
+
+// func newParitySplit(data, parity int) *paritySplit {
+// 	return &paritySplit{rs: reedsolomon.New(data, parity)}
+// }
+
+// func (ps *paritySplit) Process(c *Chunk) outChunk {
+// 	shards, err := rs.Split(c.Data)
+// 	if err != nil {
+// 		return outChunk{err: err}
+// 	}
+// 	out := make([]*Chunk, len(shards))
+// 	for i, shard := range shards {
+// 		out[i] = shard
+// 	}
+// 	return outChunk{out: out}
+// }
 
 type out struct {
 	w io.Writer
@@ -236,42 +278,52 @@ func (*compress) UnprocessInplace(c *Chunk) (err error) {
 	return
 }
 
-type index struct {
-	w       io.Writer
-	seen    map[checksum.Hash]struct{}
-	seenMu  sync.Mutex
-	order   []*checksum.Hash
-	orderMu sync.Mutex
+func computeChecksum(c *Chunk) error {
+	c.Hash = checksum.Sum(c.Data)
+	return nil
 }
 
-func newIndex(w io.Writer) *index {
-	return &index{
-		w:    w,
+type dedup struct {
+	seen   map[checksum.Hash]struct{}
+	seenMu sync.Mutex
+}
+
+func newDedup() *dedup {
+	return &dedup{
 		seen: make(map[checksum.Hash]struct{}),
 	}
 }
 
-func (i *index) Process(c *Chunk) outChunk {
-	c.Hash = checksum.Sum(c.Data)
-	i.setOrder(c.Hash, c.Num)
-	if i.getSeen(c.Hash) {
-		return outChunk{out: []*Chunk{}}
+func (d *dedup) ProcessInplace(c *Chunk) error {
+	if d.getSeen(c.Hash) {
+		c.Dup = true
+	} else {
+		d.setSeen(c.Hash)
 	}
-	i.setSeen(c.Hash)
-	return outChunk{out: []*Chunk{c}}
+	return nil
 }
 
-func (i *index) getSeen(hash checksum.Hash) (ok bool) {
-	i.seenMu.Lock()
-	defer i.seenMu.Unlock()
-	_, ok = i.seen[hash]
+func (d *dedup) getSeen(hash checksum.Hash) (ok bool) {
+	d.seenMu.Lock()
+	defer d.seenMu.Unlock()
+	_, ok = d.seen[hash]
 	return
 }
 
-func (i *index) setSeen(hash checksum.Hash) {
-	i.seenMu.Lock()
-	defer i.seenMu.Unlock()
-	i.seen[hash] = struct{}{}
+func (d *dedup) setSeen(hash checksum.Hash) {
+	d.seenMu.Lock()
+	defer d.seenMu.Unlock()
+	d.seen[hash] = struct{}{}
+}
+
+type index struct {
+	w       io.Writer
+	order   []*checksum.Hash
+	orderMu sync.Mutex
+}
+
+func (i *index) Process(c *Chunk) outChunk {
+	return outChunk{out: []*Chunk{c}}
 }
 
 func (i *index) setOrder(hash checksum.Hash, num int) {
@@ -375,6 +427,7 @@ type Chunk struct {
 	Num  int
 	Data []byte
 	Hash checksum.Hash
+	Dup  bool
 }
 
 type procFunc func(*Chunk) outChunk
@@ -420,13 +473,16 @@ type procChain []procFunc
 func (chain procChain) Process(chunk *Chunk) outChunk {
 	chunks := []*Chunk{chunk}
 	for _, process := range chain {
+		// TODO allocate len(chunks) * <max chunks output by this processor>
+		out := make([]*Chunk, 0, len(chunks))
 		for _, chunk := range chunks {
 			res := process(chunk)
 			if res.err != nil {
 				return res
 			}
-			chunks = res.out
+			out = append(out, res.out...)
 		}
+		chunks = out
 	}
 	return outChunk{out: chunks}
 }
