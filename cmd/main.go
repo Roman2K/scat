@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"secsplit/indexscan"
 	"secsplit/procs"
 	"secsplit/split"
 )
@@ -25,8 +26,8 @@ func start() error {
 	switch cmd {
 	case "split":
 		return cmdSplit()
-		// case "join":
-		// 	return cmdJoin()
+	case "join":
+		return cmdJoin()
 	}
 	return fmt.Errorf("unknown cmd: %s", cmd)
 }
@@ -53,25 +54,23 @@ func cmdSplit() (err error) {
 	return chain.Finish()
 }
 
-// func cmdJoin() error {
-// 	w := os.Stdout
-// 	scan := indexscan.NewScanner(os.Stdin)
-// 	// TODO proc pool, respect order from index iterator
-// 	chain := procs.Chain{
-// 		(&procs.LocalStore{"out"}).Unproc(),
-// 		// inplace((&localStore{"out"}).UnprocessInplace).Process,
-// 		// // inplace((&compress{}).UnprocessInplace).Process,
-// 		// inplace(verify).Process,
-// 		// inplace((&out{w}).UnprocessInplace).Process,
-// 	}
-// 	for iter.Next() {
-// 		res := process(iter.Chunk())
-// 		if e := res.err; e != nil {
-// 			return e
-// 		}
-// 	}
-// 	return iter.Err()
-// }
+func cmdJoin() error {
+	scan := indexscan.NewScanner(os.Stdin)
+	out := procs.WriteTo(os.Stdout)
+	chain := procs.NewChain([]procs.Proc{
+		(&procs.LocalStore{"out"}).Unproc(),
+		procs.Checksum{}.Unproc(),
+		out,
+	})
+	// TODO proc pool, respect order from index iterator
+	for scan.Next() {
+		res := chain.Process(scan.Chunk())
+		if e := res.Err; e != nil {
+			return e
+		}
+	}
+	return scan.Err()
+}
 
 // type paritySplit struct {
 // 	rs reedsolomon.Encoder
