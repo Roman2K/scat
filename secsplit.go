@@ -6,6 +6,7 @@ type Chunk struct {
 	Num  int
 	Data []byte
 	Hash checksum.Hash
+	Size int // int instead of uint as reedsolomon expects an int size in Join()
 	Meta map[string]interface{}
 }
 

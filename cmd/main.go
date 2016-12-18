@@ -32,10 +32,15 @@ func start() error {
 	return fmt.Errorf("unknown cmd: %s", cmd)
 }
 
+const (
+	ndata   = 2
+	nparity = 1
+)
+
 func cmdSplit() (err error) {
 	splitter := split.NewSplitter(os.Stdin)
 	index := procs.NewIndex(os.Stdout)
-	parity, err := procs.Parity(2, 1)
+	parity, err := procs.Parity(ndata, nparity)
 	if err != nil {
 		return
 	}
@@ -60,13 +65,13 @@ func cmdSplit() (err error) {
 func cmdJoin() (err error) {
 	scan := indexscan.NewScanner(os.Stdin)
 	out := procs.WriteTo(os.Stdout)
-	parity, err := procs.Parity(2, 1)
+	parity, err := procs.Parity(ndata, nparity)
 	if err != nil {
 		return
 	}
 	chain := procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
-		(&procs.Group{parity.NShards}).Proc(),
+		procs.Group(ndata + nparity),
 		parity.Unproc(),
 		out,
 	})
