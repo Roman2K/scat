@@ -7,20 +7,26 @@ import (
 
 	ss "secsplit"
 	"secsplit/checksum"
+	"secsplit/indexscan"
 )
 
 type index struct {
 	w        io.Writer
 	order    []*checksum.Hash
 	orderMu  sync.Mutex
-	finals   map[checksum.Hash][]*checksum.Hash
+	finals   map[checksum.Hash][]indexEntry
 	finalsMu sync.Mutex
+}
+
+type indexEntry struct {
+	hash *checksum.Hash
+	size int
 }
 
 func NewIndex(w io.Writer) ProcFinisher {
 	return &index{
 		w:      w,
-		finals: make(map[checksum.Hash][]*checksum.Hash),
+		finals: make(map[checksum.Hash][]indexEntry),
 	}
 }
 
@@ -36,20 +42,19 @@ func (i *index) process(c *ss.Chunk) error {
 func (i *index) end(c *ss.Chunk, finals []*ss.Chunk) {
 	i.finalsMu.Lock()
 	defer i.finalsMu.Unlock()
-	// We can't just check for i.finals and return if present. Chunks are
-	// potentially processed out of order so for example, when deduping,
+	// We can't just check for finals[hash] and return if present because chunks
+	// are potentially processed out of order. So, for example, when deduping,
 	// a duplicate might land here before the first occurrence, registering no
 	// finals. However, we want to register the finals of the first occurrence
 	// only.
 	if len(finals) < len(i.finals[c.Hash]) {
 		return
 	}
-	hashes := make([]*checksum.Hash, len(finals))
+	entries := make([]indexEntry, len(finals))
 	for i, fc := range finals {
-		hashes[i] = &fc.Hash
+		entries[i] = indexEntry{hash: &fc.Hash, size: c.Size}
 	}
-
-	i.finals[c.Hash] = hashes
+	i.finals[c.Hash] = entries
 }
 
 func (i *index) setOrder(hash checksum.Hash, num int) {
@@ -73,8 +78,8 @@ func (i *index) Finish() (err error) {
 		}
 	}
 	for _, hash := range i.order {
-		for _, fh := range i.getFinals(*hash) {
-			_, err = checksum.Write(i.w, *fh)
+		for _, entry := range i.getFinals(*hash) {
+			_, err = indexscan.Write(i.w, *entry.hash, entry.size)
 			if err != nil {
 				return
 			}
@@ -83,7 +88,7 @@ func (i *index) Finish() (err error) {
 	return
 }
 
-func (i *index) getFinals(hash checksum.Hash) []*checksum.Hash {
+func (i *index) getFinals(hash checksum.Hash) []indexEntry {
 	i.finalsMu.Lock()
 	defer i.finalsMu.Unlock()
 	return i.finals[hash]

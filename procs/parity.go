@@ -33,20 +33,32 @@ func (p *parity) Unproc() Proc {
 }
 
 func (p *parity) Process(c *ss.Chunk) Res {
-	shards, err := p.enc.Split(c.Data)
-	if err != nil {
-		return Res{Err: err}
-	}
-	chunks := make([]*ss.Chunk, len(shards))
-	for i, shard := range shards {
-		chunks[i] = &ss.Chunk{Data: shard}
-	}
-	return Res{Chunks: chunks}
+	chunks, err := p.split(c)
+	return Res{Chunks: chunks, Err: err}
 }
 
 func (p *parity) unprocess(c *ss.Chunk) (err error) {
 	data, err := p.join(c)
 	c.Data = data
+	return
+}
+
+func (p *parity) split(c *ss.Chunk) (chunks []*ss.Chunk, err error) {
+	shards, err := p.enc.Split(c.Data)
+	if err != nil {
+		return
+	}
+	err = p.enc.Encode(shards)
+	if err != nil {
+		return
+	}
+	chunks = make([]*ss.Chunk, len(shards))
+	for i, shard := range shards {
+		chunks[i] = &ss.Chunk{
+			Num:  c.Num*p.nshards + i,
+			Data: shard,
+		}
+	}
 	return
 }
 
@@ -56,15 +68,37 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 		return
 	}
 
-	// TODO verify + reconstruct
-	// TODO size
-	c.Size = 6
-
 	out := bytes.NewBuffer(make([]byte, 0, len(c.Data)*p.ndata))
 	shards := make([][]byte, len(chunks))
+	mustReconstruct := false
 	for i, c := range chunks {
+		check, ok := c.GetMeta("integrityCheck").(bool)
+		if !ok {
+			err = errors.New("missing integrityCheck")
+			return
+		}
+		if !check {
+			mustReconstruct = true
+			continue
+		}
 		shards[i] = c.Data
 	}
+
+	if mustReconstruct {
+		err = p.enc.Reconstruct(shards)
+		if err != nil {
+			return
+		}
+	}
+
+	ok, err := p.enc.Verify(shards)
+	if err == nil && !ok {
+		err = errors.New("verification failed")
+	}
+	if err != nil {
+		return
+	}
+
 	err = p.enc.Join(out, shards, c.Size)
 	joined = out.Bytes()
 	return

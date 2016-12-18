@@ -46,11 +46,12 @@ func cmdSplit() (err error) {
 	}
 	chain := procs.NewChain([]procs.Proc{
 		procs.Checksum{}.Proc(),
+		procs.Size,
 		index,
 		procs.NewDedup(),
 		parity.Proc(),
+		(&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),
-		// (&procs.Compress{}).Proc(),
 		(&procs.LocalStore{"out"}).Proc(),
 	})
 	ppool := procs.NewPool(8, chain)
@@ -71,6 +72,8 @@ func cmdJoin() (err error) {
 	}
 	chain := procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
+		procs.Checksum{}.Unproc(),
+		(&procs.Compress{}).Unproc(),
 		procs.Group(ndata + nparity),
 		parity.Unproc(),
 		out,

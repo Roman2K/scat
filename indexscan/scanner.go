@@ -1,35 +1,61 @@
 package indexscan
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"secsplit/checksum"
 
 	ss "secsplit"
-	"secsplit/checksum"
 )
 
 type scanner struct {
-	scan  *checksum.Scanner
-	num   int
-	chunk *ss.Chunk
-	err   error
+	r       io.Reader
+	hashBuf []byte
+	num     int
+	chunk   *ss.Chunk
+	err     error
 }
 
 func NewScanner(r io.Reader) ss.ChunkIterator {
-	return &scanner{scan: checksum.NewScanner(r)}
+	return &scanner{
+		r:       r,
+		hashBuf: make([]byte, len(checksum.Hash{})),
+	}
 }
 
 func (s *scanner) Next() bool {
-	ok := s.scan.Scan()
-	if !ok {
-		s.err = s.scan.Err
+	err := s.scan()
+	if err != nil {
+		if err == io.EOF {
+			err = nil
+		}
+		s.err = err
 		return false
 	}
-	s.chunk = &ss.Chunk{
-		Num:  s.num,
-		Hash: s.scan.Hash,
-	}
-	s.num++ // TODO check overflow
 	return true
+}
+
+func (s *scanner) scan() error {
+	var size int
+	n, err := fmt.Fscanf(s.r, "%x %d\n", &s.hashBuf, &size)
+	if err != nil {
+		return err
+	}
+	if n != 2 {
+		return fmt.Errorf("failed to read index line")
+	}
+	chunk := &ss.Chunk{
+		Num:  s.num,
+		Size: size,
+	}
+	n = copy(chunk.Hash[:], s.hashBuf)
+	if n != len(chunk.Hash) {
+		return errors.New("invalid hash length")
+	}
+	s.chunk = chunk
+	s.num++
+	return nil
 }
 
 func (s *scanner) Chunk() *ss.Chunk {

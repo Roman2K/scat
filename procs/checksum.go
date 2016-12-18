@@ -1,8 +1,6 @@
 package procs
 
 import (
-	"fmt"
-
 	ss "secsplit"
 	"secsplit/checksum"
 )
@@ -23,8 +21,7 @@ func (cks Checksum) process(c *ss.Chunk) error {
 }
 
 func (cks Checksum) unprocess(c *ss.Chunk) error {
-	if checksum.Sum(c.Data) != c.Hash {
-		return fmt.Errorf("integrity check failed for chunk %d")
-	}
+	ok := checksum.Sum(c.Data) == c.Hash
+	c.SetMeta("integrityCheck", ok)
 	return nil
 }
