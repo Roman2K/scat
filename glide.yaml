@@ -4,3 +4,8 @@ import:
 - package: github.com/stretchr/testify
   subpackages:
   - assert
+- package: github.com/klauspost/reedsolomon
+
+# cpuid is a dependency of reedsolomon. Not detected by glide, must be added 
+# manually
+- package: github.com/klauspost/cpuid

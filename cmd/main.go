@@ -35,14 +35,17 @@ func start() error {
 func cmdSplit() (err error) {
 	splitter := split.NewSplitter(os.Stdin)
 	index := procs.NewIndex(os.Stdout)
+	parity, err := procs.Parity(2, 1)
+	if err != nil {
+		return
+	}
 	chain := procs.NewChain([]procs.Proc{
 		procs.Checksum{}.Proc(),
 		index,
 		procs.NewDedup(),
-		procs.Split(),
+		parity.Proc(),
 		procs.Checksum{}.Proc(),
 		// (&procs.Compress{}).Proc(),
-		// (&paritySplit{data: 2, parity: 1}).Process,
 		(&procs.LocalStore{"out"}).Proc(),
 	})
 	ppool := procs.NewPool(8, chain)
@@ -54,12 +57,17 @@ func cmdSplit() (err error) {
 	return chain.Finish()
 }
 
-func cmdJoin() error {
+func cmdJoin() (err error) {
 	scan := indexscan.NewScanner(os.Stdin)
 	out := procs.WriteTo(os.Stdout)
+	parity, err := procs.Parity(2, 1)
+	if err != nil {
+		return
+	}
 	chain := procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
-		procs.Checksum{}.Unproc(),
+		(&procs.Group{parity.NShards}).Proc(),
+		parity.Unproc(),
 		out,
 	})
 	// TODO proc pool, respect order from index iterator

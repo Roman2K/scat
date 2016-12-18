@@ -1,6 +1,10 @@
-hash: a69fa58f1a8711061a3a09436c83ef514d5e30feeffebd1a3b4a0649e32e0ec9
-updated: 2016-12-17T17:54:36.721375764+01:00
+hash: c98e1081ad767cdaafa1c759fcc54c2dc10da9ed001e77aee385bc099b454830
+updated: 2016-12-17T19:48:02.98128642+01:00
 imports:
+- name: github.com/klauspost/cpuid
+  version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
+- name: github.com/klauspost/reedsolomon
+  version: d0a56f72c0d40a6cdde43a1575ad9686a0098b70
 - name: github.com/restic/chunker
   version: 50428e727f50c16e1bcb3050209fc2758427a6af
 - name: github.com/stretchr/testify
