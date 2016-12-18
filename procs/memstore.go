@@ -5,31 +5,25 @@ import (
 	"secsplit/checksum"
 )
 
-type memStore struct {
-	data map[checksum.Hash][]byte
-}
+type MemStore map[checksum.Hash][]byte
 
-func MemStore() ProcUnprocer {
-	return &memStore{
-		data: make(map[checksum.Hash][]byte),
-	}
-}
+var _ ProcUnprocer = MemStore{}
 
-func (ms *memStore) Proc() Proc {
+func (ms MemStore) Proc() Proc {
 	return inplaceProcFunc(ms.process)
 }
 
-func (ms *memStore) Unproc() Proc {
+func (ms MemStore) Unproc() Proc {
 	return inplaceProcFunc(ms.unprocess)
 }
 
-func (ms *memStore) process(c *ss.Chunk) error {
-	ms.data[c.Hash] = copyBytes(c.Data)
+func (ms MemStore) process(c *ss.Chunk) error {
+	ms[c.Hash] = copyBytes(c.Data)
 	return nil
 }
 
-func (ms *memStore) unprocess(c *ss.Chunk) error {
-	c.Data = copyBytes(ms.data[c.Hash])
+func (ms MemStore) unprocess(c *ss.Chunk) error {
+	c.Data = copyBytes(ms[c.Hash])
 	return nil
 }
 

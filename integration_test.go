@@ -5,6 +5,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/klauspost/reedsolomon"
 	assert "github.com/stretchr/testify/require"
 
 	ss "secsplit"
@@ -12,19 +13,67 @@ import (
 	"secsplit/procs"
 )
 
-func TestParity(t *testing.T) {
+func TestParityCorruptNone(t *testing.T) {
+	testParity(t, corruptNone)
+}
+
+func TestParityCorruptRecoverable(t *testing.T) {
+	testParity(t, corruptRecoverable)
+}
+
+func TestParityCorruptNonRecoverable(t *testing.T) {
+	testParity(t, corruptNonRecoverable)
+}
+
+type corruption int
+
+const (
+	corruptNone corruption = iota
+	corruptRecoverable
+	corruptNonRecoverable
+)
+
+func testParity(t *testing.T, cor corruption) {
 	const (
 		ndata    = 2
 		nparity  = 1
 		inputStr = "hello"
 	)
+
 	indexBuf := &bytes.Buffer{}
 	outputBuf := &bytes.Buffer{}
-	store := procs.MemStore()
+	store := procs.MemStore{}
 	input := [][]byte{[]byte(inputStr)}
+
 	err := doSplit(indexBuf, input, ndata, nparity, store.Proc())
 	assert.NoError(t, err)
+
+	corrupt := func(n int) {
+		i := 0
+		for hash, data := range store {
+			if i >= n {
+				break
+			}
+			store[hash] = append(data, 'x')
+			i++
+		}
+	}
+
+	switch cor {
+	case corruptNone:
+	case corruptRecoverable:
+		corrupt(nparity)
+	case corruptNonRecoverable:
+		corrupt(nparity + 1)
+	default:
+		panic("unhandled corruption type")
+	}
+
 	err = doJoin(outputBuf, indexBuf, ndata, nparity, store.Unproc())
+	if cor == corruptNonRecoverable {
+		assert.Equal(t, reedsolomon.ErrTooFewShards, err)
+		return
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, inputStr, outputBuf.String())
 }
@@ -44,7 +93,7 @@ func doSplit(
 		procs.NewIndex(indexw),
 		procs.NewDedup(),
 		parity.Proc(),
-		(&procs.Compress{}).Proc(),
+		// (&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),
 		store,
 	})
@@ -71,7 +120,7 @@ func doJoin(
 	chain := procs.NewChain([]procs.Proc{
 		store,
 		procs.Checksum{}.Unproc(),
-		(&procs.Compress{}).Unproc(),
+		// (&procs.Compress{}).Unproc(),
 		procs.Group(ndata + nparity),
 		parity.Unproc(),
 		procs.WriteTo(w),
