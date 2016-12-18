@@ -63,11 +63,13 @@ func (p *parity) split(c *ss.Chunk) (chunks []*ss.Chunk, err error) {
 }
 
 func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
+	// Shard chunks
 	chunks, err := getGroup(c, p.nshards)
 	if err != nil {
 		return
 	}
 
+	// Shards slice
 	out := bytes.NewBuffer(make([]byte, 0, len(c.Data)*p.ndata))
 	shards := make([][]byte, len(chunks))
 	mustReconstruct := false
@@ -84,6 +86,7 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 		shards[i] = c.Data
 	}
 
+	// Reconstruct invalid shards
 	if mustReconstruct {
 		err = p.enc.Reconstruct(shards)
 		if err != nil {
@@ -91,6 +94,7 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 		}
 	}
 
+	// Verify integrity
 	ok, err := p.enc.Verify(shards)
 	if err == nil && !ok {
 		err = errors.New("verification failed")
@@ -99,6 +103,7 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 		return
 	}
 
+	// Join data shards, trim trailing padding
 	err = p.enc.Join(out, shards, c.Size)
 	joined = out.Bytes()
 	return

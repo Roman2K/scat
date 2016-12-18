@@ -24,6 +24,19 @@ type AsyncProcFinisher interface {
 	Finisher
 }
 
+type Procer interface {
+	Proc() Proc
+}
+
+type Unprocer interface {
+	Unproc() Proc
+}
+
+type ProcUnprocer interface {
+	Procer
+	Unprocer
+}
+
 type ender interface {
 	end(*ss.Chunk, []*ss.Chunk)
 }
