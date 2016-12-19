@@ -93,7 +93,7 @@ func doSplit(
 		procs.NewIndex(indexw),
 		procs.NewDedup(),
 		parity.Proc(),
-		// (&procs.Compress{}).Proc(),
+		(&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),
 		store,
 	})
@@ -120,13 +120,11 @@ func doJoin(
 	chain := procs.NewChain([]procs.Proc{
 		store,
 		procs.Checksum{}.Unproc(),
-		// (&procs.Compress{}).Unproc(),
+		(&procs.Compress{}).Unproc(),
 		procs.Group(ndata + nparity),
 		parity.Unproc(),
 		procs.WriteTo(w),
 	})
-
-	// TODO proc pool, respect order from index iterator
 	for scan.Next() {
 		err = chain.Process(scan.Chunk()).Err
 		if err != nil {

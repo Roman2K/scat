@@ -6,6 +6,10 @@ type Proc interface {
 	Process(*ss.Chunk) Res
 }
 
+type ErrProc interface {
+	ProcessErr(*ss.Chunk, error) Res
+}
+
 type ProcFinisher interface {
 	Proc
 	Finisher

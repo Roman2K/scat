@@ -26,6 +26,11 @@ func Group(size int) Proc {
 	}
 }
 
+func (g *group) ProcessErr(c *ss.Chunk, err error) Res {
+	c.SetMeta("err", err)
+	return g.Process(c)
+}
+
 func (g *group) Process(c *ss.Chunk) Res {
 	grouped, tail, err := g.build(c)
 	chunks := make([]*ss.Chunk, 0, 1)

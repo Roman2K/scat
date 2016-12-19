@@ -55,6 +55,8 @@ func (i *index) end(c *ss.Chunk, finals []*ss.Chunk) {
 		entries[i] = indexEntry{hash: &fc.Hash, size: c.Size}
 	}
 	i.finals[c.Hash] = entries
+	// TODO flush to w if all previously added chunks are contiguous (Finish
+	// becomes final flush)
 }
 
 func (i *index) setOrder(hash checksum.Hash, num int) {
