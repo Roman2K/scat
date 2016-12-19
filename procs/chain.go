@@ -78,8 +78,6 @@ func (chain *chain) process(c *ss.Chunk, procIdx int) (
 	// Do the processing and prepare for error handling by another Proc
 	res := process()
 	if res.Err != nil {
-		// findErrProc() could be cached but errors shouldn't be the normal
-		// case. So, for the sake of code simplicity, call it for every error.
 		j := findErrProc(chain.procs, procIdx+1)
 		if j < 0 {
 			err = res.Err

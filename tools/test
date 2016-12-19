@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+with_test() {
+  shopt -s nullglob
+  while read d; do
+    files=("$d"/*_test.go)
+    [ "${#files[@]}" -gt 0 ] || continue
+    echo "$d"
+  done
+}
+
+find . -type d -not -path './vendor/*' \
+  | with_test \
+  | exec xargs go test "$@"
