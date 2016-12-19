@@ -57,17 +57,17 @@ func (g *group) build(c *ss.Chunk) (
 		return
 	}
 	delete(g.growing, head)
-	if have == g.size {
-		sort.Slice(chunks, func(i, j int) bool {
-			return chunks[i].Num < chunks[j].Num
-		})
-		if !contiguous(chunks) {
-			err = errors.New("non-contiguous series")
-		}
-		tail = chunks[len(chunks)-1]
-	} else {
+	if have != g.size {
 		err = errors.New("accumulated too many chunks")
+		return
 	}
+	sort.Slice(chunks, func(i, j int) bool {
+		return chunks[i].Num < chunks[j].Num
+	})
+	if !contiguous(chunks) {
+		err = errors.New("non-contiguous series")
+	}
+	tail = chunks[len(chunks)-1]
 	return
 }
 
