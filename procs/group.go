@@ -32,21 +32,23 @@ func (g *group) ProcessErr(c *ss.Chunk, err error) Res {
 }
 
 func (g *group) Process(c *ss.Chunk) Res {
-	grouped, tail, err := g.build(c)
+	head, grouped, ok, err := g.build(c)
 	chunks := make([]*ss.Chunk, 0, 1)
-	if tail != nil {
-		tail.SetMeta("group", grouped)
-		chunks = append(chunks, tail)
+	if ok {
+		agg := *grouped[0]
+		agg.Num = head
+		agg.SetMeta("group", grouped)
+		chunks = append(chunks, &agg)
 	}
 	return Res{Chunks: chunks, Err: err}
 }
 
 func (g *group) build(c *ss.Chunk) (
-	chunks []*ss.Chunk, tail *ss.Chunk, err error,
+	head int, chunks []*ss.Chunk, ok bool, err error,
 ) {
 	g.growingMu.Lock()
 	defer g.growingMu.Unlock()
-	head := c.Num / g.size
+	head = c.Num / g.size
 	if _, ok := g.growing[head]; !ok {
 		g.growing[head] = make([]*ss.Chunk, 0, g.size)
 	}
@@ -67,7 +69,7 @@ func (g *group) build(c *ss.Chunk) (
 	if !contiguous(chunks) {
 		err = errors.New("non-contiguous series")
 	}
-	tail = chunks[len(chunks)-1]
+	ok = true
 	return
 }
 

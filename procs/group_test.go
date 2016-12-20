@@ -25,12 +25,11 @@ func TestGroup(t *testing.T) {
 	assert.Equal(t, 1, len(g.(*group).growing))
 
 	chunk := res.Chunks[0]
-	assert.Equal(t, 1, chunk.Num)
-	chunks, ok := chunk.GetMeta("group").([]*ss.Chunk)
-	assert.True(t, ok)
-	assert.Equal(t, 2, len(chunks))
-	assert.Equal(t, 0, chunks[0].Num)
-	assert.Equal(t, 1, chunks[1].Num)
+	// assert.Equal(t, 0, chunk.Num)
+	grp := chunk.GetMeta("group").([]*ss.Chunk)
+	assert.Equal(t, 2, len(grp))
+	assert.Equal(t, 0, grp[0].Num)
+	assert.Equal(t, 1, grp[1].Num)
 
 	res = g.Process(&ss.Chunk{Num: 3})
 	assert.NoError(t, res.Err)
@@ -38,15 +37,18 @@ func TestGroup(t *testing.T) {
 	assert.Equal(t, 0, len(g.(*group).growing))
 
 	chunk = res.Chunks[0]
-	assert.Equal(t, 3, chunk.Num)
-	chunks, ok = chunk.GetMeta("group").([]*ss.Chunk)
-	assert.True(t, ok)
-	assert.Equal(t, 2, len(chunks))
-	assert.Equal(t, 2, chunks[0].Num)
-	assert.Equal(t, 3, chunks[1].Num)
+	// assert.Equal(t, 1, chunk.Num)
+	grp = chunk.GetMeta("group").([]*ss.Chunk)
+	assert.Equal(t, 2, len(grp))
+	assert.Equal(t, 2, grp[0].Num)
+	assert.Equal(t, 3, grp[1].Num)
 }
 
 func TestGroupMinSize(t *testing.T) {
 	assert.Panics(t, func() { Group(0) })
 	assert.NotPanics(t, func() { Group(1) })
+}
+
+func TestGroupChunkNums(t *testing.T) {
+	testChunkNums(t, Group(2), 6)
 }

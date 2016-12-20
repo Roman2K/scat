@@ -87,23 +87,3 @@ func cmdJoin() (err error) {
 	}
 	return scan.Err()
 }
-
-// type paritySplit struct {
-// 	rs reedsolomon.Encoder
-// }
-
-// func newParitySplit(data, parity int) *paritySplit {
-// 	return &paritySplit{rs: reedsolomon.New(data, parity)}
-// }
-
-// func (ps *paritySplit) Process(c *Chunk) outChunk {
-// 	shards, err := rs.Split(c.Data)
-// 	if err != nil {
-// 		return outChunk{err: err}
-// 	}
-// 	out := make([]*Chunk, len(shards))
-// 	for i, shard := range shards {
-// 		out[i] = shard
-// 	}
-// 	return outChunk{out: out}
-// }
