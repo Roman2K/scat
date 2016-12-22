@@ -9,13 +9,13 @@ import (
 
 type chain struct {
 	procs  []Proc
-	enders []ender
+	enders []EndProc
 }
 
-func NewChain(procs []Proc) ProcFinisher {
-	chain := &chain{procs: procs}
+func NewChain(procs []Proc) chain {
+	chain := chain{procs: procs}
 	for _, proc := range procs {
-		if ender, ok := proc.(ender); ok {
+		if ender, ok := proc.(EndProc); ok {
 			chain.enders = append(chain.enders, ender)
 		}
 	}
@@ -27,27 +27,46 @@ type errProcLoc struct {
 	err error
 }
 
-func (chain *chain) Process(c *ss.Chunk) Res {
-	chunks := []*ss.Chunk{c}
-	for i := range chain.procs {
-		// TODO allocate len(chunks) * <max chunks output by this processor>
-		out := make([]*ss.Chunk, 0, len(chunks))
-		for _, c := range chunks {
-			spawned, err := chain.process(c, i)
-			if err != nil {
-				return Res{Err: err}
-			}
-			out = append(out, spawned...)
-		}
-		chunks = out
-	}
-	for _, ender := range chain.enders {
-		ender.end(c, chunks)
-	}
-	return Res{Chunks: chunks}
+func (chain chain) Process(c *ss.Chunk) Res {
+	chunks, err := chain.process(c)
+	return Res{Chunks: chunks, Err: err}
 }
 
-func (chain *chain) process(c *ss.Chunk, procIdx int) (
+func (chain chain) process(c *ss.Chunk) (chunks []*ss.Chunk, err error) {
+	chunks = []*ss.Chunk{c}
+	for i := range chain.procs {
+		chunks, err = chain.processAt(i, chunks)
+		if err != nil {
+			return
+		}
+	}
+	// TODO parallel
+	for _, ender := range chain.enders {
+		err = ender.ProcessEnd(c, chunks)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (chain chain) processAt(procIdx int, chunks []*ss.Chunk) (
+	[]*ss.Chunk, error,
+) {
+	// TODO allocate len(chunks) * <max chunks output by this processor>
+	out := make([]*ss.Chunk, 0, len(chunks))
+	// TODO parallel
+	for _, c := range chunks {
+		spawned, err := chain.processChunkAt(procIdx, c)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, spawned...)
+	}
+	return out, nil
+}
+
+func (chain chain) processChunkAt(procIdx int, c *ss.Chunk) (
 	spawned []*ss.Chunk, err error,
 ) {
 	proc := chain.procs[procIdx]
@@ -101,7 +120,7 @@ func findErrProc(procs []Proc, i int) int {
 	return -1
 }
 
-func (chain *chain) Finish() (err error) {
+func (chain chain) Finish() (err error) {
 	results := make(chan error)
 	wg := sync.WaitGroup{}
 	for _, proc := range chain.procs {

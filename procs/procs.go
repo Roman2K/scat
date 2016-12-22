@@ -2,6 +2,12 @@ package procs
 
 import ss "secsplit"
 
+var nop Proc
+
+func init() {
+	nop = inplaceProcFunc(func(*ss.Chunk) error { return nil })
+}
+
 type Proc interface {
 	Process(*ss.Chunk) Res
 }
@@ -10,22 +16,12 @@ type ErrProc interface {
 	ProcessErr(*ss.Chunk, error) Res
 }
 
-type ProcFinisher interface {
-	Proc
-	Finisher
-}
-
 type Finisher interface {
 	Finish() error
 }
 
 type AsyncProc interface {
 	Process(*ss.Chunk) <-chan Res
-}
-
-type AsyncProcFinisher interface {
-	AsyncProc
-	Finisher
 }
 
 type Procer interface {
@@ -41,8 +37,8 @@ type ProcUnprocer interface {
 	Unprocer
 }
 
-type ender interface {
-	end(*ss.Chunk, []*ss.Chunk)
+type EndProc interface {
+	ProcessEnd(*ss.Chunk, []*ss.Chunk) error
 }
 
 type Res struct {

@@ -16,7 +16,7 @@ type task struct {
 	ch    chan<- Res
 }
 
-func NewPool(size int, proc Proc) AsyncProcFinisher {
+func NewPool(size int, proc Proc) pool {
 	tasks := make(chan task)
 	wg := &sync.WaitGroup{}
 	wg.Add(size)
