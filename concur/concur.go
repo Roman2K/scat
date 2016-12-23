@@ -2,17 +2,19 @@ package concur
 
 import "sync"
 
-func FirstErr(funcs ...func() error) (err error) {
+type Funcs []func() error
+
+func (fns Funcs) FirstErr() (err error) {
 	errs := make(chan error)
 	wg := sync.WaitGroup{}
-	wg.Add(len(funcs))
+	wg.Add(len(fns))
 	call := func(fn func() error) {
 		go func() {
 			defer wg.Done()
 			errs <- fn()
 		}()
 	}
-	for _, fn := range funcs {
+	for _, fn := range fns {
 		go call(fn)
 	}
 	go func() {

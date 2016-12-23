@@ -3,8 +3,9 @@ package procs
 import ss "secsplit"
 
 type iter struct {
-	ch    chan *ss.Chunk
-	chunk *ss.Chunk
+	ch     chan *ss.Chunk
+	chunk  *ss.Chunk
+	closed bool
 }
 
 func Iter() *iter {
@@ -17,13 +18,16 @@ func (it *iter) Process(c *ss.Chunk) Res {
 	return inplaceProcFunc(it.process).Process(c)
 }
 
-func (it *iter) Finish() error {
-	close(it.ch)
+func (it *iter) process(c *ss.Chunk) error {
+	it.ch <- c
 	return nil
 }
 
-func (it *iter) process(c *ss.Chunk) error {
-	it.ch <- c
+func (it *iter) Finish() error {
+	if !it.closed {
+		close(it.ch)
+		it.closed = true
+	}
 	return nil
 }
 

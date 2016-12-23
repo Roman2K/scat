@@ -51,6 +51,7 @@ func TestIndex(t *testing.T) {
 	end(2, "a", 33, true)
 	assert.Equal(t, 3, nlines())
 
+	// idempotence
 	err = idx.Finish()
 	assert.NoError(t, err)
 	assert.Equal(t, 3, nlines())

@@ -2,7 +2,7 @@ package procs
 
 import (
 	"errors"
-	"sync"
+	"secsplit/concur"
 
 	ss "secsplit"
 )
@@ -120,28 +120,14 @@ func findErrProc(procs []Proc, i int) int {
 	return -1
 }
 
-func (chain chain) Finish() (err error) {
-	results := make(chan error)
-	wg := sync.WaitGroup{}
+func (chain chain) Finish() error {
+	funcs := concur.Funcs{}
 	for _, proc := range chain.procs {
 		f, ok := proc.(Finisher)
 		if !ok {
 			continue
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			results <- f.Finish()
-		}()
+		funcs = append(funcs, f.Finish)
 	}
-	go func() {
-		defer close(results)
-		wg.Wait()
-	}()
-	for e := range results {
-		if e != nil && err == nil {
-			err = e
-		}
-	}
-	return
+	return funcs.FirstErr()
 }

@@ -44,3 +44,15 @@ func contiguousInts(ints []int) bool {
 	}
 	return true
 }
+
+type finishErrProc struct {
+	err error
+}
+
+func (p finishErrProc) Process(*ss.Chunk) (r Res) {
+	return
+}
+
+func (p finishErrProc) Finish() error {
+	return p.err
+}

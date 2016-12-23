@@ -61,39 +61,49 @@ func cmdSplit() (err error) {
 	if err != nil {
 		return
 	}
-	return chain.Finish()
+	return ppool.Finish()
 }
 
 func cmdJoin() (err error) {
-	scan := indexscan.NewScanner(os.Stdin)
-	out := procs.WriteTo(os.Stdout)
+	in, out := os.Stdin, os.Stdout
+
 	parity, err := procs.Parity(ndata, nparity)
 	if err != nil {
 		return
 	}
+
 	outIter := procs.Iter()
-	chain := procs.NewChain([]procs.Proc{
+	ppool := procs.NewPool(4, procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
 		procs.Checksum{}.Unproc(),
 		(&procs.Compress{}).Unproc(),
 		procs.Group(ndata + nparity),
 		parity.Unproc(),
 		outIter,
+	}))
+	outChain := procs.NewChain([]procs.Proc{
+		&procs.Sort{},
+		procs.WriteTo(out),
 	})
-	ppool := procs.NewPool(8, chain)
-	defer ppool.Finish()
-	process := func() error {
-		defer chain.Finish()
-		return procs.ProcessAsync(ppool, scan)
+
+	process := func() (err error) {
+		defer ppool.Finish()
+		scan := indexscan.NewScanner(in)
+		err = procs.ProcessAsync(ppool, scan)
+		if err != nil {
+			return
+		}
+		return ppool.Finish()
 	}
 
-	output := func() error {
-		chain := procs.NewChain([]procs.Proc{
-			&procs.Sort{},
-			out,
-		})
-		return procs.Process(chain, outIter)
+	processOut := func() (err error) {
+		defer outChain.Finish()
+		err = procs.Process(outChain, outIter)
+		if err != nil {
+			return
+		}
+		return outChain.Finish()
 	}
 
-	return concur.FirstErr(output, process)
+	return concur.Funcs{processOut, process}.FirstErr()
 }

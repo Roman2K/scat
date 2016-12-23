@@ -7,8 +7,10 @@ import (
 )
 
 type pool struct {
-	wg    *sync.WaitGroup
-	tasks chan task
+	proc   Proc
+	wg     *sync.WaitGroup
+	tasks  chan task
+	closed bool
 }
 
 type task struct {
@@ -16,7 +18,7 @@ type task struct {
 	ch    chan<- Res
 }
 
-func NewPool(size int, proc Proc) pool {
+func NewPool(size int, proc Proc) *pool {
 	tasks := make(chan task)
 	wg := &sync.WaitGroup{}
 	wg.Add(size)
@@ -28,17 +30,27 @@ func NewPool(size int, proc Proc) pool {
 			}
 		}()
 	}
-	return pool{wg: wg, tasks: tasks}
+	return &pool{
+		proc:  proc,
+		wg:    wg,
+		tasks: tasks,
+	}
 }
 
-func (p pool) Process(c *ss.Chunk) <-chan Res {
+func (p *pool) Process(c *ss.Chunk) <-chan Res {
 	ch := make(chan Res)
 	p.tasks <- task{chunk: c, ch: ch}
 	return ch
 }
 
-func (p pool) Finish() error {
-	close(p.tasks)
-	p.wg.Wait()
+func (p *pool) Finish() error {
+	if !p.closed {
+		close(p.tasks)
+		p.wg.Wait()
+		p.closed = true
+	}
+	if f, ok := p.proc.(Finisher); ok {
+		return f.Finish()
+	}
 	return nil
 }
