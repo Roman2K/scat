@@ -30,7 +30,7 @@ func (s *Sort) Finish() (err error) {
 	len := s.order.Len()
 	s.orderMu.Unlock()
 	if len > 0 {
-		err = ErrMissingFinalChunks
+		err = ErrShort
 	}
 	return
 }

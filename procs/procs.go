@@ -6,7 +6,7 @@ import (
 	ss "secsplit"
 )
 
-var ErrMissingFinalChunks = errors.New("missing final chunks")
+var ErrShort = errors.New("missing final chunks")
 
 var nop Proc
 

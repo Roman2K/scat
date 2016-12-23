@@ -45,7 +45,7 @@ func TestIndex(t *testing.T) {
 	assert.Equal(t, 0, nlines())
 
 	err := idx.Finish()
-	assert.Equal(t, procs.ErrMissingFinalChunks, err)
+	assert.Equal(t, procs.ErrShort, err)
 	assert.Equal(t, 0, nlines())
 
 	end(2, "a", 33, true)

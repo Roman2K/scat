@@ -84,7 +84,7 @@ func contiguous(chunks []*ss.Chunk) bool {
 
 func (g *group) Finish() (err error) {
 	if len(g.growing) > 0 {
-		err = ErrMissingFinalChunks
+		err = ErrShort
 	}
 	return
 }

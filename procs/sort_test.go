@@ -17,11 +17,11 @@ func TestSortFinish(t *testing.T) {
 	res := s.Process(&ss.Chunk{Num: 1})
 	assert.NoError(t, res.Err)
 	err := s.Finish()
-	assert.Equal(t, procs.ErrMissingFinalChunks, err)
+	assert.Equal(t, procs.ErrShort, err)
 
 	// idempotence
 	err = s.Finish()
-	assert.Equal(t, procs.ErrMissingFinalChunks, err)
+	assert.Equal(t, procs.ErrShort, err)
 
 	// 0 ok
 	// 1 ok

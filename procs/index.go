@@ -49,7 +49,7 @@ func (idx *index) Finish() (err error) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
 	if idx.order.Len() > 0 {
-		return ErrMissingFinalChunks
+		return ErrShort
 	}
 	return
 }

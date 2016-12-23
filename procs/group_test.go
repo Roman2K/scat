@@ -61,11 +61,11 @@ func TestGroupFinish(t *testing.T) {
 	res := g.Process(&ss.Chunk{Num: 0})
 	assert.NoError(t, res.Err)
 	err := g.Finish()
-	assert.Equal(t, ErrMissingFinalChunks, err)
+	assert.Equal(t, ErrShort, err)
 
 	// idempotence
 	err = g.Finish()
-	assert.Equal(t, ErrMissingFinalChunks, err)
+	assert.Equal(t, ErrShort, err)
 
 	// 0 ok
 	// 1 ok
