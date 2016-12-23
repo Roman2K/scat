@@ -22,7 +22,7 @@ func TestGroup(t *testing.T) {
 	res = g.Process(&ss.Chunk{Num: 0})
 	assert.NoError(t, res.Err)
 	assert.Equal(t, 1, len(res.Chunks))
-	assert.Equal(t, 1, len(g.(*group).growing))
+	assert.Equal(t, 1, len(g.growing))
 
 	chunk := res.Chunks[0]
 	// assert.Equal(t, 0, chunk.Num)
@@ -34,7 +34,7 @@ func TestGroup(t *testing.T) {
 	res = g.Process(&ss.Chunk{Num: 3})
 	assert.NoError(t, res.Err)
 	assert.Equal(t, 1, len(res.Chunks))
-	assert.Equal(t, 0, len(g.(*group).growing))
+	assert.Equal(t, 0, len(g.growing))
 
 	chunk = res.Chunks[0]
 	// assert.Equal(t, 1, chunk.Num)
@@ -51,4 +51,30 @@ func TestGroupMinSize(t *testing.T) {
 
 func TestGroupChunkNums(t *testing.T) {
 	testChunkNums(t, Group(2), 6)
+}
+
+func TestGroupFinish(t *testing.T) {
+	g := Group(2)
+
+	// 0 ok
+	// 1 missing
+	res := g.Process(&ss.Chunk{Num: 0})
+	assert.NoError(t, res.Err)
+	err := g.Finish()
+	assert.Equal(t, ErrMissingFinalChunks, err)
+
+	// idempotence
+	err = g.Finish()
+	assert.Equal(t, ErrMissingFinalChunks, err)
+
+	// 0 ok
+	// 1 ok
+	res = g.Process(&ss.Chunk{Num: 1})
+	assert.NoError(t, res.Err)
+	err = g.Finish()
+	assert.NoError(t, err)
+
+	// idempotence
+	err = g.Finish()
+	assert.NoError(t, err)
 }

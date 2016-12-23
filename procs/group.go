@@ -15,7 +15,7 @@ type group struct {
 	growingMu sync.Mutex
 }
 
-func Group(size int) Proc {
+func Group(size int) *group {
 	const min = 1
 	if size < min {
 		panic(fmt.Sprintf("size must be >= %d", min))
@@ -80,4 +80,11 @@ func contiguous(chunks []*ss.Chunk) bool {
 		}
 	}
 	return true
+}
+
+func (g *group) Finish() (err error) {
+	if len(g.growing) > 0 {
+		err = ErrMissingFinalChunks
+	}
+	return
 }

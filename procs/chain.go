@@ -55,7 +55,6 @@ func (chain chain) processAt(procIdx int, chunks []*ss.Chunk) (
 ) {
 	// TODO allocate len(chunks) * <max chunks output by this processor>
 	out := make([]*ss.Chunk, 0, len(chunks))
-	// TODO parallel
 	for _, c := range chunks {
 		spawned, err := chain.processChunkAt(procIdx, c)
 		if err != nil {
