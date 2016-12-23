@@ -1,7 +1,6 @@
 package procs
 
 import (
-	"errors"
 	"io"
 	"sync"
 
@@ -10,8 +9,6 @@ import (
 	"secsplit/indexscan"
 	"secsplit/seriessort"
 )
-
-var ErrMissingFinalChunks = errors.New("missing final chunks")
 
 type index struct {
 	w        io.Writer

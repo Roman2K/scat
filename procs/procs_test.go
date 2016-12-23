@@ -2,7 +2,6 @@ package procs
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"testing"
 
@@ -31,7 +30,6 @@ func testChunkNums(t *testing.T, proc Proc, inChunks int) {
 		for _, c := range res.Chunks {
 			nums = append(nums, c.Num)
 		}
-		fmt.Fprintf(os.Stderr, "%d -> %v\n", c.Num, nums)
 	}
 	sort.Ints(nums)
 	assert.True(t, contiguousInts(nums), fmt.Sprintf("not contiguous: %v", nums))

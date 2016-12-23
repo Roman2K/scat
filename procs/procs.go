@@ -1,6 +1,12 @@
 package procs
 
-import ss "secsplit"
+import (
+	"errors"
+
+	ss "secsplit"
+)
+
+var ErrMissingFinalChunks = errors.New("missing final chunks")
 
 var nop Proc
 

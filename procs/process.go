@@ -6,7 +6,17 @@ import (
 	ss "secsplit"
 )
 
-func Process(it ss.ChunkIterator, proc AsyncProc) error {
+func Process(proc Proc, it ss.ChunkIterator) (err error) {
+	for it.Next() {
+		err = proc.Process(it.Chunk()).Err
+		if err != nil {
+			return
+		}
+	}
+	return it.Err()
+}
+
+func ProcessAsync(proc AsyncProc, it ss.ChunkIterator) error {
 	chunks := make(chan *ss.Chunk)
 	results := make(chan error)
 	done := make(chan struct{})

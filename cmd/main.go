@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"secsplit/concur"
 	"secsplit/indexscan"
 	"secsplit/procs"
 	"secsplit/split"
@@ -48,15 +49,15 @@ func cmdSplit() (err error) {
 		procs.Checksum{}.Proc(),
 		procs.Size,
 		index,
-		procs.NewDedup(),
+		// procs.NewDedup(),
 		parity.Proc(),
 		(&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),
 		(&procs.LocalStore{"out"}).Proc(),
 	})
-	ppool := procs.NewPool(8, chain)
+	ppool := procs.NewPool(4, chain)
 	defer ppool.Finish()
-	err = procs.Process(splitter, ppool)
+	err = procs.ProcessAsync(ppool, splitter)
 	if err != nil {
 		return
 	}
@@ -70,20 +71,29 @@ func cmdJoin() (err error) {
 	if err != nil {
 		return
 	}
+	outIter := procs.Iter()
 	chain := procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
 		procs.Checksum{}.Unproc(),
 		(&procs.Compress{}).Unproc(),
 		procs.Group(ndata + nparity),
 		parity.Unproc(),
-		out,
+		outIter,
 	})
-	// TODO proc pool, respect order from index iterator
-	for scan.Next() {
-		res := chain.Process(scan.Chunk())
-		if e := res.Err; e != nil {
-			return e
-		}
+	ppool := procs.NewPool(8, chain)
+	defer ppool.Finish()
+	process := func() error {
+		defer chain.Finish()
+		return procs.ProcessAsync(ppool, scan)
 	}
-	return scan.Err()
+
+	output := func() error {
+		chain := procs.NewChain([]procs.Proc{
+			&procs.Sort{},
+			out,
+		})
+		return procs.Process(chain, outIter)
+	}
+
+	return concur.FirstErr(output, process)
 }
