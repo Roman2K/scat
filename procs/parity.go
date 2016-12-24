@@ -74,7 +74,11 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 	shards := make([][]byte, len(chunks))
 	mustReconstruct := false
 	for i, c := range chunks {
-		if integrityCheckFailed(c) {
+		ok, err := getIntegrityCheck(c)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
 			mustReconstruct = true
 			continue
 		}
@@ -117,7 +121,14 @@ func getGroup(c *ss.Chunk, size int) (chunks []*ss.Chunk, err error) {
 	return
 }
 
-func integrityCheckFailed(c *ss.Chunk) bool {
-	err, ok := c.GetMeta("err").(error)
-	return ok && err == errIntegrityCheckFailed
+func getIntegrityCheck(c *ss.Chunk) (bool, error) {
+	val := c.GetMeta("err")
+	if val == nil {
+		return true, nil
+	}
+	err := val.(error)
+	if err == errIntegrityCheckFailed {
+		return false, nil
+	}
+	return false, err
 }

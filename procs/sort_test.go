@@ -27,7 +27,6 @@ func TestSortFinish(t *testing.T) {
 	// 1 ok
 	res = s.Process(&ss.Chunk{Num: 0})
 	assert.NoError(t, res.Err)
-
 	err = s.Finish()
 	assert.NoError(t, err)
 
