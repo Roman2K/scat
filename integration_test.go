@@ -91,7 +91,6 @@ func doSplit(
 		procs.Checksum{}.Proc(),
 		procs.Size,
 		procs.NewIndex(indexw),
-		procs.NewDedup(),
 		parity.Proc(),
 		(&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),

@@ -49,7 +49,6 @@ func cmdSplit() (err error) {
 		procs.Checksum{}.Proc(),
 		procs.Size,
 		index,
-		// procs.NewDedup(),
 		parity.Proc(),
 		(&procs.Compress{}).Proc(),
 		procs.Checksum{}.Proc(),

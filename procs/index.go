@@ -32,7 +32,14 @@ func NewIndex(w io.Writer) *index {
 }
 
 func (idx *index) Process(c *ss.Chunk) Res {
-	return nop.Process(c)
+	idx.finalsMu.Lock()
+	defer idx.finalsMu.Unlock()
+	chunks := make([]*ss.Chunk, 0, 1)
+	if _, ok := idx.finals[c.Hash]; !ok {
+		idx.finals[c.Hash] = nil
+		chunks = append(chunks, c)
+	}
+	return Res{Chunks: chunks}
 }
 
 func (idx *index) ProcessEnd(c *ss.Chunk, finals []*ss.Chunk) (err error) {
