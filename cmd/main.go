@@ -71,7 +71,7 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	outIter := procs.Iter()
+	outIter := procs.Iter(1)
 	ppool := procs.NewPool(4, procs.NewChain([]procs.Proc{
 		(&procs.LocalStore{"out"}).Unproc(),
 		procs.Checksum{}.Unproc(),
@@ -80,13 +80,15 @@ func cmdJoin() (err error) {
 		parity.Unproc(),
 		outIter,
 	}))
+	defer ppool.Finish()
+
 	outChain := procs.NewChain([]procs.Proc{
 		&procs.Sort{},
 		procs.WriteTo(out),
 	})
+	defer outChain.Finish()
 
 	process := func() (err error) {
-		defer ppool.Finish()
 		scan := indexscan.NewScanner(in)
 		err = procs.ProcessAsync(ppool, scan)
 		if err != nil {
@@ -96,7 +98,6 @@ func cmdJoin() (err error) {
 	}
 
 	processOut := func() (err error) {
-		defer outChain.Finish()
 		err = procs.Process(outChain, outIter)
 		if err != nil {
 			return

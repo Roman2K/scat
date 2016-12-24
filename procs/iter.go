@@ -8,8 +8,8 @@ type iter struct {
 	closed bool
 }
 
-func Iter() *iter {
-	return &iter{ch: make(chan *ss.Chunk)}
+func Iter(bufSize int) *iter {
+	return &iter{ch: make(chan *ss.Chunk, bufSize)}
 }
 
 var _ ss.ChunkIterator = &iter{}
