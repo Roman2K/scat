@@ -26,10 +26,6 @@ type Finisher interface {
 	Finish() error
 }
 
-type AsyncProc interface {
-	Process(*ss.Chunk) <-chan Res
-}
-
 type Procer interface {
 	Proc() Proc
 }

@@ -1,4 +1,4 @@
-package procs
+package aprocs
 
 import (
 	"sync"
@@ -9,7 +9,7 @@ import (
 type pool struct {
 	proc   Proc
 	wg     *sync.WaitGroup
-	tasks  chan task
+	tasks  chan<- task
 	closed bool
 }
 
@@ -18,7 +18,7 @@ type task struct {
 	ch    chan<- Res
 }
 
-func NewPool(size int, proc Proc) *pool {
+func NewPool(size int, proc Proc) Proc {
 	tasks := make(chan task)
 	wg := &sync.WaitGroup{}
 	wg.Add(size)
@@ -26,7 +26,13 @@ func NewPool(size int, proc Proc) *pool {
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				task.ch <- proc.Process(task.chunk)
+				sendProcessed := func() {
+					defer close(task.ch)
+					for res := range proc.Process(task.chunk) {
+						task.ch <- res
+					}
+				}
+				sendProcessed()
 			}
 		}()
 	}
@@ -49,8 +55,5 @@ func (p *pool) Finish() error {
 		p.wg.Wait()
 		p.closed = true
 	}
-	if f, ok := p.proc.(Finisher); ok {
-		return f.Finish()
-	}
-	return nil
+	return p.proc.Finish()
 }

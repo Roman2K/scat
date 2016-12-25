@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"secsplit/concur"
+	"secsplit/aprocs"
 	"secsplit/indexscan"
 	"secsplit/procs"
 	"secsplit/split"
@@ -39,24 +39,26 @@ const (
 )
 
 func cmdSplit() (err error) {
-	splitter := split.NewSplitter(os.Stdin)
-	index := procs.NewIndex(os.Stdout)
-	parity, err := procs.Parity(ndata, nparity)
-	if err != nil {
-		return
-	}
-	chain := procs.NewChain([]procs.Proc{
+	in, out := os.Stdin, os.Stdout
+
+	ppool := aprocs.NewPool(4, procs.A(procs.NewChain([]procs.Proc{
 		procs.Checksum{}.Proc(),
 		procs.Size,
-		index,
-		parity.Proc(),
-		(&procs.Compress{}).Proc(),
-		procs.Checksum{}.Proc(),
+		procs.NewIndex(out),
 		(&procs.LocalStore{"out"}).Proc(),
-	})
-	ppool := procs.NewPool(4, chain)
+	})))
 	defer ppool.Finish()
-	err = procs.ProcessAsync(ppool, splitter)
+
+	// ppool := aprocs.NewPool(8, aprocs.NewChain([]aprocs.Proc{
+	// 	procs.A(procs.Checksum{}.Proc()),
+	// 	procs.A(procs.Size),
+	// 	procs.A(procs.NewIndex(out)),
+	// 	// (&procs.LocalStore{"out"}).Proc(),
+	// }))
+	// defer ppool.Finish()
+
+	splitter := split.NewSplitter(in)
+	err = aprocs.Process(ppool, splitter)
 	if err != nil {
 		return
 	}
@@ -66,44 +68,24 @@ func cmdSplit() (err error) {
 func cmdJoin() (err error) {
 	in, out := os.Stdin, os.Stdout
 
-	parity, err := procs.Parity(ndata, nparity)
+	procChain := aprocs.NewPool(4, procs.A(procs.NewChain([]procs.Proc{
+		(&procs.LocalStore{"out"}).Unproc(),
+		procs.Checksum{}.Unproc(),
+	})))
+	outChain := procs.A(procs.NewChain([]procs.Proc{
+		&procs.Sort{},
+		procs.WriteTo(out),
+	}))
+	chain := aprocs.NewChain([]aprocs.Proc{
+		procChain,
+		aprocs.NewMutex(outChain),
+	})
+	defer chain.Finish()
+
+	scan := indexscan.NewScanner(in)
+	err = aprocs.Process(chain, scan)
 	if err != nil {
 		return
 	}
-
-	outIter := procs.Iter(1)
-	ppool := procs.NewPool(4, procs.NewChain([]procs.Proc{
-		(&procs.LocalStore{"out"}).Unproc(),
-		procs.Checksum{}.Unproc(),
-		(&procs.Compress{}).Unproc(),
-		procs.Group(ndata + nparity),
-		parity.Unproc(),
-		outIter,
-	}))
-	defer ppool.Finish()
-
-	outChain := procs.NewChain([]procs.Proc{
-		&procs.Sort{},
-		procs.WriteTo(out),
-	})
-	defer outChain.Finish()
-
-	process := func() (err error) {
-		scan := indexscan.NewScanner(in)
-		err = procs.ProcessAsync(ppool, scan)
-		if err != nil {
-			return
-		}
-		return ppool.Finish()
-	}
-
-	processOut := func() (err error) {
-		err = procs.Process(outChain, outIter)
-		if err != nil {
-			return
-		}
-		return outChain.Finish()
-	}
-
-	return concur.Funcs{processOut, process}.FirstErr()
+	return chain.Finish()
 }

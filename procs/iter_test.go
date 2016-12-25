@@ -9,7 +9,7 @@ import (
 )
 
 func TestIterFinish(t *testing.T) {
-	iter := procs.Iter()
+	iter := procs.Iter(0)
 	err := iter.Finish()
 	assert.NoError(t, err)
 
