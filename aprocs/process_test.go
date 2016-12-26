@@ -37,12 +37,16 @@ func TestProcessErr(t *testing.T) {
 }
 
 func process(chunks []*ss.Chunk) (processed []int, err error) {
-	proc := aprocs.InplaceProcFunc(func(c *ss.Chunk) error {
-		if val := c.GetMeta("testErr"); val != nil {
-			return val.(error)
-		}
+	proc := aprocs.ProcFunc(func(c *ss.Chunk) <-chan aprocs.Res {
 		processed = append(processed, c.Num)
-		return nil
+		err, _ := c.GetMeta("testErr").(error)
+		ch := make(chan aprocs.Res, 2)
+		ch <- aprocs.Res{Chunk: c}
+		if err != nil {
+			ch <- aprocs.Res{Err: err}
+		}
+		close(ch)
+		return ch
 	})
 	iter := &testhelp.SliceIter{S: chunks}
 	err = aprocs.Process(proc, iter)

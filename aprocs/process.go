@@ -19,8 +19,9 @@ func Process(proc Proc, iter ss.ChunkIterator) (err error) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				res := <-ch
-				errors <- res.Err
+				for res := range ch {
+					errors <- res.Err
+				}
 			}()
 		}
 		wg.Wait()
