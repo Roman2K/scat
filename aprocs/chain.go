@@ -28,18 +28,10 @@ func NewChain(procs []Proc) Proc {
 func (chain chain) Process(c *ss.Chunk) <-chan Res {
 	procs := chain.procs
 	if len(chain.enders) > 0 {
-		endProc := InplaceProcFunc(func(final *ss.Chunk) (err error) {
-			for _, ender := range chain.enders {
-				err = ender.ProcessEnd(c, final)
-				if err != nil {
-					return
-				}
-			}
-			return
-		})
+		ecp := endCallProc{chunk: c, enders: chain.enders}
 		newProcs := make([]Proc, len(procs)+1)
 		copy(newProcs, procs)
-		newProcs[len(newProcs)-1] = endProc
+		newProcs[len(newProcs)-1] = ecp
 		procs = newProcs
 	}
 	ch := make(chan Res)
@@ -75,6 +67,12 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 			out <- res
 		}
 	}
+	if ecp, ok := proc.(endCallProc); ok {
+		err := ecp.processEnd()
+		if err != nil {
+			out <- Res{Err: err}
+		}
+	}
 }
 
 func finishFuncs(procs []Proc) (fns concur.Funcs) {
@@ -83,4 +81,37 @@ func finishFuncs(procs []Proc) (fns concur.Funcs) {
 		fns[i] = p.Finish
 	}
 	return
+}
+
+type endCallProc struct {
+	chunk  *ss.Chunk
+	enders []EndProc
+}
+
+func (ecp endCallProc) Process(c *ss.Chunk) <-chan Res {
+	return InplaceProcFunc(ecp.process).Process(c)
+}
+
+func (ecp endCallProc) process(final *ss.Chunk) (err error) {
+	for _, ender := range ecp.enders {
+		err = ender.ProcessFinal(ecp.chunk, final)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (ecp endCallProc) processEnd() (err error) {
+	for _, ender := range ecp.enders {
+		err = ender.ProcessEnd(ecp.chunk)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (ecp endCallProc) Finish() error {
+	return nil
 }

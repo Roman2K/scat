@@ -3,6 +3,8 @@ package procs
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
 
 	"github.com/klauspost/reedsolomon"
 
@@ -34,6 +36,9 @@ func (p *parity) Unproc() Proc {
 
 func (p *parity) Process(c *ss.Chunk) Res {
 	chunks, err := p.split(c)
+
+	fmt.Fprintf(os.Stderr, "split %d\n", len(chunks))
+
 	return Res{Chunks: chunks, Err: err}
 }
 

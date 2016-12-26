@@ -14,7 +14,8 @@ type Proc interface {
 }
 
 type EndProc interface {
-	ProcessEnd(*ss.Chunk, *ss.Chunk) error
+	ProcessFinal(*ss.Chunk, *ss.Chunk) error
+	ProcessEnd(*ss.Chunk) error
 }
 
 type Res struct {

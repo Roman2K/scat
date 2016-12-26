@@ -2,7 +2,9 @@ package secsplit_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/klauspost/reedsolomon"
@@ -70,6 +72,10 @@ func testParity(t *testing.T, cor corruption) {
 	default:
 		panic("unhandled corruption type")
 	}
+
+	fmt.Fprintf(os.Stderr, "--- index ---\n")
+	fmt.Fprintf(os.Stderr, indexBuf.String())
+	fmt.Fprintf(os.Stderr, "--- index end ---\n")
 
 	err = doJoin(outputBuf, indexBuf, ndata, nparity, store.Unproc())
 	if cor == corruptNonRecoverable {
