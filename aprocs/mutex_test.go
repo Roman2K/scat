@@ -15,8 +15,10 @@ func TestMutex(t *testing.T) {
 	processed := []int{}
 	proc := aprocs.InplaceProcFunc(func(c *ss.Chunk) error {
 		processed = append(processed, c.Num)
+		defer func() {
+			processed = append(processed, c.Num)
+		}()
 		time.Sleep(c.GetMeta("testDelay").(time.Duration))
-		processed = append(processed, c.Num)
 		return nil
 	})
 	mutex := aprocs.NewMutex(proc)
@@ -39,7 +41,7 @@ func TestMutex(t *testing.T) {
 	start := time.Now()
 	wg.Wait()
 	elapsed := time.Now().Sub(start)
-	assert.Equal(t, []int{1, 1, 0, 0}, processed)
 	assert.True(t, elapsed > 20*time.Millisecond)
 	assert.True(t, elapsed < 25*time.Millisecond)
+	assert.Equal(t, []int{1, 1, 0, 0}, processed)
 }
