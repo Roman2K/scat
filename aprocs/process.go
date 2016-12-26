@@ -6,7 +6,7 @@ import (
 	ss "secsplit"
 )
 
-func Process(proc Proc, it ss.ChunkIterator) (err error) {
+func Process(proc Proc, iter ss.ChunkIterator) (err error) {
 	errors := make(chan error)
 	chunks := make(chan *ss.Chunk)
 	done := make(chan struct{})
@@ -28,8 +28,8 @@ func Process(proc Proc, it ss.ChunkIterator) (err error) {
 
 	go func() {
 		defer close(chunks)
-		for it.Next() {
-			c := it.Chunk()
+		for iter.Next() {
+			c := iter.Chunk()
 			select {
 			case chunks <- c:
 			case <-done:
@@ -55,5 +55,5 @@ func Process(proc Proc, it ss.ChunkIterator) (err error) {
 		return
 	}
 
-	return it.Err()
+	return iter.Err()
 }

@@ -4,12 +4,12 @@ import (
 	"errors"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	ss "secsplit"
 	"secsplit/aprocs"
+	"secsplit/testhelp"
 )
 
 func TestProcess(t *testing.T) {
@@ -44,33 +44,7 @@ func process(chunks []*ss.Chunk) (processed []int, err error) {
 		processed = append(processed, c.Num)
 		return nil
 	})
-	iter := &sliceIter{S: chunks}
+	iter := &testhelp.SliceIter{S: chunks}
 	err = aprocs.Process(proc, iter)
 	return
-}
-
-type sliceIter struct {
-	S     []*ss.Chunk
-	Delay time.Duration
-	i     int
-	chunk *ss.Chunk
-}
-
-var _ ss.ChunkIterator = &sliceIter{S: []*ss.Chunk{}}
-
-func (it *sliceIter) Next() bool {
-	if it.i < len(it.S) {
-		it.chunk = it.S[it.i]
-		it.i++
-		return true
-	}
-	return false
-}
-
-func (it *sliceIter) Chunk() *ss.Chunk {
-	return it.chunk
-}
-
-func (it *sliceIter) Err() error {
-	return nil
 }

@@ -9,8 +9,10 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	ss "secsplit"
+	"secsplit/aprocs"
 	"secsplit/indexscan"
 	"secsplit/procs"
+	"secsplit/testhelp"
 )
 
 func TestParityCorruptNone(t *testing.T) {
@@ -43,7 +45,7 @@ func testParity(t *testing.T, cor corruption) {
 	indexBuf := &bytes.Buffer{}
 	outputBuf := &bytes.Buffer{}
 	store := procs.MemStore{}
-	input := [][]byte{[]byte(inputStr)}
+	input := []*ss.Chunk{&ss.Chunk{Num: 0, Data: []byte(inputStr)}}
 
 	err := doSplit(indexBuf, input, ndata, nparity, store.Proc())
 	assert.NoError(t, err)
@@ -79,7 +81,7 @@ func testParity(t *testing.T, cor corruption) {
 }
 
 func doSplit(
-	indexw io.Writer, in [][]byte, ndata, nparity int, store procs.Proc,
+	indexw io.Writer, in []*ss.Chunk, ndata, nparity int, store procs.Proc,
 ) (
 	err error,
 ) {
@@ -87,23 +89,17 @@ func doSplit(
 	if err != nil {
 		return
 	}
-	chain := procs.NewChain([]procs.Proc{
-		procs.Checksum{}.Proc(),
-		procs.Size,
-		procs.NewIndex(indexw),
-		parity.Proc(),
-		(&procs.Compress{}).Proc(),
-		procs.Checksum{}.Proc(),
-		store,
+	chain := aprocs.NewChain([]aprocs.Proc{
+		procs.A(procs.Checksum{}.Proc()),
+		procs.A(procs.Size),
+		aprocs.NewIndex(indexw),
+		procs.A(parity.Proc()),
+		procs.A((&procs.Compress{}).Proc()),
+		procs.A(procs.Checksum{}.Proc()),
+		procs.A(store),
 	})
-	for i, b := range in {
-		chunk := &ss.Chunk{Num: i, Data: b}
-		err = chain.Process(chunk).Err
-		if err != nil {
-			return
-		}
-	}
-	return chain.Finish()
+	defer chain.Finish()
+	return processFinish(chain, &testhelp.SliceIter{S: in})
 }
 
 func doJoin(
@@ -116,19 +112,22 @@ func doJoin(
 	if err != nil {
 		return
 	}
-	chain := procs.NewChain([]procs.Proc{
-		store,
-		procs.Checksum{}.Unproc(),
-		(&procs.Compress{}).Unproc(),
-		procs.Group(ndata + nparity),
-		parity.Unproc(),
-		procs.WriteTo(w),
+	chain := aprocs.NewChain([]aprocs.Proc{
+		procs.A(store),
+		procs.A(procs.Checksum{}.Unproc()),
+		procs.A((&procs.Compress{}).Unproc()),
+		procs.A(procs.Group(ndata + nparity)),
+		procs.A(parity.Unproc()),
+		procs.A(procs.WriteTo(w)),
 	})
-	for scan.Next() {
-		err = chain.Process(scan.Chunk()).Err
-		if err != nil {
-			return
-		}
+	defer chain.Finish()
+	return processFinish(chain, scan)
+}
+
+func processFinish(proc aprocs.Proc, iter ss.ChunkIterator) (err error) {
+	err = aprocs.Process(proc, iter)
+	if err != nil {
+		return
 	}
-	return scan.Err()
+	return proc.Finish()
 }

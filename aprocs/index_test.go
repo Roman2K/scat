@@ -1,4 +1,4 @@
-package procs_test
+package aprocs_test
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	ss "secsplit"
+	"secsplit/aprocs"
 	"secsplit/checksum"
 	"secsplit/procs"
 )
@@ -24,36 +25,44 @@ func TestIndex(t *testing.T) {
 		return fmt.Sprintf("%x", h)
 	}
 
-	idx := procs.NewIndex(buf)
-	end := func(num int, contents string, size int, setFinals bool) {
+	idx := aprocs.NewIndex(buf)
+	end := func(num int, contents string, size int, chCount int, setFinal bool) {
 		c := &ss.Chunk{
 			Num:  num,
 			Size: size,
 			Hash: checksum.Sum([]byte(contents)),
 		}
-		finals := []*ss.Chunk{}
-		if setFinals {
-			finals = append(finals, c)
+		ch := idx.Process(c)
+		count := 0
+		for range ch {
+			count++
 		}
-		err := idx.ProcessEnd(c, finals)
-		assert.NoError(t, err)
+		assert.Equal(t, chCount, count)
+		if setFinal {
+			err := idx.ProcessEnd(c, c)
+			assert.NoError(t, err)
+		}
 	}
 
-	end(1, "b", 22, true)
+	end(1, "b", 22, 1, true)
 	assert.Equal(t, 0, nlines())
-	end(0, "a", 11, false)
+	end(0, "a", 11, 1, false)
 	assert.Equal(t, 0, nlines())
 
 	err := idx.Finish()
 	assert.Equal(t, procs.ErrShort, err)
 	assert.Equal(t, 0, nlines())
 
-	end(2, "a", 33, true)
+	end(2, "a", 33, 0, true)
 	assert.Equal(t, 3, nlines())
+
+	err = idx.Finish()
+	assert.NoError(t, err)
 
 	// idempotence
 	err = idx.Finish()
 	assert.NoError(t, err)
+
 	assert.Equal(t, 3, nlines())
 
 	expectedIndex := sumStr("a") + " 33\n" +

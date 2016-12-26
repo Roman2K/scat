@@ -1,4 +1,4 @@
-package procs
+package aprocs
 
 import (
 	"io"
@@ -9,6 +9,11 @@ import (
 	"secsplit/indexscan"
 	"secsplit/seriessort"
 )
+
+type Index interface {
+	Proc
+	EndProc
+}
 
 type index struct {
 	w        io.Writer
@@ -23,7 +28,7 @@ type indexEntry struct {
 	size int
 }
 
-func NewIndex(w io.Writer) *index {
+func NewIndex(w io.Writer) Index {
 	return &index{
 		w:      w,
 		order:  seriessort.Series{},
@@ -31,20 +36,21 @@ func NewIndex(w io.Writer) *index {
 	}
 }
 
-func (idx *index) Process(c *ss.Chunk) Res {
+func (idx *index) Process(c *ss.Chunk) <-chan Res {
+	idx.setOrder(c)
+	ch := make(chan Res, 1)
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	chunks := make([]*ss.Chunk, 0, 1)
 	if _, ok := idx.finals[c.Hash]; !ok {
 		idx.finals[c.Hash] = nil
-		chunks = append(chunks, c)
+		ch <- Res{Chunk: c}
 	}
-	return Res{Chunks: chunks}
+	close(ch)
+	return ch
 }
 
-func (idx *index) ProcessEnd(c *ss.Chunk, finals []*ss.Chunk) (err error) {
-	idx.setOrder(c)
-	idx.setFinals(c, finals)
+func (idx *index) ProcessEnd(c, final *ss.Chunk) error {
+	idx.addFinal(c, final)
 	return idx.flush()
 }
 
@@ -89,17 +95,11 @@ func (idx *index) setOrder(c *ss.Chunk) {
 	idx.order.Add(c.Num, &c.Hash)
 }
 
-func (idx *index) setFinals(c *ss.Chunk, finals []*ss.Chunk) {
+func (idx *index) addFinal(c *ss.Chunk, final *ss.Chunk) {
+	entry := indexEntry{hash: &final.Hash, size: c.Size}
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	if len(finals) == 0 {
-		return
-	}
-	entries := make([]indexEntry, len(finals))
-	for i, fc := range finals {
-		entries[i] = indexEntry{hash: &fc.Hash, size: c.Size}
-	}
-	idx.finals[c.Hash] = entries
+	idx.finals[c.Hash] = append(idx.finals[c.Hash], entry)
 }
 
 func (idx *index) getFinals(hash checksum.Hash) []indexEntry {
