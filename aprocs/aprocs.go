@@ -32,3 +32,16 @@ type Res struct {
 	Chunk *ss.Chunk
 	Err   error
 }
+
+type Procer interface {
+	Proc() Proc
+}
+
+type Unprocer interface {
+	Unproc() Proc
+}
+
+type ProcUnprocer interface {
+	Procer
+	Unprocer
+}

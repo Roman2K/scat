@@ -1,4 +1,4 @@
-package procs
+package aprocs
 
 import (
 	"errors"
@@ -15,7 +15,12 @@ type group struct {
 	growingMu sync.Mutex
 }
 
-func Group(size int) *group {
+type Group interface {
+	Proc
+	ErrProc
+}
+
+func NewGroup(size int) Group {
 	const min = 1
 	if size < min {
 		panic(fmt.Sprintf("size must be >= %d", min))
@@ -26,21 +31,24 @@ func Group(size int) *group {
 	}
 }
 
-func (g *group) ProcessErr(c *ss.Chunk, err error) Res {
+func (g *group) ProcessErr(c *ss.Chunk, err error) <-chan Res {
 	c.SetMeta("err", err)
 	return g.Process(c)
 }
 
-func (g *group) Process(c *ss.Chunk) Res {
+func (g *group) Process(c *ss.Chunk) <-chan Res {
 	head, grouped, ok, err := g.build(c)
-	chunks := make([]*ss.Chunk, 0, 1)
-	if ok {
+	ch := make(chan Res, 1)
+	if err != nil {
+		ch <- Res{Err: err}
+	} else if ok {
 		agg := *grouped[0]
 		agg.Num = head
 		agg.SetMeta("group", grouped)
-		chunks = append(chunks, &agg)
+		ch <- Res{Chunk: &agg}
 	}
-	return Res{Chunks: chunks, Err: err}
+	close(ch)
+	return ch
 }
 
 func (g *group) build(c *ss.Chunk) (

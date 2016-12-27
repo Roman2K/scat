@@ -1,10 +1,8 @@
-package procs
+package aprocs
 
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/klauspost/reedsolomon"
 
@@ -16,7 +14,7 @@ type parity struct {
 	ndata, nshards int
 }
 
-func Parity(ndata, nparity int) (p *parity, err error) {
+func NewParity(ndata, nparity int) (p ProcUnprocer, err error) {
 	enc, err := reedsolomon.New(ndata, nparity)
 	p = &parity{
 		enc:     enc,
@@ -27,43 +25,45 @@ func Parity(ndata, nparity int) (p *parity, err error) {
 }
 
 func (p *parity) Proc() Proc {
-	return p
+	return ProcFunc(p.process)
 }
 
 func (p *parity) Unproc() Proc {
-	return inplaceProcFunc(p.unprocess)
+	return InplaceProcFunc(p.unprocess)
 }
 
-func (p *parity) Process(c *ss.Chunk) Res {
-	chunks, err := p.split(c)
+func (p *parity) process(c *ss.Chunk) <-chan Res {
+	ch := make(chan Res)
+	shards, err := p.split(c)
+	go func() {
+		defer close(ch)
+		if err != nil {
+			ch <- Res{Err: err}
+			return
+		}
+		for i, shard := range shards {
+			chunk := &ss.Chunk{
+				Num:  c.Num*p.nshards + i,
+				Data: shard,
+			}
+			ch <- Res{Chunk: chunk}
+		}
+	}()
+	return ch
+}
 
-	fmt.Fprintf(os.Stderr, "split %d\n", len(chunks))
-
-	return Res{Chunks: chunks, Err: err}
+func (p *parity) split(c *ss.Chunk) (shards [][]byte, err error) {
+	shards, err = p.enc.Split(c.Data)
+	if err != nil {
+		return
+	}
+	err = p.enc.Encode(shards)
+	return
 }
 
 func (p *parity) unprocess(c *ss.Chunk) (err error) {
 	data, err := p.join(c)
 	c.Data = data
-	return
-}
-
-func (p *parity) split(c *ss.Chunk) (chunks []*ss.Chunk, err error) {
-	shards, err := p.enc.Split(c.Data)
-	if err != nil {
-		return
-	}
-	err = p.enc.Encode(shards)
-	if err != nil {
-		return
-	}
-	chunks = make([]*ss.Chunk, len(shards))
-	for i, shard := range shards {
-		chunks[i] = &ss.Chunk{
-			Num:  c.Num*p.nshards + i,
-			Data: shard,
-		}
-	}
 	return
 }
 
@@ -127,12 +127,11 @@ func getGroup(c *ss.Chunk, size int) (chunks []*ss.Chunk, err error) {
 }
 
 func getIntegrityCheck(c *ss.Chunk) (bool, error) {
-	val := c.GetMeta("err")
-	if val == nil {
+	err, ok := c.GetMeta("err").(error)
+	if !ok {
 		return true, nil
 	}
-	err := val.(error)
-	if err == errIntegrityCheckFailed {
+	if err == ErrIntegrityCheckFailed {
 		return false, nil
 	}
 	return false, err

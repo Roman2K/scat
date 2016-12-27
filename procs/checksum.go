@@ -1,12 +1,10 @@
 package procs
 
 import (
-	"errors"
 	ss "secsplit"
+	"secsplit/aprocs"
 	"secsplit/checksum"
 )
-
-var errIntegrityCheckFailed = errors.New("checksum verification failed")
 
 type Checksum struct{}
 
@@ -25,7 +23,7 @@ func (cks Checksum) process(c *ss.Chunk) error {
 
 func (cks Checksum) unprocess(c *ss.Chunk) error {
 	if checksum.Sum(c.Data) != c.Hash {
-		return errIntegrityCheckFailed
+		return aprocs.ErrIntegrityCheckFailed
 	}
 	return nil
 }

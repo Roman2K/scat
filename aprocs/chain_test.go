@@ -101,17 +101,10 @@ func TestChainErrRecovery(t *testing.T) {
 		},
 	)
 
-	getErr := func(ch <-chan aprocs.Res) error {
-		res := <-ch
-		_, ok := <-ch
-		assert.False(t, ok)
-		return res.Err
-	}
-
 	// no recovery
 	reset()
 	chain := aprocs.NewChain([]aprocs.Proc{errp, okp})
-	err := getErr(chain.Process(&ss.Chunk{}))
+	err := getErr(t, chain.Process(&ss.Chunk{}))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
 	assert.Equal(t, []error{}, recovered)
@@ -119,7 +112,7 @@ func TestChainErrRecovery(t *testing.T) {
 	// recovery
 	reset()
 	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recover, okp})
-	err = getErr(chain.Process(&ss.Chunk{}))
+	err = getErr(t, chain.Process(&ss.Chunk{}))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, okCount)
 	assert.Equal(t, []error{someErr}, recovered)
@@ -127,7 +120,7 @@ func TestChainErrRecovery(t *testing.T) {
 	// failed recovery
 	reset()
 	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recoverFail, okp})
-	err = getErr(chain.Process(&ss.Chunk{}))
+	err = getErr(t, chain.Process(&ss.Chunk{}))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
 	assert.Equal(t, []error{}, recovered)

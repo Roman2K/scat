@@ -85,7 +85,7 @@ func doSplit(
 ) (
 	err error,
 ) {
-	parity, err := procs.Parity(ndata, nparity)
+	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
@@ -93,7 +93,7 @@ func doSplit(
 		procs.A(procs.Checksum{}.Proc()),
 		procs.A(procs.Size),
 		aprocs.NewIndex(indexw),
-		procs.A(parity.Proc()),
+		parity.Proc(),
 		procs.A((&procs.Compress{}).Proc()),
 		procs.A(procs.Checksum{}.Proc()),
 		procs.A(store),
@@ -108,7 +108,7 @@ func doJoin(
 	err error,
 ) {
 	scan := indexscan.NewScanner(indexr)
-	parity, err := procs.Parity(ndata, nparity)
+	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
@@ -116,8 +116,8 @@ func doJoin(
 		procs.A(store),
 		procs.A(procs.Checksum{}.Unproc()),
 		procs.A((&procs.Compress{}).Unproc()),
-		procs.A(procs.Group(ndata + nparity)),
-		procs.A(parity.Unproc()),
+		procs.NewGroup(ndata + nparity),
+		parity.Unproc(),
 		procs.A(procs.WriteTo(w)),
 	})
 	defer chain.Finish()
