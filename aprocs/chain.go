@@ -60,9 +60,9 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 	defer close(out)
 	for res := range in {
 		var ch <-chan Res
-		if err := res.Err; err != nil {
-			if errp, ok := proc.(ErrProc); ok {
-				ch = errp.ProcessErr(res.Chunk, err)
+		if res.Err != nil {
+			if errp, ok := proc.(ErrProc); ok && res.Chunk != nil {
+				ch = errp.ProcessErr(res.Chunk, res.Err)
 			} else {
 				out <- res
 				continue

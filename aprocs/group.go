@@ -40,7 +40,7 @@ func (g *group) Process(c *ss.Chunk) <-chan Res {
 	head, grouped, ok, err := g.build(c)
 	ch := make(chan Res, 1)
 	if err != nil {
-		ch <- Res{Err: err}
+		ch <- Res{Chunk: c, Err: err}
 	} else if ok {
 		agg := *grouped[0]
 		agg.Num = head

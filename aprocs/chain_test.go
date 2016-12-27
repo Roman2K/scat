@@ -85,14 +85,20 @@ func TestChainErrRecovery(t *testing.T) {
 	errp := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
 		return someErr
 	})
-	recover := recoverProcFunc(func(c *ss.Chunk, err error) <-chan aprocs.Res {
+	errpNoChunk := aprocs.ProcFunc(func(*ss.Chunk) <-chan aprocs.Res {
+		ch := make(chan aprocs.Res, 1)
+		ch <- aprocs.Res{Err: someErr}
+		close(ch)
+		return ch
+	})
+	recover := errProcFunc(func(c *ss.Chunk, err error) <-chan aprocs.Res {
 		ch := make(chan aprocs.Res, 1)
 		ch <- aprocs.Res{Chunk: c}
 		close(ch)
 		recovered = append(recovered, err)
 		return ch
 	})
-	recoverFail := recoverProcFunc(
+	recoverFail := errProcFunc(
 		func(c *ss.Chunk, err error) <-chan aprocs.Res {
 			ch := make(chan aprocs.Res, 1)
 			ch <- aprocs.Res{Chunk: c, Err: err}
@@ -120,6 +126,14 @@ func TestChainErrRecovery(t *testing.T) {
 	// failed recovery
 	reset()
 	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recoverFail, okp})
+	err = getErr(t, chain.Process(&ss.Chunk{}))
+	assert.Equal(t, someErr, err)
+	assert.Equal(t, 0, okCount)
+	assert.Equal(t, []error{}, recovered)
+
+	// impossible recovery: err without chunk
+	reset()
+	chain = aprocs.NewChain([]aprocs.Proc{errpNoChunk, okp, recover, okp})
 	err = getErr(t, chain.Process(&ss.Chunk{}))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
@@ -160,20 +174,20 @@ type recoverProc interface {
 	aprocs.ErrProc
 }
 
-type recoverProcFunc func(*ss.Chunk, error) <-chan aprocs.Res
+type errProcFunc func(*ss.Chunk, error) <-chan aprocs.Res
 
-var _ recoverProc = recoverProcFunc(func(*ss.Chunk, error) <-chan aprocs.Res {
+var _ recoverProc = errProcFunc(func(*ss.Chunk, error) <-chan aprocs.Res {
 	return nil
 })
 
-func (fn recoverProcFunc) Process(c *ss.Chunk) <-chan aprocs.Res {
+func (fn errProcFunc) Process(c *ss.Chunk) <-chan aprocs.Res {
 	return aprocs.Nop.Process(c)
 }
 
-func (fn recoverProcFunc) ProcessErr(c *ss.Chunk, err error) <-chan aprocs.Res {
+func (fn errProcFunc) ProcessErr(c *ss.Chunk, err error) <-chan aprocs.Res {
 	return fn(c, err)
 }
 
-func (fn recoverProcFunc) Finish() error {
+func (fn errProcFunc) Finish() error {
 	return nil
 }

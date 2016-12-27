@@ -16,14 +16,12 @@ func A(proc Proc) aprocs.Proc {
 func (ap async) Process(c *ss.Chunk) <-chan aprocs.Res {
 	var ch chan aprocs.Res
 	res := ap.proc.Process(c)
-	if res.Err != nil {
-		ch = make(chan aprocs.Res, 1)
-		ch <- aprocs.Res{Err: res.Err}
-	} else {
-		ch = make(chan aprocs.Res, len(res.Chunks))
-		for _, c := range res.Chunks {
-			ch <- aprocs.Res{Chunk: c}
-		}
+	if res.Err != nil && len(res.Chunks) == 0 {
+		panic("procs.A: won't send err associated with no chunk")
+	}
+	ch = make(chan aprocs.Res, len(res.Chunks))
+	for _, c := range res.Chunks {
+		ch <- aprocs.Res{Chunk: c, Err: res.Err}
 	}
 	close(ch)
 	return ch

@@ -40,11 +40,8 @@ func process(chunks []*ss.Chunk) (processed []int, err error) {
 	proc := aprocs.ProcFunc(func(c *ss.Chunk) <-chan aprocs.Res {
 		processed = append(processed, c.Num)
 		err, _ := c.GetMeta("testErr").(error)
-		ch := make(chan aprocs.Res, 2)
-		ch <- aprocs.Res{Chunk: c}
-		if err != nil {
-			ch <- aprocs.Res{Err: err}
-		}
+		ch := make(chan aprocs.Res, 1)
+		ch <- aprocs.Res{Chunk: c, Err: err}
 		close(ch)
 		return ch
 	})

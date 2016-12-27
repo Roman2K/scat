@@ -116,7 +116,7 @@ func doJoin(
 		procs.A(store),
 		procs.A(procs.Checksum{}.Unproc()),
 		procs.A((&procs.Compress{}).Unproc()),
-		procs.NewGroup(ndata + nparity),
+		aprocs.NewGroup(ndata + nparity),
 		parity.Unproc(),
 		procs.A(procs.WriteTo(w)),
 	})

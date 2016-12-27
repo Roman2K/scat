@@ -38,7 +38,7 @@ func (p *parity) process(c *ss.Chunk) <-chan Res {
 	go func() {
 		defer close(ch)
 		if err != nil {
-			ch <- Res{Err: err}
+			ch <- Res{Chunk: c, Err: err}
 			return
 		}
 		for i, shard := range shards {
