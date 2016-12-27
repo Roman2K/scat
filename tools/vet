@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e
+
+go list ./... | grep -v /vendor/ | exec xargs go vet

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
+exec ag -s 'Fprintf.*os.Stderr' \
+  --ignore-dir vendor \
+  --ignore-dir tools

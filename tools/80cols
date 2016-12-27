@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+find . -name '*.go' -not -path './vendor/*' \
+  | exec xargs ag '.{81,}'
