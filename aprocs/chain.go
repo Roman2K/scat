@@ -59,11 +59,18 @@ func (chain chain) Finish() error {
 func process(out chan<- Res, in <-chan Res, proc Proc) {
 	defer close(out)
 	for res := range in {
-		if res.Err != nil {
-			out <- res
-			continue
+		var ch <-chan Res
+		if err := res.Err; err != nil {
+			if errp, ok := proc.(ErrProc); ok {
+				ch = errp.ProcessErr(res.Chunk, err)
+			} else {
+				out <- res
+				continue
+			}
+		} else {
+			ch = proc.Process(res.Chunk)
 		}
-		for res := range proc.Process(res.Chunk) {
+		for res := range ch {
 			out <- res
 		}
 	}

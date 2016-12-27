@@ -1,6 +1,7 @@
 package aprocs_test
 
 import (
+	"errors"
 	"sync"
 	"testing"
 
@@ -69,6 +70,69 @@ func TestChainEndProc(t *testing.T) {
 	assert.Equal(t, []int{22, 33}, ends[chunk])
 }
 
+func TestChainErrRecovery(t *testing.T) {
+	someErr := errors.New("some err")
+	okCount := 0
+	recovered := []error{}
+	reset := func() {
+		okCount = 0
+		recovered = recovered[:0]
+	}
+	okp := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+		okCount++
+		return nil
+	})
+	errp := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+		return someErr
+	})
+	recover := recoverProcFunc(func(c *ss.Chunk, err error) <-chan aprocs.Res {
+		ch := make(chan aprocs.Res, 1)
+		ch <- aprocs.Res{Chunk: c}
+		close(ch)
+		recovered = append(recovered, err)
+		return ch
+	})
+	recoverFail := recoverProcFunc(
+		func(c *ss.Chunk, err error) <-chan aprocs.Res {
+			ch := make(chan aprocs.Res, 1)
+			ch <- aprocs.Res{Chunk: c, Err: err}
+			close(ch)
+			return ch
+		},
+	)
+
+	getErr := func(ch <-chan aprocs.Res) error {
+		res := <-ch
+		_, ok := <-ch
+		assert.False(t, ok)
+		return res.Err
+	}
+
+	// no recovery
+	reset()
+	chain := aprocs.NewChain([]aprocs.Proc{errp, okp})
+	err := getErr(chain.Process(&ss.Chunk{}))
+	assert.Equal(t, someErr, err)
+	assert.Equal(t, 0, okCount)
+	assert.Equal(t, []error{}, recovered)
+
+	// recovery
+	reset()
+	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recover, okp})
+	err = getErr(chain.Process(&ss.Chunk{}))
+	assert.NoError(t, err)
+	assert.Equal(t, 1, okCount)
+	assert.Equal(t, []error{someErr}, recovered)
+
+	// failed recovery
+	reset()
+	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recoverFail, okp})
+	err = getErr(chain.Process(&ss.Chunk{}))
+	assert.Equal(t, someErr, err)
+	assert.Equal(t, 0, okCount)
+	assert.Equal(t, []error{}, recovered)
+}
+
 type enderProc struct {
 	proc    aprocs.Proc
 	onFinal func(*ss.Chunk, *ss.Chunk) error
@@ -96,4 +160,27 @@ func (e enderProc) ProcessFinal(c, final *ss.Chunk) error {
 
 func (e enderProc) ProcessEnd(c *ss.Chunk) error {
 	return e.onEnd(c)
+}
+
+type recoverProc interface {
+	aprocs.Proc
+	aprocs.ErrProc
+}
+
+type recoverProcFunc func(*ss.Chunk, error) <-chan aprocs.Res
+
+var _ recoverProc = recoverProcFunc(func(*ss.Chunk, error) <-chan aprocs.Res {
+	return nil
+})
+
+func (fn recoverProcFunc) Process(c *ss.Chunk) <-chan aprocs.Res {
+	return aprocs.Nop.Process(c)
+}
+
+func (fn recoverProcFunc) ProcessErr(c *ss.Chunk, err error) <-chan aprocs.Res {
+	return fn(c, err)
+}
+
+func (fn recoverProcFunc) Finish() error {
+	return nil
 }

@@ -8,6 +8,12 @@ import (
 
 var ErrShort = errors.New("missing final chunks")
 
+var Nop Proc
+
+func init() {
+	Nop = InplaceProcFunc(func(*ss.Chunk) error { return nil })
+}
+
 type Proc interface {
 	Process(*ss.Chunk) <-chan Res
 	Finish() error
@@ -16,6 +22,10 @@ type Proc interface {
 type EndProc interface {
 	ProcessFinal(*ss.Chunk, *ss.Chunk) error
 	ProcessEnd(*ss.Chunk) error
+}
+
+type ErrProc interface {
+	ProcessErr(*ss.Chunk, error) <-chan Res
 }
 
 type Res struct {
