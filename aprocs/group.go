@@ -90,9 +90,9 @@ func contiguous(chunks []*ss.Chunk) bool {
 	return true
 }
 
-func (g *group) Finish() (err error) {
+func (g *group) Finish() error {
 	if len(g.growing) > 0 {
-		err = ErrShort
+		return ErrShort
 	}
-	return
+	return nil
 }

@@ -73,14 +73,14 @@ func (idx *index) ProcessEnd(c *ss.Chunk) error {
 	return idx.flush()
 }
 
-func (idx *index) Finish() (err error) {
+func (idx *index) Finish() error {
 	idx.orderMu.Lock()
 	len := idx.order.Len()
 	idx.orderMu.Unlock()
 	if len > 0 {
-		err = ErrShort
+		return ErrShort
 	}
-	return
+	return nil
 }
 
 func (idx *index) flush() (err error) {

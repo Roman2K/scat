@@ -93,9 +93,15 @@ func cmdJoin() (err error) {
 	chain := aprocs.NewChain([]aprocs.Proc{
 		procs.A((&procs.LocalStore{"out"}).Unproc()),
 		procs.A(procs.Checksum{}.Unproc()),
-		procs.A(&procs.Sort{}),
-		procs.A(procs.WriteTo(out)),
+		aprocs.NewWriterTo(out),
 	})
+
+	// chain := procs.A(procs.NewChain([]procs.Proc{
+	// 	(&procs.LocalStore{"out"}).Unproc(),
+	// 	procs.Checksum{}.Unproc(),
+	// 	&procs.Sort{},
+	// 	procs.WriteTo(out),
+	// }))
 
 	scan := indexscan.NewScanner(in)
 	err = aprocs.Process(chain, scan)

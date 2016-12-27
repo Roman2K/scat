@@ -51,3 +51,14 @@ func getErr(t *testing.T, ch <-chan aprocs.Res) error {
 	assert.False(t, ok)
 	return res.Err
 }
+
+func readChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
+	for res := range ch {
+		err = res.Err
+		if err != nil {
+			return
+		}
+		chunks = append(chunks, res.Chunk)
+	}
+	return
+}

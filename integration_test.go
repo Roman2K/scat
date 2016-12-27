@@ -118,7 +118,7 @@ func doJoin(
 		procs.A((&procs.Compress{}).Unproc()),
 		aprocs.NewGroup(ndata + nparity),
 		parity.Unproc(),
-		procs.A(procs.WriteTo(w)),
+		aprocs.NewWriterTo(w),
 	})
 	defer chain.Finish()
 	return processFinish(chain, scan)

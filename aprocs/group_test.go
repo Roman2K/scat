@@ -9,17 +9,6 @@ import (
 	"secsplit/aprocs"
 )
 
-func readChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
-	for res := range ch {
-		err = res.Err
-		if err != nil {
-			return
-		}
-		chunks = append(chunks, res.Chunk)
-	}
-	return
-}
-
 func TestGroup(t *testing.T) {
 	g := aprocs.NewGroup(2)
 
