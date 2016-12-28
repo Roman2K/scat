@@ -34,22 +34,17 @@ func (chain chain) Process(c *ss.Chunk) <-chan Res {
 		newProcs[len(newProcs)-1] = ecp
 		procs = newProcs
 	}
-	ch := make(chan Res)
 	in := make(chan Res, 1)
 	in <- Res{Chunk: c}
 	close(in)
 	var out chan Res
 	for i, n := 0, len(procs); i < n; i++ {
 		proc := procs[i]
-		if i < n-1 {
-			out = make(chan Res)
-		} else {
-			out = ch
-		}
+		out = make(chan Res)
 		go process(out, in, proc)
 		in = out
 	}
-	return ch
+	return out
 }
 
 func (chain chain) Finish() error {
