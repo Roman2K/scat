@@ -62,15 +62,23 @@ func (idx *index) ProcessFinal(c, final *ss.Chunk) error {
 	return nil
 }
 
-func (idx *index) ProcessEnd(c *ss.Chunk) error {
+func (idx *index) ProcessEnd(c *ss.Chunk) (err error) {
+	err = idx.setFinalsComplete(c)
+	if err != nil {
+		return
+	}
+	return idx.flush()
+}
+
+func (idx *index) setFinalsComplete(c *ss.Chunk) error {
 	idx.finalsMu.Lock()
+	defer idx.finalsMu.Unlock()
 	finals, ok := idx.finals[c.Hash]
 	if !ok {
 		return errors.New("attempted to process end of unprocessed chunk")
 	}
 	finals.complete = true
-	idx.finalsMu.Unlock()
-	return idx.flush()
+	return nil
 }
 
 func (idx *index) Finish() error {
@@ -93,22 +101,33 @@ func (idx *index) flush() (err error) {
 	}()
 	for n := len(sorted); i < n; i++ {
 		hash := sorted[i].(*checksum.Hash)
-		idx.finalsMu.Lock()
-		finals, ok := idx.finals[*hash]
+		entries, ok := idx.completeFinals(*hash)
 		if !ok {
 			return
 		}
-		if !finals.complete {
-			return
-		}
-		entries := make([]indexEntry, len(finals.entries))
-		copy(entries, finals.entries)
-		idx.finalsMu.Unlock()
 		err = writeEntries(idx.w, entries)
 		if err != nil {
 			return
 		}
 	}
+	return
+}
+
+func (idx *index) completeFinals(hash checksum.Hash) (
+	entries []indexEntry, ok bool,
+) {
+	idx.finalsMu.Lock()
+	defer idx.finalsMu.Unlock()
+	finals, ok := idx.finals[hash]
+	if !ok {
+		return
+	}
+	if !finals.complete {
+		ok = false
+		return
+	}
+	entries = make([]indexEntry, len(finals.entries))
+	copy(entries, finals.entries)
 	return
 }
 

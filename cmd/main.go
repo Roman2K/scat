@@ -46,24 +46,23 @@ func cmdSplit() (err error) {
 	// 	return
 	// }
 
-	chain := aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(1, aprocs.NewChain([]aprocs.Proc{
 		procs.A(procs.Checksum{}.Proc()),
 		procs.A(procs.Size),
 		aprocs.NewIndex(out),
 		// parity.Proc(),
 		// procs.A((&procs.Compress{}).Proc()),
 		// procs.A(procs.Checksum{}.Proc()),
-		procs.A((&procs.LocalStore{"out"}).Proc()),
-	})
-	ppool := aprocs.NewPool(1, chain)
-	defer ppool.Finish()
+		// procs.A((&procs.LocalStore{"out"}).Proc()),
+	}))
+	defer chain.Finish()
 
 	splitter := split.NewSplitter(in)
-	err = aprocs.Process(ppool, splitter)
+	err = aprocs.Process(chain, splitter)
 	if err != nil {
 		return
 	}
-	return ppool.Finish()
+	return chain.Finish()
 }
 
 func cmdJoin() (err error) {
@@ -91,9 +90,9 @@ func cmdJoin() (err error) {
 	// })
 	// defer chain.Finish()
 
-	chain := aprocs.NewBacklog(8, aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
 		procs.A((&procs.LocalStore{"out"}).Unproc()),
-		aprocs.NewPool(4, procs.A(procs.Checksum{}.Unproc())),
+		procs.A(procs.Checksum{}.Unproc()),
 		aprocs.NewBacklog(1, aprocs.NewWriterTo(out)),
 	}))
 
