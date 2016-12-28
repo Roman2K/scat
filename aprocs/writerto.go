@@ -9,9 +9,9 @@ import (
 )
 
 type writeTo struct {
-	w     io.Writer
-	order seriessort.Series
-	mu    sync.Mutex
+	w       io.Writer
+	order   seriessort.Series
+	orderMu sync.Mutex
 }
 
 func NewWriterTo(w io.Writer) Proc {
@@ -23,11 +23,11 @@ func (wt *writeTo) Process(c *ss.Chunk) <-chan Res {
 }
 
 func (wt *writeTo) process(c *ss.Chunk) (err error) {
-	wt.mu.Lock()
-	defer wt.mu.Unlock()
+	wt.orderMu.Lock()
 	wt.order.Add(c.Num, c)
 	sorted := wt.order.Sorted()
 	wt.order.Drop(len(sorted))
+	wt.orderMu.Unlock()
 	for _, val := range sorted {
 		data := val.(*ss.Chunk).Data
 		_, err = wt.w.Write(data)
@@ -39,9 +39,10 @@ func (wt *writeTo) process(c *ss.Chunk) (err error) {
 }
 
 func (wt *writeTo) Finish() error {
-	wt.mu.Lock()
-	defer wt.mu.Unlock()
-	if wt.order.Len() > 0 {
+	wt.orderMu.Lock()
+	len := wt.order.Len()
+	wt.orderMu.Unlock()
+	if len > 0 {
 		return ErrShort
 	}
 	return nil

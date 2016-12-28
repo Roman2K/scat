@@ -46,7 +46,7 @@ func cmdSplit() (err error) {
 	// 	return
 	// }
 
-	ppool := aprocs.NewPool(1, aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewChain([]aprocs.Proc{
 		procs.A(procs.Checksum{}.Proc()),
 		procs.A(procs.Size),
 		aprocs.NewIndex(out),
@@ -54,7 +54,8 @@ func cmdSplit() (err error) {
 		// procs.A((&procs.Compress{}).Proc()),
 		// procs.A(procs.Checksum{}.Proc()),
 		procs.A((&procs.LocalStore{"out"}).Proc()),
-	}))
+	})
+	ppool := aprocs.NewPool(1, chain)
 	defer ppool.Finish()
 
 	splitter := split.NewSplitter(in)
@@ -90,11 +91,11 @@ func cmdJoin() (err error) {
 	// })
 	// defer chain.Finish()
 
-	chain := aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(8, aprocs.NewChain([]aprocs.Proc{
 		procs.A((&procs.LocalStore{"out"}).Unproc()),
-		procs.A(procs.Checksum{}.Unproc()),
-		aprocs.NewWriterTo(out),
-	})
+		aprocs.NewPool(4, procs.A(procs.Checksum{}.Unproc())),
+		aprocs.NewBacklog(1, aprocs.NewWriterTo(out)),
+	}))
 
 	// chain := procs.A(procs.NewChain([]procs.Proc{
 	// 	(&procs.LocalStore{"out"}).Unproc(),
