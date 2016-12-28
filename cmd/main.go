@@ -53,7 +53,7 @@ func cmdSplit() (err error) {
 		// parity.Proc(),
 		// procs.A((&procs.Compress{}).Proc()),
 		// procs.A(procs.Checksum{}.Proc()),
-		// procs.A((&procs.LocalStore{"out"}).Proc()),
+		procs.A((&procs.LocalStore{"out"}).Proc()),
 	}))
 	defer chain.Finish()
 
@@ -90,10 +90,15 @@ func cmdJoin() (err error) {
 	// })
 	// defer chain.Finish()
 
-	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
-		procs.A((&procs.LocalStore{"out"}).Unproc()),
-		procs.A(procs.Checksum{}.Unproc()),
-		aprocs.NewBacklog(1, aprocs.NewWriterTo(out)),
+	chain := aprocs.NewBacklog(8, aprocs.NewChain([]aprocs.Proc{
+		aprocs.NewPool(8, aprocs.NewChain([]aprocs.Proc{
+			procs.A((&procs.LocalStore{"out"}).Unproc()),
+			procs.A(procs.Checksum{}.Unproc()),
+		})),
+		aprocs.NewMutex(aprocs.NewChain([]aprocs.Proc{
+			aprocs.NewSort(),
+			aprocs.NewWriterTo(out),
+		})),
 	}))
 
 	// chain := procs.A(procs.NewChain([]procs.Proc{
