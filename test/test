@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -e
+
+f=$HOME/tmp/100m
+# f=$HOME/tmp/010m
+# f=1m
+
+go build ../cmd/main.go
+md5 $f
+ruby clean.rb
+
+pv $f | ./main split > index
+./main join < index | pv | md5

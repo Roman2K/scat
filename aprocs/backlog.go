@@ -1,33 +1,28 @@
 package aprocs
 
 import (
-	"errors"
-
 	ss "secsplit"
+	"secsplit/slots"
 )
 
 type backlog struct {
 	proc  Proc
-	slots chan struct{}
+	slots slots.Slots
 }
 
 func NewBacklog(nslots int, proc Proc) Proc {
-	slots := make(chan struct{}, nslots)
-	for i, n := 0, cap(slots); i < n; i++ {
-		slots <- struct{}{}
-	}
 	return backlog{
 		proc:  proc,
-		slots: slots,
+		slots: slots.New(nslots),
 	}
 }
 
 func (bl backlog) Process(c *ss.Chunk) <-chan Res {
-	<-bl.slots
+	bl.slots.Take()
 	out := make(chan Res)
 	ch := bl.proc.Process(c)
 	go func() {
-		defer func() { bl.slots <- struct{}{} }()
+		defer bl.slots.Release()
 		defer close(out)
 		for res := range ch {
 			out <- res
@@ -42,7 +37,7 @@ func (bl backlog) Finish() (err error) {
 		return
 	}
 	if len(bl.slots) < cap(bl.slots) {
-		return errors.New("unreturned slots left")
+		return ErrUnreturnedSlots
 	}
 	return
 }

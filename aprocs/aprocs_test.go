@@ -10,6 +10,7 @@ import (
 	ss "secsplit"
 	"secsplit/aprocs"
 	"secsplit/checksum"
+	"secsplit/testutil"
 )
 
 func testChunkNums(t *testing.T, proc aprocs.Proc, inChunks int) {
@@ -52,13 +53,18 @@ func getErr(t *testing.T, ch <-chan aprocs.Res) error {
 	return res.Err
 }
 
-func readChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
-	for res := range ch {
-		err = res.Err
-		if err != nil {
-			return
-		}
-		chunks = append(chunks, res.Chunk)
-	}
-	return
+func readChunks(ch <-chan aprocs.Res) ([]*ss.Chunk, error) {
+	return testutil.ReadChunks(ch)
+}
+
+type finishErrProc struct {
+	err error
+}
+
+func (p finishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
+	panic("Process() not implemented")
+}
+
+func (p finishErrProc) Finish() error {
+	return p.err
 }

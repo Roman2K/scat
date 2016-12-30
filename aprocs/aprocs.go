@@ -2,11 +2,15 @@ package aprocs
 
 import (
 	"errors"
+	"secsplit/concur"
 
 	ss "secsplit"
 )
 
-var ErrShort = errors.New("missing final chunks")
+var (
+	ErrShort           = errors.New("missing final chunks")
+	ErrUnreturnedSlots = errors.New("unreturned slots left")
+)
 
 var Nop Proc
 
@@ -44,4 +48,17 @@ type Unprocer interface {
 type ProcUnprocer interface {
 	Procer
 	Unprocer
+}
+
+type DynProcer interface {
+	Procs(*ss.Chunk) ([]Proc, error)
+	Finish() error
+}
+
+func finishFuncs(procs []Proc) (fns concur.Funcs) {
+	fns = make(concur.Funcs, len(procs))
+	for i, p := range procs {
+		fns[i] = p.Finish
+	}
+	return
 }

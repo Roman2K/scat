@@ -1,14 +1,10 @@
 package aprocs
 
-import (
-	ss "secsplit"
-	"secsplit/concur"
-)
+import ss "secsplit"
 
 type chain struct {
 	procs  []Proc
 	enders []EndProc
-	finish concur.Funcs
 }
 
 func NewChain(procs []Proc) Proc {
@@ -21,7 +17,6 @@ func NewChain(procs []Proc) Proc {
 	return chain{
 		procs:  procs,
 		enders: enders,
-		finish: finishFuncs(procs),
 	}
 }
 
@@ -48,7 +43,7 @@ func (chain chain) Process(c *ss.Chunk) <-chan Res {
 }
 
 func (chain chain) Finish() error {
-	return chain.finish.FirstErr()
+	return finishFuncs(chain.procs).FirstErr()
 }
 
 func process(out chan<- Res, in <-chan Res, proc Proc) {
@@ -75,14 +70,6 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 			out <- Res{Err: err}
 		}
 	}
-}
-
-func finishFuncs(procs []Proc) (fns concur.Funcs) {
-	fns = make(concur.Funcs, len(procs))
-	for i, p := range procs {
-		fns[i] = p.Finish
-	}
-	return
 }
 
 type endCallProc struct {

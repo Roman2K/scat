@@ -1,7 +1,6 @@
 package indexscan
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"secsplit/checksum"
@@ -36,26 +35,26 @@ func (s *scanner) Next() bool {
 	return true
 }
 
-func (s *scanner) scan() error {
+func (s *scanner) scan() (err error) {
 	var size int
 	n, err := fmt.Fscanf(s.r, "%x %d\n", &s.hashBuf, &size)
 	if err != nil {
-		return err
+		return
 	}
 	if n != 2 {
-		return fmt.Errorf("failed to read index line")
+		return fmt.Errorf("invalid index line")
 	}
 	chunk := &ss.Chunk{
 		Num:  s.num,
 		Size: size,
 	}
-	n = copy(chunk.Hash[:], s.hashBuf)
-	if n != len(chunk.Hash) {
-		return errors.New("invalid hash length")
+	err = chunk.Hash.LoadSlice(s.hashBuf)
+	if err != nil {
+		return
 	}
 	s.chunk = chunk
 	s.num++
-	return nil
+	return
 }
 
 func (s *scanner) Chunk() *ss.Chunk {

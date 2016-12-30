@@ -1,0 +1,6 @@
+.DS_Store
+test/main
+test/index
+test/out
+vendor
+.go-version

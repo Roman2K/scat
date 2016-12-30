@@ -14,6 +14,7 @@ func Process(proc Proc, iter ss.ChunkIterator) (err error) {
 	go func() {
 		defer close(errors)
 		wg := sync.WaitGroup{}
+		defer wg.Wait()
 		for c := range chunks {
 			ch := proc.Process(c)
 			wg.Add(1)
@@ -24,7 +25,6 @@ func Process(proc Proc, iter ss.ChunkIterator) (err error) {
 				}
 			}()
 		}
-		wg.Wait()
 	}()
 
 	go func() {

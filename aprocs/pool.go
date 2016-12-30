@@ -18,6 +18,13 @@ type task struct {
 	ch    chan<- Res
 }
 
+func (t task) sendProcessed(proc Proc) {
+	defer close(t.ch)
+	for res := range proc.Process(t.chunk) {
+		t.ch <- res
+	}
+}
+
 func NewPool(size int, proc Proc) Proc {
 	tasks := make(chan task)
 	wg := &sync.WaitGroup{}
@@ -26,13 +33,7 @@ func NewPool(size int, proc Proc) Proc {
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				sendProcessed := func() {
-					defer close(task.ch)
-					for res := range proc.Process(task.chunk) {
-						task.ch <- res
-					}
-				}
-				sendProcessed()
+				task.sendProcessed(proc)
 			}
 		}()
 	}

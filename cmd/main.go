@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"secsplit/aprocs"
+	"secsplit/cpprocs"
+	"secsplit/cpprocs/mincopies"
 	"secsplit/indexscan"
 	"secsplit/procs"
 	"secsplit/split"
@@ -46,14 +48,22 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	chain := aprocs.NewPool(4, aprocs.NewChain([]aprocs.Proc{
+	minCopies, err := mincopies.New(2, []cpprocs.Proc{
+		cpprocs.NewCommand("cat", cpprocs.NewCat("/Users/roman/tmp/cat")),
+	})
+	if err != nil {
+		return
+	}
+
+	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
 		procs.A(procs.Checksum{}.Proc()),
 		procs.A(procs.Size),
 		aprocs.NewIndex(out),
 		parity.Proc(),
 		procs.A((&procs.Compress{}).Proc()),
 		procs.A(procs.Checksum{}.Proc()),
-		procs.A((&procs.LocalStore{"out"}).Proc()),
+		// procs.A((&procs.LocalStore{"out"}).Proc()),
+		aprocs.NewConcur(4, minCopies),
 	}))
 	defer chain.Finish()
 
@@ -73,9 +83,9 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	chain := aprocs.NewBacklog(8, aprocs.NewChain([]aprocs.Proc{
-		aprocs.NewPool(5, aprocs.NewChain([]aprocs.Proc{
-			procs.A((&procs.LocalStore{"out"}).Unproc()),
+	chain := aprocs.NewBacklog(3, aprocs.NewChain([]aprocs.Proc{
+		procs.A((&procs.LocalStore{"out"}).Unproc()),
+		aprocs.NewPool(2, aprocs.NewChain([]aprocs.Proc{
 			procs.A(procs.Checksum{}.Unproc()),
 			procs.A((&procs.Compress{}).Unproc()),
 			aprocs.NewGroup(ndata + nparity),

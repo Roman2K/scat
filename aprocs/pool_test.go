@@ -6,7 +6,6 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
 	"secsplit/aprocs"
 )
 
@@ -22,18 +21,4 @@ func TestPoolFinish(t *testing.T) {
 	// idempotence
 	err = ppool.Finish()
 	assert.Equal(t, testErr, err)
-}
-
-type finishErrProc struct {
-	err error
-}
-
-func (p finishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
-	ch := make(chan aprocs.Res)
-	close(ch)
-	return ch
-}
-
-func (p finishErrProc) Finish() error {
-	return p.err
 }
