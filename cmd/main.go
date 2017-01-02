@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"os"
 	"time"
 
@@ -23,6 +25,7 @@ func main() {
 }
 
 func start() error {
+	rand.Seed(time.Now().UnixNano())
 	args := os.Args[1:]
 	if len(args) != 1 {
 		return errors.New("usage: split|join")
@@ -44,9 +47,9 @@ const (
 
 func cmdSplit() (err error) {
 	in, out := os.Stdin, os.Stdout
-	catDir := "/Users/roman/tmp/cat"
 
-	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+	// log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+	log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
 	// lsLog := stats.NewLsLog(os.Stderr, 250*time.Millisecond)
 
 	parity, err := aprocs.NewParity(ndata, nparity)
@@ -54,13 +57,23 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	cat := cpprocs.NewCat(catDir)
-	minCopies, err := mincopies.New(1, []cpprocs.Copier{
+	cat1 := cpprocs.NewCat("/Users/roman/tmp/cat1")
+	cat2 := cpprocs.NewCat("/Users/roman/tmp/cat2")
+	cat3 := cpprocs.NewCat("/Users/roman/tmp/cat3")
+	minCopies, err := mincopies.New(2, []cpprocs.Copier{
 		{
-			Id: "cat",
+			Id: "cat1",
 			// Lister: stats.NewLister(lsLog, "cat", cat),
-			Lister: cat,
-			Proc:   stats.NewProc(log, "cat", cpprocs.NewCommand(cat)),
+			Lister: cat1,
+			Proc:   stats.NewProc(log, "cat1", cpprocs.NewCommand(cat1)),
+		}, {
+			Id:     "cat2",
+			Lister: cat2,
+			Proc:   stats.NewProc(log, "cat2", cpprocs.NewCommand(cat2)),
+		}, {
+			Id:     "cat3",
+			Lister: cat3,
+			Proc:   stats.NewProc(log, "cat3", cpprocs.NewCommand(cat3)),
 		},
 	})
 	if err != nil {

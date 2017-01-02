@@ -62,15 +62,17 @@ func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	}()
 	procs := make([]aprocs.Proc, len(copiers)+1)
 	procs[0] = aprocs.Nop
-	for i, copier := range copiers {
+	copierProc := func(copier cpprocs.Copier) aprocs.Proc {
 		proc := aprocs.NewDiscardChunks(copier.Proc)
-		proc = aprocs.NewOnEnd(proc, func(err error) {
+		return aprocs.NewOnEnd(proc, func(err error) {
 			defer wg.Done()
 			if err == nil {
 				copies.UnlockedAdd(copier)
 			}
 		})
-		procs[i+1] = proc
+	}
+	for i, copier := range copiers {
+		procs[i+1] = copierProc(copier)
 	}
 	return procs, nil
 }

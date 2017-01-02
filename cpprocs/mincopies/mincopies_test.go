@@ -75,26 +75,26 @@ func TestMinCopies(t *testing.T) {
 	reset()
 	rand2 = func() int { return 1 }
 	testProcsForHash(hash2, []string{"a"})
+	resetCalled()
+	testProcsForHash(hash2, []string{})
 
 	reset()
 	rand2 = func() int { return 0 }
 	testProcsForHash(hash2, []string{"c"})
+	resetCalled()
+	testProcsForHash(hash2, []string{})
 
 	reset()
 	rand2 = func() int { return 1 }
 	testProcsForHash(hash3, []string{"a", "b"})
+	resetCalled()
+	testProcsForHash(hash3, []string{})
 
 	reset()
 	rand2 = func() int { return 0 }
 	testProcsForHash(hash3, []string{"c", "b"})
-
-	reset()
-	rand2 = func() int { return 1 }
-	testProcsForHash(hash2, []string{"a"})
 	resetCalled()
-	testProcsForHash(hash2, []string{})
-	resetCalled()
-	testProcsForHash(hash2, []string{})
+	testProcsForHash(hash3, []string{})
 }
 
 func TestMinCopiesFinish(t *testing.T) {
