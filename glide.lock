@@ -1,6 +1,8 @@
-hash: c98e1081ad767cdaafa1c759fcc54c2dc10da9ed001e77aee385bc099b454830
-updated: 2016-12-17T19:48:02.98128642+01:00
+hash: cf550ca7d0bed8f5d5915ffaa41e74e4af31d33ff6c76bc932bc47feb576eda7
+updated: 2017-01-02T17:20:20.985261744+01:00
 imports:
+- name: github.com/dustin/go-humanize
+  version: ef638b6c2e62b857442c6443dace9366a48c0ee2
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/reedsolomon
@@ -11,4 +13,13 @@ imports:
   version: 18a02ba4a312f95da08ff4cfc0055750ce50ae9e
   subpackages:
   - assert
-testImports: []
+  - require
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib

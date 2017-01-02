@@ -32,6 +32,21 @@ type ErrProc interface {
 	ProcessErr(*ss.Chunk, error) <-chan Res
 }
 
+type Wrapper interface {
+	Underlying() Proc
+}
+
+func underlying(p Proc) Proc {
+	for {
+		w, ok := p.(Wrapper)
+		if !ok {
+			break
+		}
+		p = w.Underlying()
+	}
+	return p
+}
+
 type Res struct {
 	Chunk *ss.Chunk
 	Err   error

@@ -10,7 +10,7 @@ type chain struct {
 func NewChain(procs []Proc) Proc {
 	enders := []EndProc{}
 	for _, p := range procs {
-		if e, ok := p.(EndProc); ok {
+		if e, ok := underlying(p).(EndProc); ok {
 			enders = append(enders, e)
 		}
 	}
@@ -51,7 +51,7 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 	for res := range in {
 		var ch <-chan Res
 		if res.Err != nil {
-			if errp, ok := proc.(ErrProc); ok && res.Chunk != nil {
+			if errp, ok := underlying(proc).(ErrProc); ok && res.Chunk != nil {
 				ch = errp.ProcessErr(res.Chunk, res.Err)
 			} else {
 				out <- res

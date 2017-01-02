@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"secsplit/aprocs"
 	"secsplit/cpprocs"
@@ -11,6 +12,7 @@ import (
 	"secsplit/indexscan"
 	"secsplit/procs"
 	"secsplit/split"
+	"secsplit/stats"
 )
 
 func main() {
@@ -42,28 +44,47 @@ const (
 
 func cmdSplit() (err error) {
 	in, out := os.Stdin, os.Stdout
+	catDir := "/Users/roman/tmp/cat"
+
+	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
 
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
 
-	minCopies, err := mincopies.New(2, []cpprocs.Proc{
-		cpprocs.NewCommand("cat", cpprocs.NewCat("/Users/roman/tmp/cat")),
+	minCopies, err := mincopies.New(1, []cpprocs.Proc{
+		stats.NewCpProc(log, "cat",
+			cpprocs.NewCommand("cat", cpprocs.NewCat(catDir)),
+		),
 	})
 	if err != nil {
 		return
 	}
 
-	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
-		procs.A(procs.Checksum{}.Proc()),
-		procs.A(procs.Size),
-		aprocs.NewIndex(out),
-		parity.Proc(),
-		procs.A((&procs.Compress{}).Proc()),
-		procs.A(procs.Checksum{}.Proc()),
-		// procs.A((&procs.LocalStore{"out"}).Proc()),
-		aprocs.NewConcur(4, minCopies),
+	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
+		stats.NewProc(log, "checksum",
+			procs.A(procs.Checksum{}.Proc()),
+		),
+		stats.NewProc(log, "size",
+			procs.A(procs.Size),
+		),
+		stats.NewProc(log, "index",
+			aprocs.NewIndex(out),
+		),
+		stats.NewProc(log, "parity",
+			parity.Proc(),
+		),
+		stats.NewProc(log, "compress",
+			procs.A((&procs.Compress{}).Proc()),
+		),
+		stats.NewProc(log, "checksum2",
+			procs.A(procs.Checksum{}.Proc()),
+		),
+		// stats.NewProc(log, "localstore",
+		// 	procs.A((&procs.LocalStore{"out"}).Proc()),
+		// ),
+		aprocs.NewConcur(2, minCopies),
 	}))
 	defer chain.Finish()
 
