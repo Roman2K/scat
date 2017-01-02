@@ -56,15 +56,3 @@ func getErr(t *testing.T, ch <-chan aprocs.Res) error {
 func readChunks(ch <-chan aprocs.Res) ([]*ss.Chunk, error) {
 	return testutil.ReadChunks(ch)
 }
-
-type finishErrProc struct {
-	err error
-}
-
-func (p finishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
-	panic("Process() not implemented")
-}
-
-func (p finishErrProc) Finish() error {
-	return p.err
-}

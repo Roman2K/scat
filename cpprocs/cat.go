@@ -14,7 +14,12 @@ type cat struct {
 	dir string
 }
 
-func NewCat(dir string) CmdSpawner {
+type Cat interface {
+	CmdSpawner
+	Lister
+}
+
+func NewCat(dir string) Cat {
 	return cat{dir: dir}
 }
 

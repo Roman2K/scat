@@ -20,45 +20,42 @@ func TestMinCopies(t *testing.T) {
 	hash2 := checksum.Sum([]byte("hash2"))
 	hash3 := checksum.Sum([]byte("hash3"))
 
-	cpps := []cpprocs.Proc{
-		&testCpProc{
-			id:     "a",
-			hashes: []checksum.Hash{hash1},
-		},
-		&testCpProc{
-			id:     "b",
-			hashes: []checksum.Hash{hash1, hash2},
-		},
-		&testCpProc{
-			id:     "c",
-			hashes: []checksum.Hash{},
-		},
+	called := []string{}
+	testProc := func(id string) aprocs.Proc {
+		return aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+			called = append(called, id)
+			return nil
+		})
 	}
 
-	calledProcs := func() []string {
-		ids := []string{}
-		for _, cpp := range cpps {
-			if cpp.(*testCpProc).called {
-				ids = append(ids, cpp.Id().(string))
-			}
-		}
-		return ids
+	copiers := []cpprocs.Copier{
+		{
+			Id:     "a",
+			Lister: testutil.SliceLister{hash1},
+			Proc:   testProc("a"),
+		}, {
+			Id:     "b",
+			Lister: testutil.SliceLister{hash1, hash2},
+			Proc:   testProc("b"),
+		}, {
+			Id:     "c",
+			Lister: testutil.SliceLister{},
+			Proc:   testProc("c"),
+		},
 	}
 
 	var mc aprocs.DynProcer
 	resetMc := func() {
 		var err error
-		mc, err = New(min, cpps)
+		mc, err = New(min, copiers)
 		assert.NoError(t, err)
 	}
-	resetProcs := func() {
-		for _, cpp := range cpps {
-			cpp.(*testCpProc).called = false
-		}
+	resetCalled := func() {
+		called = called[:0]
 	}
 	reset := func() {
 		resetMc()
-		resetProcs()
+		resetCalled()
 	}
 
 	testProcsForHash := func(h checksum.Hash, expectedCalls []string) {
@@ -69,7 +66,7 @@ func TestMinCopies(t *testing.T) {
 		chunks, err := processByAll(c, procs)
 		assert.NoError(t, err)
 		assert.Equal(t, []*ss.Chunk{c}, chunks)
-		assert.Equal(t, expectedCalls, calledProcs())
+		assert.Equal(t, expectedCalls, called)
 	}
 
 	reset()
@@ -89,27 +86,39 @@ func TestMinCopies(t *testing.T) {
 
 	reset()
 	rand2 = func() int { return 0 }
-	testProcsForHash(hash3, []string{"b", "c"})
+	testProcsForHash(hash3, []string{"c", "b"})
 
 	reset()
 	rand2 = func() int { return 1 }
 	testProcsForHash(hash2, []string{"a"})
-	resetProcs()
+	resetCalled()
 	testProcsForHash(hash2, []string{})
-	resetProcs()
+	resetCalled()
 	testProcsForHash(hash2, []string{})
 }
 
 func TestMinCopiesFinish(t *testing.T) {
-	a := &testCpProc{}
-	mc, err := New(2, []cpprocs.Proc{a})
+	copiers := []cpprocs.Copier{
+		{
+			Id:     "",
+			Lister: testutil.SliceLister{},
+			Proc:   testutil.FinishErrProc{Err: nil},
+		},
+	}
+	mc, err := New(2, copiers)
 	assert.NoError(t, err)
 	err = mc.Finish()
 	assert.NoError(t, err)
 
 	someErr := errors.New("some err")
-	a = &testCpProc{finishErr: someErr}
-	mc, err = New(2, []cpprocs.Proc{a})
+	copiers = []cpprocs.Copier{
+		{
+			Id:     "",
+			Lister: testutil.SliceLister{},
+			Proc:   testutil.FinishErrProc{Err: someErr},
+		},
+	}
+	mc, err = New(2, copiers)
 	assert.NoError(t, err)
 	err = mc.Finish()
 	assert.Equal(t, someErr, err)
@@ -125,30 +134,4 @@ func processByAll(c *ss.Chunk, procs []aprocs.Proc) ([]*ss.Chunk, error) {
 		all = append(all, chunks...)
 	}
 	return all, nil
-}
-
-type testCpProc struct {
-	id        interface{}
-	hashes    []checksum.Hash
-	called    bool
-	finishErr error
-}
-
-func (cpp *testCpProc) Id() interface{} {
-	return cpp.id
-}
-
-func (cpp *testCpProc) Ls() ([]checksum.Hash, error) {
-	return cpp.hashes, nil
-}
-
-func (cpp *testCpProc) Process(c *ss.Chunk) <-chan aprocs.Res {
-	cpp.called = true
-	ch := make(chan aprocs.Res)
-	close(ch)
-	return ch
-}
-
-func (cpp *testCpProc) Finish() error {
-	return cpp.finishErr
 }

@@ -9,30 +9,16 @@ import (
 	"secsplit/checksum"
 )
 
-type cmdProc struct {
-	id      interface{}
-	spawner CmdSpawner
-}
-
 type CmdSpawner interface {
 	NewCmd(checksum.Hash) (*exec.Cmd, error)
-	Ls() ([]checksum.Hash, error)
 }
 
-func NewCommand(id interface{}, spawner CmdSpawner) Proc {
-	return cmdProc{id: id, spawner: spawner}
+func NewCommand(spawner CmdSpawner) aprocs.Proc {
+	return aprocs.InplaceProcFunc(cmdProc{spawner: spawner}.process)
 }
 
-func (cmdp cmdProc) Id() interface{} {
-	return cmdp.id
-}
-
-func (cmdp cmdProc) Ls() ([]checksum.Hash, error) {
-	return cmdp.spawner.Ls()
-}
-
-func (cmdp cmdProc) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return aprocs.InplaceProcFunc(cmdp.process).Process(c)
+type cmdProc struct {
+	spawner CmdSpawner
 }
 
 func (cmdp cmdProc) process(c *ss.Chunk) (err error) {
@@ -42,8 +28,4 @@ func (cmdp cmdProc) process(c *ss.Chunk) (err error) {
 	}
 	cmd.Stdin = bytes.NewReader(c.Data)
 	return cmd.Run()
-}
-
-func (cmdp cmdProc) Finish() error {
-	return nil
 }

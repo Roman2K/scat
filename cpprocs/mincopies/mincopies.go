@@ -13,22 +13,22 @@ import (
 )
 
 type minCopies struct {
-	min   int
-	reg   *copies.Reg
-	procs []cpprocs.Proc
+	min     int
+	reg     *copies.Reg
+	copiers []cpprocs.Copier
 }
 
 var rand2 = func() int {
 	return rand.Intn(2)
 }
 
-func New(min int, procs []cpprocs.Proc) (dynp aprocs.DynProcer, err error) {
+func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
 	reg := copies.NewReg()
-	err = reg.Add(procs)
+	err = reg.Add(copiers)
 	dynp = minCopies{
-		min:   min,
-		reg:   reg,
-		procs: procs,
+		min:     min,
+		reg:     reg,
+		copiers: copiers,
 	}
 	return
 }
@@ -37,10 +37,10 @@ func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	copies := mc.reg.List(c.Hash)
 	copies.Mu.Lock()
 	ncopies := copies.UnlockedLen()
-	avail := make([]cpprocs.Proc, 0, len(mc.procs)-ncopies)
-	for _, p := range mc.procs {
-		if !copies.UnlockedContains(p) {
-			avail = append(avail, p)
+	avail := make([]cpprocs.Copier, 0, len(mc.copiers)-ncopies)
+	for _, copier := range mc.copiers {
+		if !copies.UnlockedContains(copier) {
+			avail = append(avail, copier)
 		}
 	}
 	missing := mc.min - ncopies
@@ -53,34 +53,36 @@ func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	sort.Slice(avail, func(_, _ int) bool {
 		return rand2() == 0
 	})
-	cpProcs := avail[:missing]
+	copiers := avail[:missing]
 	wg := sync.WaitGroup{}
-	wg.Add(len(cpProcs))
+	wg.Add(len(copiers))
 	go func() {
 		defer copies.Mu.Unlock()
 		wg.Wait()
 	}()
-	procs := make([]aprocs.Proc, len(cpProcs)+1)
+	procs := make([]aprocs.Proc, len(copiers)+1)
 	procs[0] = aprocs.Nop
-	for i, p := range cpProcs {
-		procs[i+1] = aprocs.NewOnEnd(aprocs.NewDiscardChunks(p), func(err error) {
+	for i, copier := range copiers {
+		proc := aprocs.NewDiscardChunks(copier.Proc)
+		proc = aprocs.NewOnEnd(proc, func(err error) {
 			defer wg.Done()
 			if err == nil {
-				copies.UnlockedAdd(p)
+				copies.UnlockedAdd(copier)
 			}
 		})
+		procs[i+1] = proc
 	}
 	return procs, nil
 }
 
 func (mc minCopies) Finish() error {
-	return finishFuncs(mc.procs).FirstErr()
+	return finishFuncs(mc.copiers).FirstErr()
 }
 
-func finishFuncs(procs []cpprocs.Proc) (fns concur.Funcs) {
-	fns = make(concur.Funcs, len(procs))
-	for i, p := range procs {
-		fns[i] = p.Finish
+func finishFuncs(copiers []cpprocs.Copier) (fns concur.Funcs) {
+	fns = make(concur.Funcs, len(copiers))
+	for i, c := range copiers {
+		fns[i] = c.Proc.Finish
 	}
 	return
 }

@@ -19,24 +19,24 @@ func NewReg() *Reg {
 	}
 }
 
-func (r *Reg) Add(procs []cpprocs.Proc) error {
-	fns := make(concur.Funcs, len(procs))
-	addProcFunc := func(p cpprocs.Proc) func() error {
-		return func() error { return r.addProc(p) }
+func (r *Reg) Add(copiers []cpprocs.Copier) error {
+	fns := make(concur.Funcs, len(copiers))
+	addCopierFunc := func(c cpprocs.Copier) func() error {
+		return func() error { return r.addCopier(c) }
 	}
-	for i, p := range procs {
-		fns[i] = addProcFunc(p)
+	for i, c := range copiers {
+		fns[i] = addCopierFunc(c)
 	}
 	return fns.FirstErr()
 }
 
-func (r *Reg) addProc(p cpprocs.Proc) (err error) {
-	hashes, err := p.Ls()
+func (r *Reg) addCopier(c cpprocs.Copier) (err error) {
+	hashes, err := c.Lister.Ls()
 	if err != nil {
 		return
 	}
 	for _, h := range hashes {
-		r.List(h).Add(p)
+		r.List(h).Add(c)
 	}
 	return nil
 }
@@ -57,18 +57,18 @@ type List struct {
 	Mu sync.Mutex
 }
 
-func (list *List) Add(p cpprocs.Proc) {
+func (list *List) Add(c cpprocs.Copier) {
 	list.Mu.Lock()
 	defer list.Mu.Unlock()
-	list.UnlockedAdd(p)
+	list.UnlockedAdd(c)
 }
 
-func (list *List) UnlockedAdd(p cpprocs.Proc) {
-	list.m[p.Id()] = struct{}{}
+func (list *List) UnlockedAdd(c cpprocs.Copier) {
+	list.m[c.Id] = struct{}{}
 }
 
-func (list *List) UnlockedContains(p cpprocs.Proc) (ok bool) {
-	_, ok = list.m[p.Id()]
+func (list *List) UnlockedContains(c cpprocs.Copier) (ok bool) {
+	_, ok = list.m[c.Id]
 	return
 }
 

@@ -21,8 +21,7 @@ func TestCommand(t *testing.T) {
 		cmd.Stdout = buf
 		return cmd, nil
 	})
-	cmd := cpprocs.NewCommand("mycmd", spawner)
-	assert.Equal(t, "mycmd", cmd.Id())
+	cmd := cpprocs.NewCommand(spawner)
 	c := &ss.Chunk{Data: []byte(data)}
 	ch := cmd.Process(c)
 	chunks, err := testutil.ReadChunks(ch)
@@ -35,7 +34,7 @@ func TestCommandError(t *testing.T) {
 	spawner := testSpawner(func(checksum.Hash) (*exec.Cmd, error) {
 		return exec.Command("/dev/null"), nil
 	})
-	cmd := cpprocs.NewCommand("", spawner)
+	cmd := cpprocs.NewCommand(spawner)
 	c := &ss.Chunk{}
 	ch := cmd.Process(c)
 	chunks, err := testutil.ReadChunks(ch)
@@ -47,8 +46,4 @@ type testSpawner func(checksum.Hash) (*exec.Cmd, error)
 
 func (fn testSpawner) NewCmd(h checksum.Hash) (*exec.Cmd, error) {
 	return fn(h)
-}
-
-func (fn testSpawner) Ls() ([]checksum.Hash, error) {
-	return nil, nil
 }

@@ -8,6 +8,7 @@ import (
 
 	ss "secsplit"
 	"secsplit/aprocs"
+	"secsplit/testutil"
 )
 
 func TestDiscardChunks(t *testing.T) {
@@ -34,7 +35,7 @@ func TestDiscardChunksError(t *testing.T) {
 }
 
 func TestDiscardChunksFinish(t *testing.T) {
-	proc := finishErrProc{err: nil}
+	proc := testutil.FinishErrProc{Err: nil}
 	dc := aprocs.NewDiscardChunks(proc)
 	err := dc.Finish()
 	assert.NoError(t, err)
@@ -42,7 +43,7 @@ func TestDiscardChunksFinish(t *testing.T) {
 
 func TestDiscardChunksFinishError(t *testing.T) {
 	someErr := errors.New("some err")
-	proc := finishErrProc{err: someErr}
+	proc := testutil.FinishErrProc{Err: someErr}
 	dc := aprocs.NewDiscardChunks(proc)
 	err := dc.Finish()
 	assert.Equal(t, someErr, err)

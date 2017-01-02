@@ -5,8 +5,12 @@ import (
 	"secsplit/checksum"
 )
 
-type Proc interface {
-	Id() interface{}
+type Lister interface {
 	Ls() ([]checksum.Hash, error)
-	aprocs.Proc
+}
+
+type Copier struct {
+	Id     interface{}
+	Lister Lister
+	Proc   aprocs.Proc
 }

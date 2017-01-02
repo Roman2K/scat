@@ -7,11 +7,12 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"secsplit/aprocs"
+	"secsplit/testutil"
 )
 
 func TestPoolFinish(t *testing.T) {
 	testErr := errors.New("test")
-	proc := finishErrProc{testErr}
+	proc := testutil.FinishErrProc{Err: testErr}
 	ppool := aprocs.NewPool(1, proc)
 
 	// returns procs's err

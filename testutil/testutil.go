@@ -3,6 +3,8 @@ package testutil
 import (
 	ss "secsplit"
 	"secsplit/aprocs"
+	"secsplit/checksum"
+	"secsplit/cpprocs"
 )
 
 func ReadChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
@@ -38,4 +40,24 @@ func (it *SliceIter) Chunk() *ss.Chunk {
 
 func (it *SliceIter) Err() error {
 	return nil
+}
+
+type SliceLister []checksum.Hash
+
+var _ cpprocs.Lister = SliceLister{}
+
+func (sl SliceLister) Ls() ([]checksum.Hash, error) {
+	return []checksum.Hash(sl), nil
+}
+
+type FinishErrProc struct {
+	Err error
+}
+
+func (p FinishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
+	panic("Process() not implemented")
+}
+
+func (p FinishErrProc) Finish() error {
+	return p.Err
 }

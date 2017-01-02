@@ -47,20 +47,26 @@ func cmdSplit() (err error) {
 	catDir := "/Users/roman/tmp/cat"
 
 	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+	// lsLog := stats.NewLsLog(os.Stderr, 250*time.Millisecond)
 
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
 
-	minCopies, err := mincopies.New(1, []cpprocs.Proc{
-		stats.NewCpProc(log, "cat",
-			cpprocs.NewCommand("cat", cpprocs.NewCat(catDir)),
-		),
+	cat := cpprocs.NewCat(catDir)
+	minCopies, err := mincopies.New(1, []cpprocs.Copier{
+		{
+			Id: "cat",
+			// Lister: stats.NewLister(lsLog, "cat", cat),
+			Lister: cat,
+			Proc:   stats.NewProc(log, "cat", cpprocs.NewCommand(cat)),
+		},
 	})
 	if err != nil {
 		return
 	}
+	// lsLog.Finish()
 
 	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(log, "checksum",

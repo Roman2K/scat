@@ -8,6 +8,7 @@ import (
 
 	ss "secsplit"
 	"secsplit/aprocs"
+	"secsplit/testutil"
 )
 
 func TestOnEnd(t *testing.T) {
@@ -42,7 +43,7 @@ func TestOnEndError(t *testing.T) {
 }
 
 func TestOnEndFinish(t *testing.T) {
-	proc := finishErrProc{err: nil}
+	proc := testutil.FinishErrProc{Err: nil}
 	oe := aprocs.NewOnEnd(proc, func(error) {})
 	err := oe.Finish()
 	assert.NoError(t, err)
@@ -50,7 +51,7 @@ func TestOnEndFinish(t *testing.T) {
 
 func TestOnEndFinishError(t *testing.T) {
 	someErr := errors.New("some err")
-	proc := finishErrProc{err: someErr}
+	proc := testutil.FinishErrProc{Err: someErr}
 	oe := aprocs.NewOnEnd(proc, func(error) {})
 	err := oe.Finish()
 	assert.Equal(t, someErr, err)
