@@ -9,7 +9,7 @@ import (
 
 	ss "secsplit"
 	"secsplit/aprocs"
-	"secsplit/testhelp"
+	"secsplit/testutil"
 )
 
 func TestProcess(t *testing.T) {
@@ -45,7 +45,7 @@ func process(chunks []*ss.Chunk) (processed []int, err error) {
 		close(ch)
 		return ch
 	})
-	iter := &testhelp.SliceIter{S: chunks}
+	iter := &testutil.SliceIter{S: chunks}
 	err = aprocs.Process(proc, iter)
 	return
 }

@@ -12,7 +12,7 @@ import (
 	"secsplit/aprocs"
 	"secsplit/indexscan"
 	"secsplit/procs"
-	"secsplit/testhelp"
+	"secsplit/testutil"
 )
 
 func TestParityCorruptNone(t *testing.T) {
@@ -99,7 +99,7 @@ func doSplit(
 		procs.A(store),
 	})
 	defer chain.Finish()
-	return processFinish(chain, &testhelp.SliceIter{S: in})
+	return processFinish(chain, &testutil.SliceIter{S: in})
 }
 
 func doJoin(

@@ -14,3 +14,28 @@ func ReadChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
 	}
 	return
 }
+
+type SliceIter struct {
+	S     []*ss.Chunk
+	i     int
+	chunk *ss.Chunk
+}
+
+var _ ss.ChunkIterator = &SliceIter{}
+
+func (it *SliceIter) Next() bool {
+	if it.i < len(it.S) {
+		it.chunk = it.S[it.i]
+		it.i++
+		return true
+	}
+	return false
+}
+
+func (it *SliceIter) Chunk() *ss.Chunk {
+	return it.chunk
+}
+
+func (it *SliceIter) Err() error {
+	return nil
+}
