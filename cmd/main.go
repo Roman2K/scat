@@ -9,7 +9,7 @@ import (
 	"secsplit/aprocs"
 	"secsplit/cpprocs"
 	"secsplit/cpprocs/mincopies"
-	"secsplit/indexscan"
+	"secsplit/index"
 	"secsplit/procs"
 	"secsplit/split"
 	"secsplit/stats"
@@ -118,7 +118,7 @@ func cmdJoin() (err error) {
 		})),
 	}))
 
-	scan := indexscan.NewScanner(in)
+	scan := index.NewScanner(in)
 	err = aprocs.Process(chain, scan)
 	if err != nil {
 		return

@@ -1,4 +1,4 @@
-package indexscan
+package index
 
 import (
 	"fmt"

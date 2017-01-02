@@ -10,7 +10,7 @@ import (
 
 	ss "secsplit"
 	"secsplit/aprocs"
-	"secsplit/indexscan"
+	"secsplit/index"
 	"secsplit/procs"
 	"secsplit/testutil"
 )
@@ -107,7 +107,7 @@ func doJoin(
 ) (
 	err error,
 ) {
-	scan := indexscan.NewScanner(indexr)
+	scan := index.NewScanner(indexr)
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return

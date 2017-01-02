@@ -1,4 +1,4 @@
-package indexscan_test
+package index_test
 
 import (
 	"bytes"
@@ -8,19 +8,19 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"secsplit/checksum"
-	"secsplit/indexscan"
+	"secsplit/index"
 )
 
 func TestScannerEmpty(t *testing.T) {
 	buf := &bytes.Buffer{}
-	scan := indexscan.NewScanner(buf)
+	scan := index.NewScanner(buf)
 	assert.False(t, scan.Next())
 	assert.NoError(t, scan.Err())
 }
 
 func TestScanner(t *testing.T) {
 	buf := &bytes.Buffer{}
-	scan := indexscan.NewScanner(buf)
+	scan := index.NewScanner(buf)
 
 	h1 := checksum.Sum([]byte("a"))
 	h2 := checksum.Sum([]byte("b"))

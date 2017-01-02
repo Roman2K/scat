@@ -1,9 +1,9 @@
-package indexscan_test
+package index_test
 
 import (
 	"bytes"
 	"secsplit/checksum"
-	"secsplit/indexscan"
+	"secsplit/index"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
@@ -18,6 +18,6 @@ func TestWrite(t *testing.T) {
 		}
 	)
 	buf := &bytes.Buffer{}
-	indexscan.Write(buf, hash, 123)
+	index.Write(buf, hash, 123)
 	assert.Equal(t, hex+" 123\n", string(buf.Bytes()))
 }

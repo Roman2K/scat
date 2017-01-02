@@ -7,7 +7,7 @@ import (
 
 	ss "secsplit"
 	"secsplit/checksum"
-	"secsplit/indexscan"
+	"secsplit/index"
 	"secsplit/seriessort"
 )
 
@@ -16,7 +16,7 @@ type Index interface {
 	EndProc
 }
 
-type index struct {
+type indexProc struct {
 	w        io.Writer
 	order    seriessort.Series
 	orderMu  sync.Mutex
@@ -30,14 +30,14 @@ type indexEntry struct {
 }
 
 func NewIndex(w io.Writer) Index {
-	return &index{
+	return &indexProc{
 		w:      w,
 		order:  seriessort.Series{},
 		finals: make(map[checksum.Hash]*finals),
 	}
 }
 
-func (idx *index) Process(c *ss.Chunk) <-chan Res {
+func (idx *indexProc) Process(c *ss.Chunk) <-chan Res {
 	idx.setOrder(c)
 	ch := make(chan Res, 1)
 	idx.finalsMu.Lock()
@@ -50,7 +50,7 @@ func (idx *index) Process(c *ss.Chunk) <-chan Res {
 	return ch
 }
 
-func (idx *index) ProcessFinal(c, final *ss.Chunk) error {
+func (idx *indexProc) ProcessFinal(c, final *ss.Chunk) error {
 	entry := indexEntry{hash: &final.Hash, size: c.Size}
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
@@ -62,7 +62,7 @@ func (idx *index) ProcessFinal(c, final *ss.Chunk) error {
 	return nil
 }
 
-func (idx *index) ProcessEnd(c *ss.Chunk) (err error) {
+func (idx *indexProc) ProcessEnd(c *ss.Chunk) (err error) {
 	err = idx.setFinalsComplete(c)
 	if err != nil {
 		return
@@ -70,7 +70,7 @@ func (idx *index) ProcessEnd(c *ss.Chunk) (err error) {
 	return idx.flush()
 }
 
-func (idx *index) setFinalsComplete(c *ss.Chunk) error {
+func (idx *indexProc) setFinalsComplete(c *ss.Chunk) error {
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
 	finals, ok := idx.finals[c.Hash]
@@ -81,7 +81,7 @@ func (idx *index) setFinalsComplete(c *ss.Chunk) error {
 	return nil
 }
 
-func (idx *index) Finish() error {
+func (idx *indexProc) Finish() error {
 	idx.orderMu.Lock()
 	len := idx.order.Len()
 	idx.orderMu.Unlock()
@@ -91,7 +91,7 @@ func (idx *index) Finish() error {
 	return nil
 }
 
-func (idx *index) flush() (err error) {
+func (idx *indexProc) flush() (err error) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
 	sorted := idx.order.Sorted()
@@ -113,7 +113,7 @@ func (idx *index) flush() (err error) {
 	return
 }
 
-func (idx *index) completeFinals(hash checksum.Hash) (
+func (idx *indexProc) completeFinals(hash checksum.Hash) (
 	entries []indexEntry, ok bool,
 ) {
 	idx.finalsMu.Lock()
@@ -131,7 +131,7 @@ func (idx *index) completeFinals(hash checksum.Hash) (
 	return
 }
 
-func (idx *index) setOrder(c *ss.Chunk) {
+func (idx *indexProc) setOrder(c *ss.Chunk) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
 	idx.order.Add(c.Num, &c.Hash)
@@ -139,7 +139,7 @@ func (idx *index) setOrder(c *ss.Chunk) {
 
 func writeEntries(w io.Writer, entries []indexEntry) (err error) {
 	for _, entry := range entries {
-		_, err = indexscan.Write(w, *entry.hash, entry.size)
+		_, err = index.Write(w, *entry.hash, entry.size)
 		if err != nil {
 			return
 		}
