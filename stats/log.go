@@ -89,7 +89,7 @@ func (log *Log) write() error {
 		outRate := rateStr(out, now.Sub(cnt.start))
 		ownRate := rateStr(out, dur)
 		_, err := fmt.Fprintf(log.w,
-			"%15s x%d:\t%s/s\t\x1b[90m%s/s\x1b[0m\n",
+			"%15s x%d:\t%9s/s\t\x1b[90m%9s/s\x1b[0m\n",
 			name, cnt.getInst(), ownRate, outRate,
 		)
 		if err != nil {

@@ -17,7 +17,7 @@ func TestConcur(t *testing.T) {
 		return nil
 	})
 	b := aprocs.InplaceProcFunc(func(c *ss.Chunk) error {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(30 * time.Millisecond)
 		return nil
 	})
 
@@ -37,8 +37,8 @@ func TestConcur(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []*ss.Chunk{c, c, c}, chunks)
 	elapsed := time.Now().Sub(start)
-	assert.True(t, elapsed > 30*time.Millisecond)
-	assert.True(t, elapsed < 40*time.Millisecond)
+	assert.True(t, elapsed > 20*time.Millisecond)
+	assert.True(t, elapsed < 65*time.Millisecond)
 }
 
 type testDynProcer struct {

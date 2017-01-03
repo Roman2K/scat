@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"time"
@@ -48,8 +47,8 @@ const (
 func cmdSplit() (err error) {
 	in, out := os.Stdin, os.Stdout
 
-	// log := stats.NewLog(os.Stderr, 250*time.Millisecond)
-	log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
+	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+	// log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
 	// lsLog := stats.NewLsLog(os.Stderr, 250*time.Millisecond)
 
 	parity, err := aprocs.NewParity(ndata, nparity)

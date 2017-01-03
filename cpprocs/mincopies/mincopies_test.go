@@ -73,28 +73,56 @@ func TestMinCopies(t *testing.T) {
 	testProcsForHash(hash1, []string{})
 
 	reset()
-	rand2 = func() int { return 1 }
+	sortCopiers = identity
 	testProcsForHash(hash2, []string{"a"})
 	resetCalled()
 	testProcsForHash(hash2, []string{})
 
 	reset()
-	rand2 = func() int { return 0 }
+	sortCopiers = reverse
 	testProcsForHash(hash2, []string{"c"})
 	resetCalled()
 	testProcsForHash(hash2, []string{})
 
 	reset()
-	rand2 = func() int { return 1 }
+	sortCopiers = identity
 	testProcsForHash(hash3, []string{"a", "b"})
 	resetCalled()
 	testProcsForHash(hash3, []string{})
 
 	reset()
-	rand2 = func() int { return 0 }
+	sortCopiers = reverse
 	testProcsForHash(hash3, []string{"c", "b"})
 	resetCalled()
 	testProcsForHash(hash3, []string{})
+}
+
+func identity([]cpprocs.Copier) {
+}
+
+func TestMinCopiesReverseTest(t *testing.T) {
+	s := []cpprocs.Copier{
+		{Id: 1},
+		{Id: 2},
+		{Id: 3},
+	}
+	reverse(s)
+	ids := []int{}
+	for _, c := range s {
+		ids = append(ids, c.Id.(int))
+	}
+	assert.Equal(t, []int{3, 2, 1}, ids)
+}
+
+func reverse(s []cpprocs.Copier) {
+	n := len(s)
+	r := make([]cpprocs.Copier, n)
+	for i := 0; i < n; i++ {
+		r[i] = s[n-i-1]
+	}
+	for i, c := range r {
+		s[i] = c
+	}
 }
 
 func TestMinCopiesFinish(t *testing.T) {

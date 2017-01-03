@@ -2,7 +2,6 @@ package mincopies
 
 import (
 	"math/rand"
-	"sort"
 	"sync"
 
 	ss "secsplit"
@@ -16,10 +15,6 @@ type minCopies struct {
 	min     int
 	reg     *copies.Reg
 	copiers []cpprocs.Copier
-}
-
-var rand2 = func() int {
-	return rand.Intn(2)
 }
 
 func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
@@ -36,24 +31,17 @@ func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
 func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	copies := mc.reg.List(c.Hash)
 	copies.Mu.Lock()
-	ncopies := copies.UnlockedLen()
-	avail := make([]cpprocs.Copier, 0, len(mc.copiers)-ncopies)
-	for _, copier := range mc.copiers {
-		if !copies.UnlockedContains(copier) {
-			avail = append(avail, copier)
+	ncopies := copies.Len()
+	all := make([]cpprocs.Copier, len(mc.copiers))
+	copy(all, mc.copiers)
+	sortCopiers(all)
+	missing := mc.min - ncopies
+	copiers := make([]cpprocs.Copier, 0, missing)
+	for i, n := 0, len(all); i < n && i < missing; i++ {
+		if copier := all[i]; !copies.Contains(copier) {
+			copiers = append(copiers, copier)
 		}
 	}
-	missing := mc.min - ncopies
-	if navail := len(avail); missing > navail {
-		missing = navail
-	}
-	if missing < 0 {
-		missing = 0
-	}
-	sort.Slice(avail, func(_, _ int) bool {
-		return rand2() == 0
-	})
-	copiers := avail[:missing]
 	wg := sync.WaitGroup{}
 	wg.Add(len(copiers))
 	go func() {
@@ -67,7 +55,7 @@ func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 		return aprocs.NewOnEnd(proc, func(err error) {
 			defer wg.Done()
 			if err == nil {
-				copies.UnlockedAdd(copier)
+				copies.Add(copier)
 			}
 		})
 	}
@@ -75,6 +63,17 @@ func (mc minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 		procs[i+1] = copierProc(copier)
 	}
 	return procs, nil
+}
+
+var sortCopiers = func(copiers []cpprocs.Copier) {
+	indexes := rand.Perm(len(copiers))
+	dup := make([]cpprocs.Copier, len(indexes))
+	for i, idx := range indexes {
+		dup[i] = copiers[idx]
+	}
+	for i, c := range dup {
+		copiers[i] = c
+	}
 }
 
 func (mc minCopies) Finish() error {

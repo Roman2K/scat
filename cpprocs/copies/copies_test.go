@@ -25,8 +25,8 @@ func TestCopies(t *testing.T) {
 	}
 	err := reg.Add([]cpprocs.Copier{a})
 	assert.NoError(t, err)
-	assert.Equal(t, 1, reg.List(hash1).UnlockedLen())
-	assert.True(t, reg.List(hash1).UnlockedContains(a))
-	assert.False(t, reg.List(hash2).UnlockedContains(a))
-	assert.False(t, reg.List(hash1).UnlockedContains(b))
+	assert.Equal(t, 1, reg.List(hash1).Len())
+	assert.True(t, reg.List(hash1).Contains(a))
+	assert.False(t, reg.List(hash2).Contains(a))
+	assert.False(t, reg.List(hash1).Contains(b))
 }

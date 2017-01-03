@@ -53,25 +53,26 @@ func (r *Reg) List(h checksum.Hash) *List {
 }
 
 type List struct {
-	m  map[interface{}]struct{}
-	Mu sync.Mutex
+	m     map[interface{}]struct{}
+	mapMu sync.Mutex
+	Mu    sync.Mutex
 }
 
 func (list *List) Add(c cpprocs.Copier) {
-	list.Mu.Lock()
-	defer list.Mu.Unlock()
-	list.UnlockedAdd(c)
-}
-
-func (list *List) UnlockedAdd(c cpprocs.Copier) {
+	list.mapMu.Lock()
+	defer list.mapMu.Unlock()
 	list.m[c.Id] = struct{}{}
 }
 
-func (list *List) UnlockedContains(c cpprocs.Copier) (ok bool) {
+func (list *List) Contains(c cpprocs.Copier) (ok bool) {
+	list.mapMu.Lock()
+	defer list.mapMu.Unlock()
 	_, ok = list.m[c.Id]
 	return
 }
 
-func (list *List) UnlockedLen() int {
+func (list *List) Len() int {
+	list.mapMu.Lock()
+	defer list.mapMu.Unlock()
 	return len(list.m)
 }
