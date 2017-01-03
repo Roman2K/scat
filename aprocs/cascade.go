@@ -17,12 +17,9 @@ func (casc Cascade) Process(c *ss.Chunk) <-chan Res {
 			err := false
 			for res := range ch {
 				buf = append(buf, res)
-				if res.Err != nil {
+				if res.Err != nil && !err {
 					err = true
-					break
 				}
-			}
-			for range ch {
 			}
 			if !err {
 				break

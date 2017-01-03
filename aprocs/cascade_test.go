@@ -14,8 +14,12 @@ import (
 func TestCascade(t *testing.T) {
 	nop := aprocs.Nop
 	someErr := errors.New("some err")
-	errp := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
-		return someErr
+	errp := aprocs.ProcFunc(func(c *ss.Chunk) <-chan aprocs.Res {
+		ch := make(chan aprocs.Res, 2)
+		ch <- aprocs.Res{Err: someErr, Chunk: c}
+		ch <- aprocs.Res{Chunk: c}
+		close(ch)
+		return ch
 	})
 	c := &ss.Chunk{}
 
@@ -42,7 +46,7 @@ func TestCascade(t *testing.T) {
 	casc = aprocs.Cascade{errp}
 	chunks, err = readChunks(casc.Process(c))
 	assert.Equal(t, someErr, err)
-	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, []*ss.Chunk{c, c}, chunks)
 
 	casc = aprocs.Cascade{errp, nop}
 	chunks, err = readChunks(casc.Process(c))

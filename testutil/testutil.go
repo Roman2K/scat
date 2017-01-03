@@ -54,6 +54,8 @@ type FinishErrProc struct {
 	Err error
 }
 
+var _ aprocs.Proc = FinishErrProc{}
+
 func (p FinishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
 	panic("Process() not implemented")
 }
