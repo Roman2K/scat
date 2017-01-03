@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"secsplit/checksum"
-	"secsplit/concur"
 	"secsplit/cpprocs"
 )
 
@@ -13,32 +12,18 @@ type Reg struct {
 	mu sync.Mutex
 }
 
+var _ cpprocs.CopierAdder = &Reg{}
+
 func NewReg() *Reg {
 	return &Reg{
 		m: make(map[checksum.Hash]*List),
 	}
 }
 
-func (r *Reg) Add(copiers []cpprocs.Copier) error {
-	fns := make(concur.Funcs, len(copiers))
-	addCopierFunc := func(c cpprocs.Copier) func() error {
-		return func() error { return r.addCopier(c) }
+func (r *Reg) AddCopier(cp cpprocs.Copier, entries []cpprocs.LsEntry) {
+	for _, e := range entries {
+		r.List(e.Hash).Add(cp)
 	}
-	for i, c := range copiers {
-		fns[i] = addCopierFunc(c)
-	}
-	return fns.FirstErr()
-}
-
-func (r *Reg) addCopier(c cpprocs.Copier) (err error) {
-	hashes, err := c.Lister.Ls()
-	if err != nil {
-		return
-	}
-	for _, h := range hashes {
-		r.List(h).Add(c)
-	}
-	return nil
 }
 
 func (r *Reg) List(h checksum.Hash) *List {
@@ -46,14 +31,14 @@ func (r *Reg) List(h checksum.Hash) *List {
 	defer r.mu.Unlock()
 	if _, ok := r.m[h]; !ok {
 		r.m[h] = &List{
-			m: make(map[interface{}]struct{}),
+			m: make(map[cpprocs.CopierId]struct{}),
 		}
 	}
 	return r.m[h]
 }
 
 type List struct {
-	m     map[interface{}]struct{}
+	m     map[cpprocs.CopierId]struct{}
 	mapMu sync.Mutex
 	Mu    sync.Mutex
 }
@@ -61,13 +46,13 @@ type List struct {
 func (list *List) Add(c cpprocs.Copier) {
 	list.mapMu.Lock()
 	defer list.mapMu.Unlock()
-	list.m[c.Id] = struct{}{}
+	list.m[c.Id()] = struct{}{}
 }
 
 func (list *List) Contains(c cpprocs.Copier) (ok bool) {
 	list.mapMu.Lock()
 	defer list.mapMu.Unlock()
-	_, ok = list.m[c.Id]
+	_, ok = list.m[c.Id()]
 	return
 }
 

@@ -12,21 +12,41 @@ import (
 )
 
 type minCopies struct {
-	min       int
-	reg       *copies.Reg
-	copiers   []cpprocs.Copier
-	copiersMu sync.Mutex
+	min     int
+	copiers []cpprocs.Copier
+	reg     *copies.Reg
+	qman    *cpprocs.QuotaMan
 }
 
 func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
 	reg := copies.NewReg()
-	err = reg.Add(copiers)
+	qman := cpprocs.NewQuotaMan()
+	err = addCopiers([]cpprocs.CopierAdder{reg, qman}, copiers)
 	dynp = &minCopies{
 		min:     min,
-		reg:     reg,
 		copiers: copiers,
+		reg:     reg,
+		qman:    qman,
 	}
 	return
+}
+
+func addCopiers(adders []cpprocs.CopierAdder, copiers []cpprocs.Copier) error {
+	fns := make(concur.Funcs, len(copiers))
+	for i := range copiers {
+		cp := copiers[i]
+		fns[i] = func() (err error) {
+			ls, err := cp.Lister().Ls()
+			if err != nil {
+				return
+			}
+			for _, a := range adders {
+				a.AddCopier(cp, ls)
+			}
+			return
+		}
+	}
+	return fns.FirstErr()
 }
 
 func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
@@ -34,7 +54,7 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	copies.Mu.Lock()
 	ncopies := copies.Len()
 	missing := mc.min - ncopies
-	all := shuffle(mc.getCopiers())
+	all := shuffle(mc.qman.Copiers())
 	elected := make([]cpprocs.Copier, 0, missing)
 	foCap := len(all) - ncopies - missing
 	if foCap < 0 {
@@ -60,17 +80,21 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	}()
 	procs := make([]aprocs.Proc, len(elected)+1)
 	procs[0] = aprocs.Nop
+	newEntries := []cpprocs.LsEntry{
+		{Hash: c.Hash, Size: int64(len(c.Data))},
+	}
 	copierProc := func(copier cpprocs.Copier) aprocs.Proc {
 		copiers := append([]cpprocs.Copier{copier}, failover...)
 		casc := make(aprocs.Cascade, len(copiers))
 		for i := range copiers {
 			cp := copiers[i]
-			casc[i] = aprocs.NewOnEnd(cp.Proc, func(err error) {
+			casc[i] = aprocs.NewOnEnd(cp.Proc(), func(err error) {
 				if err != nil {
-					mc.deleteCopier(cp)
+					mc.qman.Delete(cp)
 					return
 				}
 				copies.Add(cp)
+				mc.qman.AddCopier(cp, newEntries)
 			})
 		}
 		proc := aprocs.NewDiscardChunks(casc)
@@ -91,26 +115,6 @@ var shuffle = func(copiers []cpprocs.Copier) (res []cpprocs.Copier) {
 	return
 }
 
-func (mc *minCopies) getCopiers() (cps []cpprocs.Copier) {
-	mc.copiersMu.Lock()
-	defer mc.copiersMu.Unlock()
-	cps = make([]cpprocs.Copier, len(mc.copiers))
-	copy(cps, mc.copiers)
-	return
-}
-
-func (mc *minCopies) deleteCopier(dcp cpprocs.Copier) {
-	mc.copiersMu.Lock()
-	defer mc.copiersMu.Unlock()
-	cps := make([]cpprocs.Copier, 0, len(mc.copiers)-1)
-	for _, cp := range mc.copiers {
-		if cp.Id != dcp.Id {
-			cps = append(cps, cp)
-		}
-	}
-	mc.copiers = cps
-}
-
 func (mc *minCopies) Finish() error {
 	return finishFuncs(mc.copiers).FirstErr()
 }
@@ -118,7 +122,7 @@ func (mc *minCopies) Finish() error {
 func finishFuncs(copiers []cpprocs.Copier) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(copiers))
 	for i, c := range copiers {
-		fns[i] = c.Proc.Finish
+		fns[i] = c.Proc().Finish
 	}
 	return
 }

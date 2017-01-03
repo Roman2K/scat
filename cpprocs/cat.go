@@ -34,25 +34,30 @@ func (cat cat) NewCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	return
 }
 
-func (cat cat) Ls() (hashes []checksum.Hash, err error) {
+func (cat cat) Ls() (entries []LsEntry, err error) {
 	files, err := ioutil.ReadDir(cat.dir)
 	if err != nil {
 		return
 	}
 	var (
-		buf  []byte
-		hash checksum.Hash
+		buf   []byte
+		entry LsEntry
 	)
 	for _, f := range files {
 		n, err := fmt.Sscanf(f.Name(), "%x", &buf)
 		if err != nil || n != 1 {
 			continue
 		}
-		err = hash.LoadSlice(buf)
+		err = entry.Hash.LoadSlice(buf)
 		if err != nil {
 			continue
 		}
-		hashes = append(hashes, hash)
+		fi, err := os.Stat(filepath.Join(cat.dir, f.Name()))
+		if err != nil {
+			return nil, err
+		}
+		entry.Size = fi.Size()
+		entries = append(entries, entry)
 	}
 	return
 }

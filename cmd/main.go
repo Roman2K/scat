@@ -57,24 +57,18 @@ func cmdSplit() (err error) {
 	}
 
 	cat1 := cpprocs.NewCat("/Users/roman/tmp/cat1")
+	cat1cp := cpprocs.NewCopier("cat1", cat1,
+		stats.NewProc(log, "cat1", cpprocs.NewCommand(cat1)),
+	)
 	cat2 := cpprocs.NewCat("/Users/roman/tmp/cat2")
+	cat2cp := cpprocs.NewCopier("cat2", cat2,
+		stats.NewProc(log, "cat2", cpprocs.NewCommand(cat2)),
+	)
 	cat3 := cpprocs.NewCat("/Users/roman/tmp/cat3")
-	minCopies, err := mincopies.New(2, []cpprocs.Copier{
-		{
-			Id: "cat1",
-			// Lister: stats.NewLister(lsLog, "cat", cat),
-			Lister: cat1,
-			Proc:   stats.NewProc(log, "cat1", cpprocs.NewCommand(cat1)),
-		}, {
-			Id:     "cat2",
-			Lister: cat2,
-			Proc:   stats.NewProc(log, "cat2", cpprocs.NewCommand(cat2)),
-		}, {
-			Id:     "cat3",
-			Lister: cat3,
-			Proc:   stats.NewProc(log, "cat3", cpprocs.NewCommand(cat3)),
-		},
-	})
+	cat3cp := cpprocs.NewCopier("cat3", cat3,
+		stats.NewProc(log, "cat3", cpprocs.NewCommand(cat3)),
+	)
+	minCopies, err := mincopies.New(2, []cpprocs.Copier{cat1cp, cat2cp, cat3cp})
 	if err != nil {
 		return
 	}

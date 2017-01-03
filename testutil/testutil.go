@@ -3,7 +3,6 @@ package testutil
 import (
 	ss "secsplit"
 	"secsplit/aprocs"
-	"secsplit/checksum"
 	"secsplit/cpprocs"
 )
 
@@ -42,12 +41,12 @@ func (it *SliceIter) Err() error {
 	return nil
 }
 
-type SliceLister []checksum.Hash
+type SliceLister []cpprocs.LsEntry
 
 var _ cpprocs.Lister = SliceLister{}
 
-func (sl SliceLister) Ls() ([]checksum.Hash, error) {
-	return []checksum.Hash(sl), nil
+func (sl SliceLister) Ls() ([]cpprocs.LsEntry, error) {
+	return []cpprocs.LsEntry(sl), nil
 }
 
 type FinishErrProc struct {

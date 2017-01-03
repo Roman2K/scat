@@ -37,19 +37,18 @@ func TestMinCopies(t *testing.T) {
 	}
 
 	copiers := []cpprocs.Copier{
-		{
-			Id:     "a",
-			Lister: testutil.SliceLister{hash1},
-			Proc:   testProc("a"),
-		}, {
-			Id:     "b",
-			Lister: testutil.SliceLister{hash1, hash2},
-			Proc:   testProc("b"),
-		}, {
-			Id:     "c",
-			Lister: testutil.SliceLister{},
-			Proc:   testProc("c"),
-		},
+		cpprocs.NewCopier("a",
+			testutil.SliceLister{{Hash: hash1}},
+			testProc("a"),
+		),
+		cpprocs.NewCopier("b",
+			testutil.SliceLister{{Hash: hash1}, {Hash: hash2}},
+			testProc("b"),
+		),
+		cpprocs.NewCopier("c",
+			testutil.SliceLister{},
+			testProc("c"),
+		),
 	}
 
 	var mc aprocs.DynProcer
@@ -89,7 +88,7 @@ func TestMinCopies(t *testing.T) {
 	testProcsForHash(hash1, []string{}, nil)
 
 	reset()
-	shuffle = identity
+	shuffle = byId
 	testProcsForHash(hash2, []string{"a"}, nil)
 	resetCalled()
 	testProcsForHash(hash2, []string{}, nil)
@@ -101,7 +100,7 @@ func TestMinCopies(t *testing.T) {
 	testProcsForHash(hash2, []string{}, nil)
 
 	reset()
-	shuffle = identity
+	shuffle = byId
 	testProcsForHash(hash3, []string{"a", "b"}, nil)
 	resetCalled()
 	testProcsForHash(hash3, []string{}, nil)
@@ -114,7 +113,7 @@ func TestMinCopies(t *testing.T) {
 
 	// Failover: OK
 	reset()
-	shuffle = identity
+	shuffle = byId
 	someErr := errors.New("some err")
 	errs["a"] = someErr
 	testProcsForHash(hash3, []string{"a", "c", "b"}, nil)
@@ -125,7 +124,7 @@ func TestMinCopies(t *testing.T) {
 
 	// Failover: all KO
 	reset()
-	shuffle = identity
+	shuffle = byId
 	err1 := errors.New("err1")
 	err2 := errors.New("err2")
 	errs["a"] = err1
@@ -137,11 +136,11 @@ func TestMinCopies(t *testing.T) {
 
 func TestFinish(t *testing.T) {
 	copiers := []cpprocs.Copier{
-		{
-			Id:     "",
-			Lister: testutil.SliceLister{},
-			Proc:   testutil.FinishErrProc{Err: nil},
-		},
+		cpprocs.NewCopier(
+			nil,
+			testutil.SliceLister{},
+			testutil.FinishErrProc{Err: nil},
+		),
 	}
 	mc, err := New(2, copiers)
 	assert.NoError(t, err)
@@ -152,11 +151,11 @@ func TestFinish(t *testing.T) {
 func TestFinishError(t *testing.T) {
 	someErr := errors.New("some err")
 	copiers := []cpprocs.Copier{
-		{
-			Id:     "",
-			Lister: testutil.SliceLister{},
-			Proc:   testutil.FinishErrProc{Err: someErr},
-		},
+		cpprocs.NewCopier(
+			nil,
+			testutil.SliceLister{},
+			testutil.FinishErrProc{Err: someErr},
+		),
 	}
 	mc, err := New(2, copiers)
 	assert.NoError(t, err)
@@ -182,22 +181,29 @@ func processByAll(c *ss.Chunk, procs []aprocs.Proc) (
 
 func TestShuffle(t *testing.T) {
 	s := []cpprocs.Copier{
-		{Id: 1},
-		{Id: 2},
-		{Id: 3},
+		cpprocs.NewCopier("a", nil, nil),
+		cpprocs.NewCopier("b", nil, nil),
+		cpprocs.NewCopier("c", nil, nil),
 	}
-	ids := intIds(shuffle(s))
-	sort.Ints(ids)
-	assert.Equal(t, []int{1, 2, 3}, ids)
+	ids := ids(shuffle(s))
+	sort.Strings(ids)
+	assert.Equal(t, []string{"a", "b", "c"}, ids)
 }
 
-func identity(s []cpprocs.Copier) (res []cpprocs.Copier) {
+func byId(s []cpprocs.Copier) (res []cpprocs.Copier) {
 	res = make([]cpprocs.Copier, len(s))
 	copy(res, s)
+	sortable := func(i int) string {
+		return res[i].Id().(string)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return sortable(i) < sortable(j)
+	})
 	return
 }
 
 func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
+	s = byId(s)
 	n := len(s)
 	res = make([]cpprocs.Copier, n)
 	for i := 0; i < n; i++ {
@@ -208,16 +214,16 @@ func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
 
 func TestReverseTest(t *testing.T) {
 	s := []cpprocs.Copier{
-		{Id: 1},
-		{Id: 2},
-		{Id: 3},
+		cpprocs.NewCopier("a", nil, nil),
+		cpprocs.NewCopier("b", nil, nil),
+		cpprocs.NewCopier("c", nil, nil),
 	}
-	assert.Equal(t, []int{3, 2, 1}, intIds(reverse(s)))
+	assert.Equal(t, []string{"c", "b", "a"}, ids(reverse(s)))
 }
 
-func intIds(s []cpprocs.Copier) (ids []int) {
+func ids(s []cpprocs.Copier) (ids []string) {
 	for _, c := range s {
-		ids = append(ids, c.Id.(int))
+		ids = append(ids, c.Id().(string))
 	}
 	return
 }
