@@ -59,7 +59,7 @@ func cmdSplit() (err error) {
 	for i, n := 0, len(cats); i < n; i++ {
 		id := fmt.Sprintf("cat%d", i+1)
 		cats[i] = cpprocs.NewCopier(id, stats.NewLsProc(log, id,
-			cpprocs.NewCommand(cpprocs.NewCat("/Users/roman/tmp/"+id)).LsProc(),
+			cpprocs.NewCat("/Users/roman/tmp/"+id).LsProc(),
 		))
 	}
 	cats[0].SetQuota(10 * 1024 * 1024)
@@ -67,6 +67,14 @@ func cmdSplit() (err error) {
 	if err != nil {
 		return
 	}
+
+	// driveRcl, err := cpprocs.NewRclone("drive:tmp", "")
+	// if err != nil {
+	// 	return
+	// }
+	// drive := cpprocs.NewCopier("drive", stats.NewLsProc(log, "drive",
+	// 	cpprocs.NewCommand(driveRcl.ProcSpawner()),
+	// ))
 
 	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(log, "checksum",
@@ -91,6 +99,7 @@ func cmdSplit() (err error) {
 		// 	procs.A((&procs.LocalStore{"out"}).Proc()),
 		// ),
 		aprocs.NewConcur(2, minCopies),
+		// drive,
 	}))
 	defer chain.Finish()
 
@@ -116,7 +125,7 @@ func cmdJoin() (err error) {
 	for i, n := 0, len(cats); i < n; i++ {
 		id := fmt.Sprintf("cat%d", i+1)
 		cats[i] = cpprocs.NewReader(id, stats.NewLsProc(log, id,
-			cpprocs.NewCommand(cpprocs.NewCat("/Users/roman/tmp/"+id)).LsUnproc(),
+			cpprocs.NewCat("/Users/roman/tmp/"+id).LsUnproc(),
 		))
 	}
 

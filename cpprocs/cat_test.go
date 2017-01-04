@@ -1,20 +1,20 @@
 package cpprocs_test
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
 
+	ss "secsplit"
 	"secsplit/checksum"
 	"secsplit/cpprocs"
+	"secsplit/testutil"
 )
 
-func TestCatProcCmd(t *testing.T) {
+func TestCatProc(t *testing.T) {
 	const (
 		hashData = "x"
 		hashStr  = "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
@@ -26,16 +26,16 @@ func TestCatProcCmd(t *testing.T) {
 	cat := cpprocs.NewCat(dir)
 
 	// Ls() empty
-	entries, err := cat.Ls()
+	entries, err := cat.LsProc().Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(entries))
 
-	// NewProcCmd()
+	// LsProc()
 	hash := checksum.Sum([]byte(hashData))
-	cmd, err := cat.NewProcCmd(hash)
-	assert.NoError(t, err)
-	cmd.Stdin = strings.NewReader(data)
-	err = cmd.Run()
+	_, err = testutil.ReadChunks(cat.LsProc().Process(&ss.Chunk{
+		Hash: hash,
+		Data: []byte(data),
+	}))
 	assert.NoError(t, err)
 	path := filepath.Join(dir, hashStr)
 	fdata, err := ioutil.ReadFile(path)
@@ -43,14 +43,14 @@ func TestCatProcCmd(t *testing.T) {
 	assert.Equal(t, data, string(fdata))
 
 	// Ls()
-	entries, err = cat.Ls()
+	entries, err = cat.LsProc().Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, hash, entries[0].Hash)
 	assert.Equal(t, int64(len(data)), entries[0].Size)
 }
 
-func TestCatUnprocCmd(t *testing.T) {
+func TestCatUnproc(t *testing.T) {
 	const (
 		hashData = "y"
 		hashStr  = "a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa"
@@ -66,11 +66,10 @@ func TestCatUnprocCmd(t *testing.T) {
 	assert.NoError(t, err)
 
 	hash := checksum.Sum([]byte(hashData))
-	cmd, err := cat.NewUnprocCmd(hash)
+	chunks, err := testutil.ReadChunks(cat.LsUnproc().Process(&ss.Chunk{
+		Hash: hash,
+	}))
 	assert.NoError(t, err)
-	buf := &bytes.Buffer{}
-	cmd.Stdout = buf
-	err = cmd.Run()
-	assert.NoError(t, err)
-	assert.Equal(t, data, buf.String())
+	assert.Equal(t, 1, len(chunks))
+	assert.Equal(t, data, string(chunks[0].Data))
 }

@@ -30,7 +30,8 @@ func (mrd multireader) Process(c *ss.Chunk) <-chan aprocs.Res {
 	owners := mrd.reg.List(c.Hash).Owners()
 	casc := make(aprocs.Cascade, len(owners))
 	for i, o := range owners {
-		casc[i] = aprocs.NewOnEnd(o.(aprocs.Proc), func(err error) {
+		proc := o.(aprocs.Proc)
+		casc[i] = aprocs.NewOnEnd(proc, func(err error) {
 			if err != nil {
 				mrd.reg.RemoveOwner(o)
 			}

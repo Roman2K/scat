@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	ss "secsplit"
+	"secsplit/aprocs"
 	"secsplit/checksum"
 )
 
@@ -14,12 +16,16 @@ type cat struct {
 	dir string
 }
 
-func NewCat(dir string) CmdSpawner {
+func NewCat(dir string) LsProcUnprocer {
 	return cat{dir: dir}
 }
 
-func (cat cat) NewProcCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
-	path := cat.filePath(hash)
+func (cat cat) LsProc() LsProc {
+	return NewLsProc(cat, aprocs.CmdInFunc(cat.procCmd))
+}
+
+func (cat cat) procCmd(c *ss.Chunk) (cmd *exec.Cmd, err error) {
+	path := cat.filePath(c.Hash)
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return
@@ -29,8 +35,12 @@ func (cat cat) NewProcCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	return
 }
 
-func (cat cat) NewUnprocCmd(hash checksum.Hash) (*exec.Cmd, error) {
-	path := cat.filePath(hash)
+func (cat cat) LsUnproc() LsProc {
+	return NewLsProc(cat, aprocs.CmdOutFunc(cat.unprocCmd))
+}
+
+func (cat cat) unprocCmd(c *ss.Chunk) (*exec.Cmd, error) {
+	path := cat.filePath(c.Hash)
 	return exec.Command("cat", path), nil
 }
 
