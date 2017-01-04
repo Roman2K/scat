@@ -1,6 +1,8 @@
 package mincopies
 
 import (
+	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 
@@ -55,12 +57,16 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	ncopies := copies.Len()
 	missing := mc.min - ncopies
 	all := shuffle(mc.qman.Copiers(int64(len(c.Data))))
-	elected := make([]cpprocs.Copier, 0, missing)
-	foCap := len(all) - ncopies - missing
-	if foCap < 0 {
-		foCap = 0
+	navail := len(all) - ncopies
+	if missing > navail {
+		return nil, errors.New(fmt.Sprintf(
+			"missing copiers to meet min requirement:"+
+				" min=%d copies=%d missing=%d avail=%d",
+			mc.min, ncopies, missing, navail,
+		))
 	}
-	failover := make([]cpprocs.Copier, 0, foCap)
+	elected := make([]cpprocs.Copier, 0, missing)
+	failover := make([]cpprocs.Copier, 0, navail-missing)
 	for i, n := 0, len(all); i < n; i++ {
 		cp := all[i]
 		if copies.Contains(cp) {

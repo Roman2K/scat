@@ -71,56 +71,58 @@ func TestMinCopies(t *testing.T) {
 		resetErrs()
 	}
 
-	testProcsForHash := func(
-		h checksum.Hash, expectedCalls []string, expectedErr error,
-	) {
+	testProcsForHash := func(h checksum.Hash, expectedCalls []string) error {
 		c := &ss.Chunk{Hash: h}
 		procs, err := mc.Procs(c)
 		assert.NoError(t, err)
 		chunks, err := processByAll(c, procs)
-		assert.Equal(t, expectedErr, err)
 		assert.Equal(t, 1, len(chunks))
 		assert.Equal(t, []*ss.Chunk{c}, chunks)
 		assert.Equal(t, expectedCalls, called)
+		return err
+	}
+	testProcsForHashNoErr := func(h checksum.Hash, expectedCalls []string) {
+		err := testProcsForHash(h, expectedCalls)
+		assert.NoError(t, err)
 	}
 
 	reset()
-	testProcsForHash(hash1, []string{}, nil)
+	testProcsForHashNoErr(hash1, []string{})
 
 	reset()
 	shuffle = byId
-	testProcsForHash(hash2, []string{"a"}, nil)
+	testProcsForHashNoErr(hash2, []string{"a"})
 	resetCalled()
-	testProcsForHash(hash2, []string{}, nil)
+	testProcsForHashNoErr(hash2, []string{})
 
 	reset()
 	shuffle = reverse
-	testProcsForHash(hash2, []string{"c"}, nil)
+	testProcsForHashNoErr(hash2, []string{"c"})
 	resetCalled()
-	testProcsForHash(hash2, []string{}, nil)
+	testProcsForHashNoErr(hash2, []string{})
 
 	reset()
 	shuffle = byId
-	testProcsForHash(hash3, []string{"a", "b"}, nil)
+	testProcsForHashNoErr(hash3, []string{"a", "b"})
 	resetCalled()
-	testProcsForHash(hash3, []string{}, nil)
+	testProcsForHashNoErr(hash3, []string{})
 
 	reset()
 	shuffle = reverse
-	testProcsForHash(hash3, []string{"c", "b"}, nil)
+	testProcsForHashNoErr(hash3, []string{"c", "b"})
 	resetCalled()
-	testProcsForHash(hash3, []string{}, nil)
+	testProcsForHashNoErr(hash3, []string{})
 
 	// Failover: OK
 	reset()
 	shuffle = byId
 	someErr := errors.New("some err")
 	errs["a"] = someErr
-	testProcsForHash(hash3, []string{"a", "c", "b"}, nil)
+	testProcsForHashNoErr(hash3, []string{"a", "c", "b"})
 	resetCalled()
-	testProcsForHash(hash3, []string{}, nil)
+	testProcsForHashNoErr(hash3, []string{})
 	resetCalled()
-	testProcsForHash(hash4, []string{"b", "c"}, nil)
+	testProcsForHashNoErr(hash4, []string{"b", "c"})
 
 	// Failover: all KO
 	reset()
@@ -129,9 +131,14 @@ func TestMinCopies(t *testing.T) {
 	err2 := errors.New("err2")
 	errs["a"] = err1
 	errs["c"] = err2
-	testProcsForHash(hash3, []string{"a", "c", "b"}, err2)
+	err := testProcsForHash(hash3, []string{"a", "c", "b"})
+	assert.Equal(t, err2, err)
 	resetCalled()
-	testProcsForHash(hash3, []string{}, nil)
+	_, err = mc.Procs(&ss.Chunk{Hash: hash3})
+	assert.Equal(t, "missing copiers to meet min requirement:"+
+		" min=2 copies=1 missing=1 avail=0",
+		err.Error(),
+	)
 }
 
 func TestFinish(t *testing.T) {
