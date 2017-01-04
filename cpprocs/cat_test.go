@@ -13,7 +13,7 @@ import (
 	"secsplit/cpprocs"
 )
 
-func TestCat(t *testing.T) {
+func TestCatProcCmd(t *testing.T) {
 	const (
 		hashData = "x"
 		hashStr  = "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
@@ -29,9 +29,9 @@ func TestCat(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(entries))
 
-	// NewCmd()
+	// NewProcCmd()
 	hash := checksum.Sum([]byte(hashData))
-	cmd, err := cat.NewCmd(hash)
+	cmd, err := cat.NewProcCmd(hash)
 	assert.NoError(t, err)
 	cmd.Stdin = strings.NewReader(data)
 	err = cmd.Run()

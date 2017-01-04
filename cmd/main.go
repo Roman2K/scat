@@ -49,31 +49,24 @@ func cmdSplit() (err error) {
 
 	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
 	// log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
-	// lsLog := stats.NewLsLog(os.Stderr, 250*time.Millisecond)
 
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
 
-	cat1 := cpprocs.NewCat("/Users/roman/tmp/cat1")
-	cat1cp := cpprocs.NewCopier("cat1", cat1,
-		stats.NewProc(log, "cat1", cpprocs.NewCommand(cat1)),
-	)
-	cat1cp.SetQuota(10 * 1024 * 1024)
-	cat2 := cpprocs.NewCat("/Users/roman/tmp/cat2")
-	cat2cp := cpprocs.NewCopier("cat2", cat2,
-		stats.NewProc(log, "cat2", cpprocs.NewCommand(cat2)),
-	)
-	cat3 := cpprocs.NewCat("/Users/roman/tmp/cat3")
-	cat3cp := cpprocs.NewCopier("cat3", cat3,
-		stats.NewProc(log, "cat3", cpprocs.NewCommand(cat3)),
-	)
-	minCopies, err := mincopies.New(2, []cpprocs.Copier{cat1cp, cat2cp, cat3cp})
+	cats := make([]cpprocs.Copier, 3)
+	for i, n := 0, len(cats); i < n; i++ {
+		id := fmt.Sprintf("cat%d", i+1)
+		cats[i] = cpprocs.NewCopier(id, stats.NewLsProc(log, id,
+			cpprocs.NewCommand(cpprocs.NewCat("/Users/roman/tmp/"+id)).LsProc(),
+		))
+	}
+	cats[0].SetQuota(10 * 1024 * 1024)
+	minCopies, err := mincopies.New(2, cats)
 	if err != nil {
 		return
 	}
-	// lsLog.Finish()
 
 	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(log, "checksum",

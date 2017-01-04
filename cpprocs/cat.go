@@ -14,16 +14,11 @@ type cat struct {
 	dir string
 }
 
-type Cat interface {
-	CmdSpawner
-	Lister
-}
-
-func NewCat(dir string) Cat {
+func NewCat(dir string) CmdSpawner {
 	return cat{dir: dir}
 }
 
-func (cat cat) NewCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
+func (cat cat) NewProcCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	path := filepath.Join(cat.dir, fmt.Sprintf("%x", hash))
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -31,6 +26,10 @@ func (cat cat) NewCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	}
 	cmd = exec.Command("cat")
 	cmd.Stdout = f
+	return
+}
+
+func (cat cat) NewUnprocCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	return
 }
 

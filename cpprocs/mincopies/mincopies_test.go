@@ -37,18 +37,18 @@ func TestMinCopies(t *testing.T) {
 	}
 
 	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier("a",
+		cpprocs.NewCopier("a", cpprocs.NewLsProc(
 			testutil.SliceLister{{Hash: hash1}},
 			testProc("a"),
-		),
-		cpprocs.NewCopier("b",
+		)),
+		cpprocs.NewCopier("b", cpprocs.NewLsProc(
 			testutil.SliceLister{{Hash: hash1}, {Hash: hash2}},
 			testProc("b"),
-		),
-		cpprocs.NewCopier("c",
+		)),
+		cpprocs.NewCopier("c", cpprocs.NewLsProc(
 			testutil.SliceLister{},
 			testProc("c"),
-		),
+		)),
 	}
 
 	var mc aprocs.DynProcer
@@ -143,11 +143,10 @@ func TestMinCopies(t *testing.T) {
 
 func TestFinish(t *testing.T) {
 	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier(
-			nil,
+		cpprocs.NewCopier(nil, cpprocs.NewLsProc(
 			testutil.SliceLister{},
 			testutil.FinishErrProc{Err: nil},
-		),
+		)),
 	}
 	mc, err := New(2, copiers)
 	assert.NoError(t, err)
@@ -158,11 +157,10 @@ func TestFinish(t *testing.T) {
 func TestFinishError(t *testing.T) {
 	someErr := errors.New("some err")
 	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier(
-			nil,
+		cpprocs.NewCopier(nil, cpprocs.NewLsProc(
 			testutil.SliceLister{},
 			testutil.FinishErrProc{Err: someErr},
-		),
+		)),
 	}
 	mc, err := New(2, copiers)
 	assert.NoError(t, err)
@@ -188,9 +186,9 @@ func processByAll(c *ss.Chunk, procs []aprocs.Proc) (
 
 func TestShuffle(t *testing.T) {
 	s := []cpprocs.Copier{
-		cpprocs.NewCopier("a", nil, nil),
-		cpprocs.NewCopier("b", nil, nil),
-		cpprocs.NewCopier("c", nil, nil),
+		cpprocs.NewCopier("a", nil),
+		cpprocs.NewCopier("b", nil),
+		cpprocs.NewCopier("c", nil),
 	}
 	ids := ids(shuffle(s))
 	sort.Strings(ids)
@@ -221,9 +219,9 @@ func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
 
 func TestReverseTest(t *testing.T) {
 	s := []cpprocs.Copier{
-		cpprocs.NewCopier("a", nil, nil),
-		cpprocs.NewCopier("b", nil, nil),
-		cpprocs.NewCopier("c", nil, nil),
+		cpprocs.NewCopier("a", nil),
+		cpprocs.NewCopier("b", nil),
+		cpprocs.NewCopier("c", nil),
 	}
 	assert.Equal(t, []string{"c", "b", "a"}, ids(reverse(s)))
 }

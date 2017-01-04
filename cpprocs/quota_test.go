@@ -9,8 +9,8 @@ import (
 )
 
 func TestQuotaMan(t *testing.T) {
-	a := cpprocs.NewCopier("a", nil, nil)
-	b := cpprocs.NewCopier("b", nil, nil)
+	a := cpprocs.NewCopier("a", nil)
+	b := cpprocs.NewCopier("b", nil)
 	ids := func(copiers []cpprocs.Copier) (res []string) {
 		res = []string{}
 		for _, cp := range copiers {

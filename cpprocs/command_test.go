@@ -13,37 +13,51 @@ import (
 	"secsplit/testutil"
 )
 
-func TestCommand(t *testing.T) {
+func TestCommandLsProc(t *testing.T) {
 	const data = "xxx"
 	buf := &bytes.Buffer{}
-	spawner := testSpawner(func(checksum.Hash) (*exec.Cmd, error) {
-		cmd := exec.Command("cat")
-		cmd.Stdout = buf
-		return cmd, nil
-	})
+	spawner := testSpawner{
+		newProcCmd: func(checksum.Hash) (*exec.Cmd, error) {
+			cmd := exec.Command("cat")
+			cmd.Stdout = buf
+			return cmd, nil
+		},
+	}
 	cmd := cpprocs.NewCommand(spawner)
 	c := &ss.Chunk{Data: []byte(data)}
-	ch := cmd.Process(c)
+	ch := cmd.LsProc().Process(c)
 	chunks, err := testutil.ReadChunks(ch)
 	assert.NoError(t, err)
 	assert.Equal(t, []*ss.Chunk{c}, chunks)
 	assert.Equal(t, data, buf.String())
 }
 
-func TestCommandError(t *testing.T) {
-	spawner := testSpawner(func(checksum.Hash) (*exec.Cmd, error) {
-		return exec.Command("/dev/null"), nil
-	})
+func TestCommandLsProcError(t *testing.T) {
+	spawner := testSpawner{
+		newProcCmd: func(checksum.Hash) (*exec.Cmd, error) {
+			return exec.Command("/dev/null"), nil
+		},
+	}
 	cmd := cpprocs.NewCommand(spawner)
 	c := &ss.Chunk{}
-	ch := cmd.Process(c)
+	ch := cmd.LsProc().Process(c)
 	chunks, err := testutil.ReadChunks(ch)
 	assert.Equal(t, []*ss.Chunk{c}, chunks)
 	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
 }
 
-type testSpawner func(checksum.Hash) (*exec.Cmd, error)
+type testSpawner struct {
+	newProcCmd func(checksum.Hash) (*exec.Cmd, error)
+}
 
-func (fn testSpawner) NewCmd(h checksum.Hash) (*exec.Cmd, error) {
-	return fn(h)
+func (ts testSpawner) Ls() ([]cpprocs.LsEntry, error) {
+	return nil, nil
+}
+
+func (ts testSpawner) NewProcCmd(h checksum.Hash) (*exec.Cmd, error) {
+	return ts.newProcCmd(h)
+}
+
+func (ts testSpawner) NewUnprocCmd(h checksum.Hash) (*exec.Cmd, error) {
+	panic("NewUnprocCmd() not implemented")
 }

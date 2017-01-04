@@ -18,26 +18,23 @@ type LsEntry struct {
 type CopierId interface{}
 
 type copier struct {
-	id     CopierId
-	lister Lister
-	proc   aprocs.Proc
-	quota  uint64
+	id    CopierId
+	quota uint64
+	lsp   LsProc
 }
 
 type Copier interface {
-	Lister
-	aprocs.Proc
 	Id() CopierId
 	Quota() uint64
 	SetQuota(uint64)
+	LsProc
 }
 
-func NewCopier(id CopierId, lister Lister, proc aprocs.Proc) Copier {
+func NewCopier(id CopierId, lsp LsProc) Copier {
 	return &copier{
-		id:     id,
-		lister: lister,
-		proc:   proc,
-		quota:  QuotaUnlimited,
+		id:    id,
+		lsp:   lsp,
+		quota: QuotaUnlimited,
 	}
 }
 
@@ -46,17 +43,56 @@ func (cp *copier) Quota() uint64     { return cp.quota }
 func (cp *copier) SetQuota(q uint64) { cp.quota = q }
 
 func (cp *copier) Ls() ([]LsEntry, error) {
-	return cp.lister.Ls()
+	return cp.lsp.Ls()
 }
 
 func (cp *copier) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return cp.proc.Process(c)
+	return cp.lsp.Process(c)
 }
 
 func (cp *copier) Finish() error {
-	return cp.proc.Finish()
+	return cp.lsp.Finish()
 }
 
 type CopierAdder interface {
 	AddCopier(Copier, []LsEntry)
+}
+
+type LsProc interface {
+	Lister
+	aprocs.Proc
+}
+
+type lsProc struct {
+	lister Lister
+	proc   aprocs.Proc
+}
+
+func NewLsProc(lister Lister, proc aprocs.Proc) LsProc {
+	return lsProc{lister: lister, proc: proc}
+}
+
+func (lsp lsProc) Process(c *ss.Chunk) <-chan aprocs.Res {
+	return lsp.proc.Process(c)
+}
+
+func (lsp lsProc) Finish() error {
+	return lsp.proc.Finish()
+}
+
+func (lsp lsProc) Ls() ([]LsEntry, error) {
+	return lsp.lister.Ls()
+}
+
+type LsProcer interface {
+	LsProc() LsProc
+}
+
+type LsUnprocer interface {
+	LsUnproc() LsProc
+}
+
+type LsProcUnprocer interface {
+	LsProcer
+	LsUnprocer
 }

@@ -43,16 +43,16 @@ type List struct {
 	Mu    sync.Mutex
 }
 
-func (list *List) Add(c cpprocs.Copier) {
+func (list *List) Add(cp cpprocs.Copier) {
 	list.mapMu.Lock()
 	defer list.mapMu.Unlock()
-	list.m[c.Id()] = struct{}{}
+	list.m[cp.Id()] = struct{}{}
 }
 
-func (list *List) Contains(c cpprocs.Copier) (ok bool) {
+func (list *List) Contains(cp cpprocs.Copier) (ok bool) {
 	list.mapMu.Lock()
 	defer list.mapMu.Unlock()
-	_, ok = list.m[c.Id()]
+	_, ok = list.m[cp.Id()]
 	return
 }
 

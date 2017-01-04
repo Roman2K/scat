@@ -15,8 +15,12 @@ func TestCopies(t *testing.T) {
 	reg := copies.NewReg()
 	hash1 := checksum.Sum([]byte("hash1"))
 	hash2 := checksum.Sum([]byte("hash2"))
-	a := cpprocs.NewCopier("a", testutil.SliceLister{{Hash: hash1}}, nil)
-	b := cpprocs.NewCopier("b", testutil.SliceLister{{Hash: hash1}}, nil)
+	a := cpprocs.NewCopier("a",
+		cpprocs.NewLsProc(testutil.SliceLister{{Hash: hash1}}, nil),
+	)
+	b := cpprocs.NewCopier("b",
+		cpprocs.NewLsProc(testutil.SliceLister{{Hash: hash1}}, nil),
+	)
 	ls, err := a.Ls()
 	assert.NoError(t, err)
 	reg.AddCopier(a, ls)
