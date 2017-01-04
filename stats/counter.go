@@ -13,6 +13,7 @@ type counter struct {
 	out    uint64
 	dur    time.Duration
 	outMu  sync.Mutex
+	last   time.Time
 }
 
 func (cnt *counter) addOut(nbytes uint64, dur time.Duration) {
@@ -38,10 +39,12 @@ func (cnt *counter) addInstance() {
 	cnt.instMu.Lock()
 	defer cnt.instMu.Unlock()
 	cnt.inst++
+	cnt.last = time.Now()
 }
 
 func (cnt *counter) removeInstance() {
 	cnt.instMu.Lock()
 	defer cnt.instMu.Unlock()
 	cnt.inst--
+	cnt.last = time.Now()
 }

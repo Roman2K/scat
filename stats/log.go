@@ -12,6 +12,8 @@ import (
 	"secsplit/ansirefresh"
 )
 
+const aliveThreshold = 1 * time.Second
+
 type Log struct {
 	w          ansirefresh.WriteFlusher
 	counters   map[string]*counter
@@ -88,10 +90,14 @@ func (log *Log) write() error {
 		out, dur := cnt.getOut()
 		outRate := rateStr(out, now.Sub(cnt.start))
 		ownRate := rateStr(out, dur)
-		_, err := fmt.Fprintf(log.w,
-			"%15s x%d:\t%9s/s\t\x1b[90m%9s/s\x1b[0m\n",
-			name, cnt.getInst(), ownRate, outRate,
-		)
+
+		info := ""
+		if now.Sub(cnt.last) > aliveThreshold {
+			info = fmt.Sprintf("\x1b[90m%11s\x1b[0m", "stopped")
+		} else {
+			info = fmt.Sprintf("%9s/s\t\x1b[90m%9s/s\x1b[0m", ownRate, outRate)
+		}
+		_, err := fmt.Fprintf(log.w, "%15s x%d:\t%s\n", name, cnt.getInst(), info)
 		if err != nil {
 			return err
 		}
