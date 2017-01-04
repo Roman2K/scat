@@ -38,7 +38,7 @@ func addCopiers(adders []cpprocs.CopierAdder, copiers []cpprocs.Copier) error {
 	for i := range copiers {
 		cp := copiers[i]
 		fns[i] = func() (err error) {
-			ls, err := cp.Lister().Ls()
+			ls, err := cp.Ls()
 			if err != nil {
 				return
 			}
@@ -94,7 +94,7 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 		casc := make(aprocs.Cascade, len(copiers))
 		for i := range copiers {
 			cp := copiers[i]
-			casc[i] = aprocs.NewOnEnd(cp.Proc(), func(err error) {
+			casc[i] = aprocs.NewOnEnd(cp, func(err error) {
 				if err != nil {
 					mc.qman.Delete(cp)
 					return
@@ -127,8 +127,8 @@ func (mc *minCopies) Finish() error {
 
 func finishFuncs(copiers []cpprocs.Copier) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(copiers))
-	for i, c := range copiers {
-		fns[i] = c.Proc().Finish
+	for i, cp := range copiers {
+		fns[i] = cp.Finish
 	}
 	return
 }

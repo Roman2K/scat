@@ -1,6 +1,7 @@
 package cpprocs
 
 import (
+	ss "secsplit"
 	"secsplit/aprocs"
 	"secsplit/checksum"
 )
@@ -24,9 +25,9 @@ type copier struct {
 }
 
 type Copier interface {
+	Lister
+	aprocs.Proc
 	Id() CopierId
-	Lister() Lister
-	Proc() aprocs.Proc
 	Quota() uint64
 	SetQuota(uint64)
 }
@@ -40,11 +41,21 @@ func NewCopier(id CopierId, lister Lister, proc aprocs.Proc) Copier {
 	}
 }
 
-func (c *copier) Id() CopierId      { return c.id }
-func (c *copier) Lister() Lister    { return c.lister }
-func (c *copier) Proc() aprocs.Proc { return c.proc }
-func (c *copier) Quota() uint64     { return c.quota }
-func (c *copier) SetQuota(q uint64) { c.quota = q }
+func (cp *copier) Id() CopierId      { return cp.id }
+func (cp *copier) Quota() uint64     { return cp.quota }
+func (cp *copier) SetQuota(q uint64) { cp.quota = q }
+
+func (cp *copier) Ls() ([]LsEntry, error) {
+	return cp.lister.Ls()
+}
+
+func (cp *copier) Process(c *ss.Chunk) <-chan aprocs.Res {
+	return cp.proc.Process(c)
+}
+
+func (cp *copier) Finish() error {
+	return cp.proc.Finish()
+}
 
 type CopierAdder interface {
 	AddCopier(Copier, []LsEntry)
