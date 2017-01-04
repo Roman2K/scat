@@ -1,6 +1,7 @@
 package cpprocs_test
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -47,4 +48,29 @@ func TestCatProcCmd(t *testing.T) {
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, hash, entries[0].Hash)
 	assert.Equal(t, int64(len(data)), entries[0].Size)
+}
+
+func TestCatUnprocCmd(t *testing.T) {
+	const (
+		hashData = "y"
+		hashStr  = "a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa"
+		data     = "xxx"
+	)
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
+	cat := cpprocs.NewCat(dir)
+
+	path := filepath.Join(dir, hashStr)
+	err = ioutil.WriteFile(path, []byte(data), 0644)
+	assert.NoError(t, err)
+
+	hash := checksum.Sum([]byte(hashData))
+	cmd, err := cat.NewUnprocCmd(hash)
+	assert.NoError(t, err)
+	buf := &bytes.Buffer{}
+	cmd.Stdout = buf
+	err = cmd.Run()
+	assert.NoError(t, err)
+	assert.Equal(t, data, buf.String())
 }

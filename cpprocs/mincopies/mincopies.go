@@ -45,7 +45,6 @@ func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
 		qman:    qman,
 	}
 	err = ml.AddEntriesTo(adders)
-
 	return
 }
 

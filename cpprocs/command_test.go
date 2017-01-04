@@ -46,18 +46,56 @@ func TestCommandLsProcError(t *testing.T) {
 	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
 }
 
+func TestCommandLsUnproc(t *testing.T) {
+	const output = "ok"
+	spawner := testSpawner{
+		newUnprocCmd: func(checksum.Hash) (*exec.Cmd, error) {
+			return exec.Command("echo", "-n", output), nil
+		},
+	}
+	cmd := cpprocs.NewCommand(spawner)
+	c := &ss.Chunk{}
+	ch := cmd.LsUnproc().Process(c)
+	chunks, err := testutil.ReadChunks(ch)
+	assert.NoError(t, err)
+	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, output, string(chunks[0].Data))
+}
+
+func TestCommandLsUnprocError(t *testing.T) {
+	spawner := testSpawner{
+		newUnprocCmd: func(checksum.Hash) (*exec.Cmd, error) {
+			return exec.Command("/dev/null"), nil
+		},
+	}
+	cmd := cpprocs.NewCommand(spawner)
+	c := &ss.Chunk{}
+	ch := cmd.LsUnproc().Process(c)
+	chunks, err := testutil.ReadChunks(ch)
+	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
+	assert.Nil(t, c.Data)
+}
+
 type testSpawner struct {
-	newProcCmd func(checksum.Hash) (*exec.Cmd, error)
+	newProcCmd   func(checksum.Hash) (*exec.Cmd, error)
+	newUnprocCmd func(checksum.Hash) (*exec.Cmd, error)
 }
 
 func (ts testSpawner) Ls() ([]cpprocs.LsEntry, error) {
-	return nil, nil
+	panic("Ls() not implemented")
 }
 
 func (ts testSpawner) NewProcCmd(h checksum.Hash) (*exec.Cmd, error) {
+	if ts.newProcCmd == nil {
+		panic("newProcCmd not set")
+	}
 	return ts.newProcCmd(h)
 }
 
 func (ts testSpawner) NewUnprocCmd(h checksum.Hash) (*exec.Cmd, error) {
-	panic("NewUnprocCmd() not implemented")
+	if ts.newUnprocCmd == nil {
+		panic("newUnprocCmd not set")
+	}
+	return ts.newUnprocCmd(h)
 }

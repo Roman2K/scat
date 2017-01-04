@@ -19,7 +19,7 @@ func NewCat(dir string) CmdSpawner {
 }
 
 func (cat cat) NewProcCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
-	path := filepath.Join(cat.dir, fmt.Sprintf("%x", hash))
+	path := cat.filePath(hash)
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return
@@ -29,8 +29,13 @@ func (cat cat) NewProcCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
 	return
 }
 
-func (cat cat) NewUnprocCmd(hash checksum.Hash) (cmd *exec.Cmd, err error) {
-	return
+func (cat cat) NewUnprocCmd(hash checksum.Hash) (*exec.Cmd, error) {
+	path := cat.filePath(hash)
+	return exec.Command("cat", path), nil
+}
+
+func (cat cat) filePath(hash checksum.Hash) string {
+	return filepath.Join(cat.dir, fmt.Sprintf("%x", hash))
 }
 
 func (cat cat) Ls() (entries []LsEntry, err error) {

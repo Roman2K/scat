@@ -112,17 +112,25 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	cats := make([]cpprocs.LsProc, 3)
+	cats := make([]cpprocs.Reader, 3)
 	for i, n := 0, len(cats); i < n; i++ {
 		id := fmt.Sprintf("cat%d", i+1)
-		cats[i] = stats.NewLsProc(log, id,
+		cats[i] = cpprocs.NewReader(id, stats.NewLsProc(log, id,
 			cpprocs.NewCommand(cpprocs.NewCat("/Users/roman/tmp/"+id)).LsUnproc(),
-		)
+		))
+	}
+
+	mrd, err := cpprocs.NewMultiReader(cats)
+	if err != nil {
+		return
 	}
 
 	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
-		stats.NewProc(log, "localstore",
-			procs.A((&procs.LocalStore{"out"}).Unproc()),
+		// stats.NewProc(log, "localstore",
+		// 	procs.A((&procs.LocalStore{"out"}).Unproc()),
+		// ),
+		stats.NewProc(log, "cats",
+			mrd,
 		),
 		stats.NewProc(log, "pool",
 			aprocs.NewPool(2, aprocs.NewChain([]aprocs.Proc{

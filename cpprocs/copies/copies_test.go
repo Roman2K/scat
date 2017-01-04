@@ -20,6 +20,10 @@ func TestCopies(t *testing.T) {
 	assert.True(t, reg.List(hash1).Contains(a))
 	assert.False(t, reg.List(hash2).Contains(a))
 	assert.False(t, reg.List(hash1).Contains(b))
+	reg.RemoveOwner(a)
+	assert.False(t, reg.List(hash1).Contains(a))
+	reg.RemoveOwner(b)
+	assert.False(t, reg.List(hash1).Contains(b))
 }
 
 type owner string

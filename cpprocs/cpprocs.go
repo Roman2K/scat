@@ -18,6 +18,10 @@ type LsEntry struct {
 	Size int64
 }
 
+type Identified interface {
+	Id() interface{}
+}
+
 type copier struct {
 	id    interface{}
 	quota uint64
@@ -25,7 +29,7 @@ type copier struct {
 }
 
 type Copier interface {
-	Id() interface{}
+	Identified
 	Quota() uint64
 	SetQuota(uint64)
 	LsProc
@@ -79,6 +83,36 @@ func (lsp lsProc) Finish() error {
 
 func (lsp lsProc) Ls() ([]LsEntry, error) {
 	return lsp.lister.Ls()
+}
+
+type Reader interface {
+	Identified
+	LsProc
+}
+
+type reader struct {
+	id  interface{}
+	lsp LsProc
+}
+
+func NewReader(id interface{}, lsp LsProc) Reader {
+	return reader{id: id, lsp: lsp}
+}
+
+func (r reader) Id() interface{} {
+	return r.id
+}
+
+func (r reader) Ls() ([]LsEntry, error) {
+	return r.lsp.Ls()
+}
+
+func (r reader) Process(c *ss.Chunk) <-chan aprocs.Res {
+	return r.lsp.Process(c)
+}
+
+func (r reader) Finish() error {
+	return r.lsp.Finish()
 }
 
 type LsProcer interface {

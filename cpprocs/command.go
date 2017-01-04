@@ -41,5 +41,15 @@ func (cmdp command) LsUnproc() LsProc {
 }
 
 func (cmdp command) unprocess(c *ss.Chunk) (err error) {
+	cmd, err := cmdp.spawner.NewUnprocCmd(c.Hash)
+	if err != nil {
+		return
+	}
+	buf := &bytes.Buffer{}
+	cmd.Stdout = buf
+	err = cmd.Run()
+	if err == nil {
+		c.Data = buf.Bytes()
+	}
 	return
 }
