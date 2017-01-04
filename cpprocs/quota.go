@@ -1,71 +1,49 @@
 package cpprocs
 
-import (
-	"sync"
-)
-
 var QuotaUnlimited = ^uint64(0)
 
-type QuotaMan struct {
-	usage   quotaUsage
-	usageMu sync.Mutex
-}
+type QuotaMan map[key]*usage
 
-type quotaUsage map[CopierId]*usage
+// Private type to prevent external adds like man[id] = nil
+type key CopierId
 
 type usage struct {
-	copier  Copier
-	used    uint64
-	deleted bool
+	copier Copier
+	use    uint64
 }
 
-var _ CopierAdder = &QuotaMan{}
+var _ CopierAdder = QuotaMan{}
 
-func NewQuotaMan() *QuotaMan {
-	return &QuotaMan{usage: make(quotaUsage)}
-}
-
-func (m *QuotaMan) AddCopier(cp Copier, entries []LsEntry) {
-	used := uint64(0)
+func (m QuotaMan) AddCopier(cp Copier, entries []LsEntry) {
+	use := uint64(0)
 	for _, e := range entries {
-		used += uint64(e.Size)
+		use += uint64(e.Size)
 	}
-	m.addUsed(cp, used)
+	if _, ok := m[cp.Id()]; !ok {
+		m[cp.Id()] = &usage{copier: cp}
+	}
+	m.AddUse(cp, use)
 }
 
-func (m *QuotaMan) addUsed(cp Copier, used uint64) {
-	m.usageMu.Lock()
-	defer m.usageMu.Unlock()
-	cpid := cp.Id()
-	if _, ok := m.usage[cpid]; !ok {
-		m.usage[cpid] = &usage{copier: cp}
-	}
-	u := m.usage[cpid]
-	u.used += used
-	if u.used >= u.copier.Quota() {
-		u.deleted = true
-	}
-}
-
-func (m *QuotaMan) Delete(cp Copier) {
-	m.usageMu.Lock()
-	defer m.usageMu.Unlock()
-	u, ok := m.usage[cp.Id()]
+func (m QuotaMan) AddUse(cp Copier, use uint64) {
+	u, ok := m[cp.Id()]
 	if !ok {
 		return
 	}
-	u.deleted = true
+	u.use += use
+	if u.use >= u.copier.Quota() {
+		delete(m, cp.Id())
+	}
 }
 
-func (m *QuotaMan) Copiers(use int64) (res []Copier) {
-	m.usageMu.Lock()
-	defer m.usageMu.Unlock()
-	res = make([]Copier, 0, len(m.usage))
-	for _, u := range m.usage {
-		if u.deleted {
-			continue
-		}
-		if u.used+uint64(use) >= u.copier.Quota() {
+func (m QuotaMan) Delete(cp Copier) {
+	delete(m, cp.Id())
+}
+
+func (m QuotaMan) Copiers(use uint64) (res []Copier) {
+	res = make([]Copier, 0, len(m))
+	for _, u := range m {
+		if u.use+uint64(use) >= u.copier.Quota() {
 			continue
 		}
 		res = append(res, u.copier)

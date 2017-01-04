@@ -18,7 +18,7 @@ func TestQuotaMan(t *testing.T) {
 		}
 		return
 	}
-	man := cpprocs.NewQuotaMan()
+	man := make(cpprocs.QuotaMan)
 
 	// none
 	assert.Equal(t, []string{}, ids(man.Copiers(4)))
@@ -33,17 +33,17 @@ func TestQuotaMan(t *testing.T) {
 
 	// a) quota = 100, used = 2
 	a.SetQuota(100)
-	man.AddCopier(a, []cpprocs.LsEntry{{Size: 1}})
+	man.AddUse(a, 1)
 	assert.Equal(t, []string{"a"}, ids(man.Copiers(97)))
 	assert.Equal(t, []string{}, ids(man.Copiers(98)))
 
 	// a) quota = 100, used = 100
-	man.AddCopier(a, []cpprocs.LsEntry{{Size: 98}})
+	man.AddUse(a, 98)
 	assert.Equal(t, []string{}, ids(man.Copiers(0)))
 	assert.Equal(t, []string{}, ids(man.Copiers(1)))
 
 	// a) quota = 100, used = 101
-	man.AddCopier(a, []cpprocs.LsEntry{{Size: 1}})
+	man.AddUse(a, 1)
 	assert.Equal(t, []string{}, ids(man.Copiers(0)))
 
 	// b)
@@ -56,6 +56,6 @@ func TestQuotaMan(t *testing.T) {
 	assert.Equal(t, []string{}, ids(man.Copiers(0)))
 
 	// b) deleted, used = 1
-	man.AddCopier(b, []cpprocs.LsEntry{{Size: 1}})
+	man.AddUse(b, 1)
 	assert.Equal(t, []string{}, ids(man.Copiers(0)))
 }
