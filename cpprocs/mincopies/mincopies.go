@@ -54,7 +54,7 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	copies.Mu.Lock()
 	ncopies := copies.Len()
 	missing := mc.min - ncopies
-	all := shuffle(mc.qman.Copiers())
+	all := shuffle(mc.qman.Copiers(int64(len(c.Data))))
 	elected := make([]cpprocs.Copier, 0, missing)
 	foCap := len(all) - ncopies - missing
 	if foCap < 0 {

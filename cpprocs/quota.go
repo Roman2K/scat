@@ -57,12 +57,15 @@ func (m *QuotaMan) Delete(cp Copier) {
 	u.deleted = true
 }
 
-func (m *QuotaMan) Copiers() (res []Copier) {
+func (m *QuotaMan) Copiers(use int64) (res []Copier) {
 	m.usageMu.Lock()
 	defer m.usageMu.Unlock()
 	res = make([]Copier, 0, len(m.usage))
 	for _, u := range m.usage {
 		if u.deleted {
+			continue
+		}
+		if u.used+uint64(use) >= u.copier.Quota() {
 			continue
 		}
 		res = append(res, u.copier)

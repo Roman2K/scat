@@ -60,6 +60,7 @@ func cmdSplit() (err error) {
 	cat1cp := cpprocs.NewCopier("cat1", cat1,
 		stats.NewProc(log, "cat1", cpprocs.NewCommand(cat1)),
 	)
+	cat1cp.SetQuota(10 * 1024 * 1024)
 	cat2 := cpprocs.NewCat("/Users/roman/tmp/cat2")
 	cat2cp := cpprocs.NewCopier("cat2", cat2,
 		stats.NewProc(log, "cat2", cpprocs.NewCommand(cat2)),
