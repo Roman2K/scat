@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"secsplit/checksum"
-	"secsplit/cpprocs"
 )
 
 type Reg struct {
@@ -12,17 +11,9 @@ type Reg struct {
 	mu sync.Mutex
 }
 
-var _ cpprocs.CopierAdder = &Reg{}
-
 func NewReg() *Reg {
 	return &Reg{
 		m: make(map[checksum.Hash]*List),
-	}
-}
-
-func (r *Reg) AddCopier(cp cpprocs.Copier, entries []cpprocs.LsEntry) {
-	for _, e := range entries {
-		r.List(e.Hash).Add(cp)
 	}
 }
 
@@ -31,28 +22,32 @@ func (r *Reg) List(h checksum.Hash) *List {
 	defer r.mu.Unlock()
 	if _, ok := r.m[h]; !ok {
 		r.m[h] = &List{
-			m: make(map[cpprocs.CopierId]struct{}),
+			m: make(map[interface{}]struct{}),
 		}
 	}
 	return r.m[h]
 }
 
 type List struct {
-	m     map[cpprocs.CopierId]struct{}
+	m     map[interface{}]struct{}
 	mapMu sync.Mutex
 	Mu    sync.Mutex
 }
 
-func (list *List) Add(cp cpprocs.Copier) {
-	list.mapMu.Lock()
-	defer list.mapMu.Unlock()
-	list.m[cp.Id()] = struct{}{}
+type Owner interface {
+	Id() interface{}
 }
 
-func (list *List) Contains(cp cpprocs.Copier) (ok bool) {
+func (list *List) Add(o Owner) {
 	list.mapMu.Lock()
 	defer list.mapMu.Unlock()
-	_, ok = list.m[cp.Id()]
+	list.m[o.Id()] = struct{}{}
+}
+
+func (list *List) Contains(o Owner) (ok bool) {
+	list.mapMu.Lock()
+	defer list.mapMu.Unlock()
+	_, ok = list.m[o.Id()]
 	return
 }
 

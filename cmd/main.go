@@ -105,22 +105,48 @@ func cmdSplit() (err error) {
 func cmdJoin() (err error) {
 	in, out := os.Stdin, os.Stdout
 
+	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
 
-	chain := aprocs.NewBacklog(3, aprocs.NewChain([]aprocs.Proc{
-		procs.A((&procs.LocalStore{"out"}).Unproc()),
-		aprocs.NewPool(2, aprocs.NewChain([]aprocs.Proc{
-			procs.A(procs.Checksum{}.Unproc()),
-			procs.A((&procs.Compress{}).Unproc()),
-			aprocs.NewGroup(ndata + nparity),
-			parity.Unproc(),
-		})),
+	cats := make([]cpprocs.LsProc, 3)
+	for i, n := 0, len(cats); i < n; i++ {
+		id := fmt.Sprintf("cat%d", i+1)
+		cats[i] = stats.NewLsProc(log, id,
+			cpprocs.NewCommand(cpprocs.NewCat("/Users/roman/tmp/"+id)).LsUnproc(),
+		)
+	}
+
+	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
+		stats.NewProc(log, "localstore",
+			procs.A((&procs.LocalStore{"out"}).Unproc()),
+		),
+		stats.NewProc(log, "pool",
+			aprocs.NewPool(2, aprocs.NewChain([]aprocs.Proc{
+				stats.NewProc(log, "checksum",
+					procs.A(procs.Checksum{}.Unproc()),
+				),
+				stats.NewProc(log, "compress",
+					procs.A((&procs.Compress{}).Unproc()),
+				),
+				stats.NewProc(log, "group",
+					aprocs.NewGroup(ndata+nparity),
+				),
+				stats.NewProc(log, "parity",
+					parity.Unproc(),
+				),
+			})),
+		),
 		aprocs.NewMutex(aprocs.NewChain([]aprocs.Proc{
-			aprocs.NewSort(),
-			aprocs.NewWriterTo(out),
+			stats.NewProc(log, "sort",
+				aprocs.NewSort(),
+			),
+			stats.NewProc(log, "writerto",
+				aprocs.NewWriterTo(out),
+			),
 		})),
 	}))
 

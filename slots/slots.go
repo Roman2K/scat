@@ -1,8 +1,6 @@
 package slots
 
 type Slots chan slot
-
-// Private type to prevent external adds like slots <- struct{}
 type slot struct{}
 
 func New(n int) Slots {

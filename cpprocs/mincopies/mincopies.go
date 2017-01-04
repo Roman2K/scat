@@ -11,61 +11,54 @@ import (
 	"secsplit/concur"
 	"secsplit/cpprocs"
 	"secsplit/cpprocs/copies"
+	"secsplit/cpprocs/quota"
 )
 
 type minCopies struct {
 	min     int
 	copiers []cpprocs.Copier
 	reg     *copies.Reg
-	qman    cpprocs.QuotaMan
+	qman    quota.Man
 	qmanMu  sync.Mutex
 }
 
 func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
 	reg := copies.NewReg()
-	qman := make(cpprocs.QuotaMan)
-	err = addCopiers([]cpprocs.CopierAdder{
-		reg,
-		&lockedCopierAdder{adder: qman},
-	}, copiers)
+	qman := make(quota.Man)
+
+	for _, cp := range copiers {
+		qman.AddRes(cp)
+	}
+	ml := make(cpprocs.MultiLister, len(copiers))
+	for i, cp := range copiers {
+		ml[i] = cp
+	}
+	adders := []cpprocs.LsEntryAdder{
+		cpprocs.CopiesEntryAdder{Reg: reg},
+		&quotaEntryAdder{qman: qman},
+	}
+
 	dynp = &minCopies{
 		min:     min,
 		copiers: copiers,
 		reg:     reg,
 		qman:    qman,
 	}
+	err = ml.AddEntriesTo(adders)
+
 	return
 }
 
-type lockedCopierAdder struct {
-	adder cpprocs.CopierAdder
-	mu    sync.Mutex
+type quotaEntryAdder struct {
+	qman quota.Man
+	mu   sync.Mutex
 }
 
-func (a *lockedCopierAdder) AddCopier(
-	cp cpprocs.Copier, entries []cpprocs.LsEntry,
-) {
+func (a *quotaEntryAdder) AddLsEntry(lser cpprocs.Lister, e cpprocs.LsEntry) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.adder.AddCopier(cp, entries)
-}
-
-func addCopiers(adders []cpprocs.CopierAdder, copiers []cpprocs.Copier) error {
-	fns := make(concur.Funcs, len(copiers))
-	for i := range copiers {
-		cp := copiers[i]
-		fns[i] = func() (err error) {
-			ls, err := cp.Ls()
-			if err != nil {
-				return
-			}
-			for _, a := range adders {
-				a.AddCopier(cp, ls)
-			}
-			return
-		}
-	}
-	return fns.FirstErr()
+	res := lser.(quota.Res)
+	a.qman.AddUse(res, uint64(e.Size))
 }
 
 func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
@@ -127,10 +120,15 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	return procs, nil
 }
 
-func (mc *minCopies) getCopiers(use uint64) []cpprocs.Copier {
+func (mc *minCopies) getCopiers(use uint64) (cps []cpprocs.Copier) {
 	mc.qmanMu.Lock()
 	defer mc.qmanMu.Unlock()
-	return mc.qman.Copiers(use)
+	ress := mc.qman.Resources(use)
+	cps = make([]cpprocs.Copier, len(ress))
+	for i, res := range ress {
+		cps[i] = res.(cpprocs.Copier)
+	}
+	return
 }
 
 func (mc *minCopies) deleteCopier(cp cpprocs.Copier) {

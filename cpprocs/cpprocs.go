@@ -4,6 +4,9 @@ import (
 	ss "secsplit"
 	"secsplit/aprocs"
 	"secsplit/checksum"
+	"secsplit/concur"
+	"secsplit/cpprocs/copies"
+	"secsplit/cpprocs/quota"
 )
 
 type Lister interface {
@@ -15,30 +18,28 @@ type LsEntry struct {
 	Size int64
 }
 
-type CopierId interface{}
-
 type copier struct {
-	id    CopierId
+	id    interface{}
 	quota uint64
 	lsp   LsProc
 }
 
 type Copier interface {
-	Id() CopierId
+	Id() interface{}
 	Quota() uint64
 	SetQuota(uint64)
 	LsProc
 }
 
-func NewCopier(id CopierId, lsp LsProc) Copier {
+func NewCopier(id interface{}, lsp LsProc) Copier {
 	return &copier{
 		id:    id,
 		lsp:   lsp,
-		quota: QuotaUnlimited,
+		quota: quota.Unlimited,
 	}
 }
 
-func (cp *copier) Id() CopierId      { return cp.id }
+func (cp *copier) Id() interface{}   { return cp.id }
 func (cp *copier) Quota() uint64     { return cp.quota }
 func (cp *copier) SetQuota(q uint64) { cp.quota = q }
 
@@ -52,10 +53,6 @@ func (cp *copier) Process(c *ss.Chunk) <-chan aprocs.Res {
 
 func (cp *copier) Finish() error {
 	return cp.lsp.Finish()
-}
-
-type CopierAdder interface {
-	AddCopier(Copier, []LsEntry)
 }
 
 type LsProc interface {
@@ -95,4 +92,39 @@ type LsUnprocer interface {
 type LsProcUnprocer interface {
 	LsProcer
 	LsUnprocer
+}
+
+type LsEntryAdder interface {
+	AddLsEntry(Lister, LsEntry)
+}
+
+type MultiLister []Lister
+
+func (ml MultiLister) AddEntriesTo(adders []LsEntryAdder) error {
+	fns := make(concur.Funcs, len(ml))
+	for i := range ml {
+		lser := ml[i]
+		fns[i] = func() (err error) {
+			ls, err := lser.Ls()
+			if err != nil {
+				return
+			}
+			for _, a := range adders {
+				for _, e := range ls {
+					a.AddLsEntry(lser, e)
+				}
+			}
+			return
+		}
+	}
+	return fns.FirstErr()
+}
+
+type CopiesEntryAdder struct {
+	Reg *copies.Reg
+}
+
+func (a CopiesEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
+	owner := lser.(copies.Owner)
+	a.Reg.List(e.Hash).Add(owner)
 }

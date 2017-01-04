@@ -217,7 +217,7 @@ func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
 	return
 }
 
-func TestReverseTest(t *testing.T) {
+func TestReverse(t *testing.T) {
 	s := []cpprocs.Copier{
 		cpprocs.NewCopier("a", nil),
 		cpprocs.NewCopier("b", nil),
