@@ -5,12 +5,12 @@ import (
 	"errors"
 )
 
-const size = sha256.Size
+const Size = sha256.Size
 
-type Hash [size]byte
+type Hash [Size]byte
 
 func (h *Hash) LoadSlice(s []byte) error {
-	if len(s) != size {
+	if len(s) != Size {
 		return errors.New("invalid hash length")
 	}
 	copy(h[:], s)

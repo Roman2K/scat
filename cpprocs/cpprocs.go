@@ -87,16 +87,18 @@ func (lsp lsProc) Ls() ([]LsEntry, error) {
 
 type Reader interface {
 	Identified
-	LsProc
+	Lister
+	aprocs.Proc
 }
 
 type reader struct {
-	id  interface{}
-	lsp LsProc
+	id   interface{}
+	lser Lister
+	proc aprocs.Proc
 }
 
-func NewReader(id interface{}, lsp LsProc) Reader {
-	return reader{id: id, lsp: lsp}
+func NewReader(id interface{}, lser Lister, proc aprocs.Proc) Reader {
+	return reader{id: id, lser: lser, proc: proc}
 }
 
 func (r reader) Id() interface{} {
@@ -104,28 +106,15 @@ func (r reader) Id() interface{} {
 }
 
 func (r reader) Ls() ([]LsEntry, error) {
-	return r.lsp.Ls()
+	return r.lser.Ls()
 }
 
 func (r reader) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return r.lsp.Process(c)
+	return r.proc.Process(c)
 }
 
 func (r reader) Finish() error {
-	return r.lsp.Finish()
-}
-
-type LsProcer interface {
-	LsProc() LsProc
-}
-
-type LsUnprocer interface {
-	LsUnproc() LsProc
-}
-
-type LsProcUnprocer interface {
-	LsProcer
-	LsUnprocer
+	return r.proc.Finish()
 }
 
 type LsEntryAdder interface {

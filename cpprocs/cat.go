@@ -16,12 +16,17 @@ type cat struct {
 	dir string
 }
 
-func NewCat(dir string) LsProcUnprocer {
+type Cat interface {
+	Lister
+	aprocs.ProcUnprocer
+}
+
+func NewCat(dir string) Cat {
 	return cat{dir: dir}
 }
 
-func (cat cat) LsProc() LsProc {
-	return NewLsProc(cat, aprocs.CmdInFunc(cat.procCmd))
+func (cat cat) Proc() aprocs.Proc {
+	return aprocs.CmdInFunc(cat.procCmd)
 }
 
 func (cat cat) procCmd(c *ss.Chunk) (cmd *exec.Cmd, err error) {
@@ -35,8 +40,8 @@ func (cat cat) procCmd(c *ss.Chunk) (cmd *exec.Cmd, err error) {
 	return
 }
 
-func (cat cat) LsUnproc() LsProc {
-	return NewLsProc(cat, aprocs.CmdOutFunc(cat.unprocCmd))
+func (cat cat) Unproc() aprocs.Proc {
+	return aprocs.CmdOutFunc(cat.unprocCmd)
 }
 
 func (cat cat) unprocCmd(c *ss.Chunk) (*exec.Cmd, error) {
@@ -54,7 +59,7 @@ func (cat cat) Ls() (entries []LsEntry, err error) {
 		return
 	}
 	var (
-		buf   []byte
+		buf   = make([]byte, checksum.Size)
 		entry LsEntry
 	)
 	for _, f := range files {

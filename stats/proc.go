@@ -5,7 +5,6 @@ import (
 
 	ss "secsplit"
 	"secsplit/aprocs"
-	"secsplit/cpprocs"
 )
 
 type logProc struct {
@@ -54,28 +53,4 @@ func (p *logProc) Finish() (err error) {
 		return
 	}
 	return p.log.Finish()
-}
-
-type logLsProc struct {
-	lister cpprocs.Lister
-	proc   aprocs.Proc
-}
-
-func NewLsProc(log *Log, name string, lsp cpprocs.LsProc) cpprocs.LsProc {
-	return logLsProc{
-		lister: lsp,
-		proc:   NewProc(log, name, lsp),
-	}
-}
-
-func (lsp logLsProc) Ls() ([]cpprocs.LsEntry, error) {
-	return lsp.lister.Ls()
-}
-
-func (lsp logLsProc) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return lsp.proc.Process(c)
-}
-
-func (lsp logLsProc) Finish() error {
-	return lsp.proc.Finish()
 }

@@ -90,7 +90,6 @@ func (log *Log) write() error {
 		out, dur := cnt.getOut()
 		outRate := rateStr(out, now.Sub(cnt.start))
 		ownRate := rateStr(out, dur)
-
 		info := ""
 		if now.Sub(cnt.last) > aliveThreshold {
 			info = fmt.Sprintf("\x1b[90m%11s\x1b[0m", "stopped")

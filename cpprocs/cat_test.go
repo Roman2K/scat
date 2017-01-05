@@ -26,13 +26,13 @@ func TestCatProc(t *testing.T) {
 	cat := cpprocs.NewCat(dir)
 
 	// Ls() empty
-	entries, err := cat.LsProc().Ls()
+	entries, err := cat.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(entries))
 
-	// LsProc()
+	// Proc()
 	hash := checksum.Sum([]byte(hashData))
-	_, err = testutil.ReadChunks(cat.LsProc().Process(&ss.Chunk{
+	_, err = testutil.ReadChunks(cat.Proc().Process(&ss.Chunk{
 		Hash: hash,
 		Data: []byte(data),
 	}))
@@ -43,7 +43,7 @@ func TestCatProc(t *testing.T) {
 	assert.Equal(t, data, string(fdata))
 
 	// Ls()
-	entries, err = cat.LsProc().Ls()
+	entries, err = cat.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, hash, entries[0].Hash)
@@ -66,7 +66,7 @@ func TestCatUnproc(t *testing.T) {
 	assert.NoError(t, err)
 
 	hash := checksum.Sum([]byte(hashData))
-	chunks, err := testutil.ReadChunks(cat.LsUnproc().Process(&ss.Chunk{
+	chunks, err := testutil.ReadChunks(cat.Unproc().Process(&ss.Chunk{
 		Hash: hash,
 	}))
 	assert.NoError(t, err)

@@ -1,6 +1,9 @@
 package aprocs
 
-import ss "secsplit"
+import (
+	ss "secsplit"
+	"sync"
+)
 
 type chain struct {
 	procs  []Proc
@@ -47,7 +50,11 @@ func (chain chain) Finish() error {
 }
 
 func process(out chan<- Res, in <-chan Res, proc Proc) {
-	defer close(out)
+	wg := sync.WaitGroup{}
+	defer func() {
+		defer close(out)
+		wg.Wait()
+	}()
 	for res := range in {
 		var ch <-chan Res
 		if res.Err != nil {
@@ -60,9 +67,13 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 		} else {
 			ch = proc.Process(res.Chunk)
 		}
-		for res := range ch {
-			out <- res
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for res := range ch {
+				out <- res
+			}
+		}()
 	}
 	if ecp, ok := proc.(endCallProc); ok {
 		err := ecp.processEnd()

@@ -56,8 +56,7 @@ type quotaEntryAdder struct {
 func (a *quotaEntryAdder) AddLsEntry(lser cpprocs.Lister, e cpprocs.LsEntry) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	res := lser.(quota.Res)
-	a.qman.AddUse(res, uint64(e.Size))
+	a.qman.AddUse(lser.(quota.Res), uint64(e.Size))
 }
 
 func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {

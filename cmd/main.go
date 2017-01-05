@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	humanize "github.com/dustin/go-humanize"
+
 	"secsplit/aprocs"
 	"secsplit/cpprocs"
 	"secsplit/cpprocs/mincopies"
@@ -14,6 +16,7 @@ import (
 	"secsplit/procs"
 	"secsplit/split"
 	"secsplit/stats"
+	"secsplit/tmpdedup"
 )
 
 func main() {
@@ -55,28 +58,36 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	cats := make([]cpprocs.Copier, 3)
-	for i, n := 0, len(cats); i < n; i++ {
-		id := fmt.Sprintf("cat%d", i+1)
-		cats[i] = cpprocs.NewCopier(id, stats.NewLsProc(log, id,
-			cpprocs.NewCat("/Users/roman/tmp/"+id).LsProc(),
-		))
+	// cats := make([]cpprocs.Copier, 3)
+	// for i, n := 0, len(cats); i < n; i++ {
+	// 	id := fmt.Sprintf("cat%d", i+1)
+	// 	cats[i] = cpprocs.NewCopier(id, stats.NewLsProc(log, id,
+	// 		cpprocs.NewCat("/Users/roman/tmp/"+id).LsProc(),
+	// 	))
+	// }
+	// cats[0].SetQuota(10 * 1024 * 1024)
+	// minCopies, err := mincopies.New(2, cats)
+	// if err != nil {
+	// 	return
+	// }
+
+	tmp, err := tmpdedup.TempDir("")
+	if err != nil {
+		return
 	}
-	cats[0].SetQuota(10 * 1024 * 1024)
-	minCopies, err := mincopies.New(2, cats)
+	defer tmp.Finish()
+
+	drive := cpprocs.NewCopier("drive",
+		cpprocs.NewRcloneLsProc("drive:tmp", tmp),
+	)
+	drive.SetQuota(7 * humanize.GiByte)
+
+	minCopies, err := mincopies.New(1, []cpprocs.Copier{drive})
 	if err != nil {
 		return
 	}
 
-	// driveRcl, err := cpprocs.NewRclone("drive:tmp", "")
-	// if err != nil {
-	// 	return
-	// }
-	// drive := cpprocs.NewCopier("drive", stats.NewLsProc(log, "drive",
-	// 	cpprocs.NewCommand(driveRcl.ProcSpawner()),
-	// ))
-
-	chain := aprocs.NewBacklog(4, aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(1, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(log, "checksum",
 			procs.A(procs.Checksum{}.Proc()),
 		),
@@ -95,11 +106,10 @@ func cmdSplit() (err error) {
 		stats.NewProc(log, "checksum2",
 			procs.A(procs.Checksum{}.Proc()),
 		),
-		// stats.NewProc(log, "localstore",
-		// 	procs.A((&procs.LocalStore{"out"}).Proc()),
-		// ),
 		aprocs.NewConcur(2, minCopies),
-		// drive,
+		// stats.NewProc(log, "drive",
+		// 	aprocs.NewPool(3, drive),
+		// ),
 	}))
 	defer chain.Finish()
 
@@ -124,9 +134,9 @@ func cmdJoin() (err error) {
 	cats := make([]cpprocs.Reader, 3)
 	for i, n := 0, len(cats); i < n; i++ {
 		id := fmt.Sprintf("cat%d", i+1)
-		cats[i] = cpprocs.NewReader(id, stats.NewLsProc(log, id,
-			cpprocs.NewCat("/Users/roman/tmp/"+id).LsUnproc(),
-		))
+		cat := cpprocs.NewCat("/Users/roman/tmp/" + id)
+		proc := stats.NewProc(log, id, cat.Proc())
+		cats[i] = cpprocs.NewReader(id, cat, proc)
 	}
 
 	mrd, err := cpprocs.NewMultiReader(cats)
@@ -141,21 +151,17 @@ func cmdJoin() (err error) {
 		stats.NewProc(log, "cats",
 			mrd,
 		),
-		stats.NewProc(log, "pool",
-			aprocs.NewPool(2, aprocs.NewChain([]aprocs.Proc{
-				stats.NewProc(log, "checksum",
-					procs.A(procs.Checksum{}.Unproc()),
-				),
-				stats.NewProc(log, "compress",
-					procs.A((&procs.Compress{}).Unproc()),
-				),
-				stats.NewProc(log, "group",
-					aprocs.NewGroup(ndata+nparity),
-				),
-				stats.NewProc(log, "parity",
-					parity.Unproc(),
-				),
-			})),
+		stats.NewProc(log, "checksum",
+			procs.A(procs.Checksum{}.Unproc()),
+		),
+		stats.NewProc(log, "compress",
+			procs.A((&procs.Compress{}).Unproc()),
+		),
+		stats.NewProc(log, "group",
+			aprocs.NewGroup(ndata+nparity),
+		),
+		stats.NewProc(log, "parity",
+			parity.Unproc(),
 		),
 		aprocs.NewMutex(aprocs.NewChain([]aprocs.Proc{
 			stats.NewProc(log, "sort",

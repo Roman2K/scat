@@ -30,8 +30,10 @@ func TestPathCmdIn(t *testing.T) {
 		cmd.Stdout = fdata
 		return cmd, nil
 	}
-	cmdp, err := aprocs.NewPathCmdIn("", newCmd)
+	tmp, err := tmpdedup.TempDir("")
 	assert.NoError(t, err)
+	defer tmp.Finish()
+	cmdp := aprocs.NewPathCmdIn(newCmd, tmp)
 	c := &ss.Chunk{
 		Hash: checksum.Sum([]byte(hashData)),
 		Data: []byte(data),
@@ -44,26 +46,9 @@ func TestPathCmdIn(t *testing.T) {
 	assert.Equal(t, hashStr, filepath.Base(paths[0]))
 	assert.Equal(t, data, fdata.String())
 
-	type tmpManer interface {
-		TmpMan() *tmpdedup.Man
-	}
-
 	// tmp cleanup
-	cmdp.(tmpManer).TmpMan().Wait()
+	tmp.TmpMan().Wait()
 	_, err = os.Stat(paths[0])
 	assert.Error(t, err)
 	assert.True(t, os.IsNotExist(err))
-
-	// Finish()
-	dir := filepath.Dir(paths[0])
-	_, err = os.Stat(dir)
-	assert.NoError(t, err)
-	err = cmdp.Finish()
-	assert.NoError(t, err)
-	_, err = os.Stat(dir)
-	assert.True(t, os.IsNotExist(err))
-
-	// idempotence
-	err = cmdp.Finish()
-	assert.NoError(t, err)
 }
