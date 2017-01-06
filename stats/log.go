@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"io"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -85,21 +86,31 @@ func (log *Log) write() error {
 		return sortable(i) < sortable(j)
 	})
 	now := time.Now()
+	fmt.Fprintf(log.w,
+		"%15s   \t%11s\t\x1b[90m%11s\x1b[0m\n",
+		"PROC", "PERF", "AVG OUT",
+	)
 	for _, name := range names {
 		cnt := log.counters[name]
 		out, dur := cnt.getOut()
 		outRate := rateStr(out, now.Sub(cnt.start))
 		ownRate := rateStr(out, dur)
+		ninst := cnt.getInst()
 		info := ""
-		if now.Sub(cnt.last) > aliveThreshold {
+		if ninst == 0 && now.Sub(cnt.last) > aliveThreshold {
 			info = fmt.Sprintf("\x1b[90m%11s\x1b[0m", "stopped")
 		} else {
 			info = fmt.Sprintf("%9s/s\t\x1b[90m%9s/s\x1b[0m", ownRate, outRate)
 		}
-		_, err := fmt.Fprintf(log.w, "%15s x%d:\t%s\n", name, cnt.getInst(), info)
+		_, err := fmt.Fprintf(log.w, "%15s x%d\t%s\n", name, ninst, info)
 		if err != nil {
 			return err
 		}
+	}
+	ngors := runtime.NumGoroutine()
+	_, err := fmt.Fprintf(log.w, "%15s x%d\n", "(goroutines)", ngors)
+	if err != nil {
+		return err
 	}
 	return log.w.Flush()
 }
