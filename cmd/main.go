@@ -61,11 +61,11 @@ func cmdSplit() (err error) {
 	// cats := make([]cpprocs.Copier, 3)
 	// for i, n := 0, len(cats); i < n; i++ {
 	// 	id := fmt.Sprintf("cat%d", i+1)
-	// 	cats[i] = cpprocs.NewCopier(id, stats.NewLsProc(log, id,
-	// 		cpprocs.NewCat("/Users/roman/tmp/"+id).LsProc(),
-	// 	))
+	// 	cat := cpprocs.NewCat("/Users/roman/tmp/"+id)
+	// 	cats[i] = cpprocs.NewCopier(id, cat, stats.NewProc(log, id, cat.Unproc()))
 	// }
 	// cats[0].SetQuota(10 * 1024 * 1024)
+	//
 	// minCopies, err := mincopies.New(2, cats)
 	// if err != nil {
 	// 	return
@@ -77,9 +77,10 @@ func cmdSplit() (err error) {
 	}
 	defer tmp.Finish()
 
-	drive := cpprocs.NewCopier("drive",
-		cpprocs.NewRcloneLsProc("drive:tmp", tmp),
-	)
+	id := "drive"
+	driveRc := cpprocs.NewRclone("drive:tmp", tmp)
+	proc := stats.NewProc(log, id, driveRc.Proc())
+	drive := cpprocs.NewCopier(id, driveRc, proc)
 	drive.SetQuota(7 * humanize.GiByte)
 
 	minCopies, err := mincopies.New(1, []cpprocs.Copier{drive})
@@ -131,26 +132,26 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	cats := make([]cpprocs.Reader, 3)
-	for i, n := 0, len(cats); i < n; i++ {
-		id := fmt.Sprintf("cat%d", i+1)
-		cat := cpprocs.NewCat("/Users/roman/tmp/" + id)
-		proc := stats.NewProc(log, id, cat.Proc())
-		cats[i] = cpprocs.NewReader(id, cat, proc)
-	}
+	// cats := make([]cpprocs.Reader, 3)
+	// for i, n := 0, len(cats); i < n; i++ {
+	// 	id := fmt.Sprintf("cat%d", i+1)
+	// 	cat := cpprocs.NewCat("/Users/roman/tmp/" + id)
+	// 	proc := stats.NewProc(log, id, cat.Proc())
+	// 	cats[i] = cpprocs.NewReader(id, cat, proc)
+	// }
 
-	mrd, err := cpprocs.NewMultiReader(cats)
-	if err != nil {
-		return
-	}
+	// mrd, err := cpprocs.NewMultiReader(cats)
+	// if err != nil {
+	// 	return
+	// }
 
 	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
 		// stats.NewProc(log, "localstore",
 		// 	procs.A((&procs.LocalStore{"out"}).Unproc()),
 		// ),
-		stats.NewProc(log, "cats",
-			mrd,
-		),
+		// stats.NewProc(log, "cats",
+		// 	mrd,
+		// ),
 		stats.NewProc(log, "checksum",
 			procs.A(procs.Checksum{}.Unproc()),
 		),

@@ -11,34 +11,30 @@ import (
 	"secsplit/tmpdedup"
 )
 
-func NewRcloneLsProc(remote string, tmp *tmpdedup.Dir) LsProc {
-	lser := NewRcloneLister(remote)
-	proc := NewRcloneProc(remote, tmp)
-	return NewLsProc(lser, proc)
-}
-
-func NewRcloneProc(remote string, tmp *tmpdedup.Dir) aprocs.Proc {
-	newCmd := func(_ *ss.Chunk, path string) (*exec.Cmd, error) {
-		cmd := exec.Command("rclone", "copy", path, remote, "-q")
-		return cmd, nil
-	}
-	return aprocs.NewPathCmdIn(newCmd, tmp)
-}
-
-type rcloneLister struct {
+type rclone struct {
 	remote string
+	tmp    *tmpdedup.Dir
 }
 
-func NewRcloneLister(remote string) Lister {
-	return rcloneLister{remote: remote}
+func NewRclone(remote string, tmp *tmpdedup.Dir) LsProcUnprocer {
+	return rclone{remote, tmp}
 }
 
-var rcloneLs = func(remote string) *exec.Cmd {
-	return exec.Command("rclone", "ls", remote, "-q")
+func (rc rclone) Proc() aprocs.Proc {
+	return aprocs.NewPathCmdIn(rc.procCmd, rc.tmp)
 }
 
-func (rcl rcloneLister) Ls() (entries []LsEntry, err error) {
-	cmd := rcloneLs(rcl.remote)
+func (rc rclone) procCmd(_ *ss.Chunk, path string) (*exec.Cmd, error) {
+	cmd := exec.Command("rclone", "copy", path, rc.remote, "-q")
+	return cmd, nil
+}
+
+func (rc rclone) Unproc() aprocs.Proc {
+	return nil
+}
+
+func (rc rclone) Ls() (entries []LsEntry, err error) {
+	cmd := rcloneLs(rc.remote)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return
@@ -65,4 +61,8 @@ func (rcl rcloneLister) Ls() (entries []LsEntry, err error) {
 	}
 	err = cmd.Wait()
 	return
+}
+
+var rcloneLs = func(remote string) *exec.Cmd {
+	return exec.Command("rclone", "ls", remote, "-q")
 }

@@ -16,12 +16,7 @@ type cat struct {
 	dir string
 }
 
-type Cat interface {
-	Lister
-	aprocs.ProcUnprocer
-}
-
-func NewCat(dir string) Cat {
+func NewCat(dir string) LsProcUnprocer {
 	return cat{dir: dir}
 }
 

@@ -22,25 +22,23 @@ type Identified interface {
 	Id() interface{}
 }
 
-type copier struct {
-	id    interface{}
-	quota uint64
-	lsp   LsProc
-}
-
 type Copier interface {
 	Identified
+	Lister
+	aprocs.Proc
 	Quota() uint64
 	SetQuota(uint64)
-	LsProc
 }
 
-func NewCopier(id interface{}, lsp LsProc) Copier {
-	return &copier{
-		id:    id,
-		lsp:   lsp,
-		quota: quota.Unlimited,
-	}
+type copier struct {
+	id    interface{}
+	lser  Lister
+	proc  aprocs.Proc
+	quota uint64
+}
+
+func NewCopier(id interface{}, lser Lister, proc aprocs.Proc) Copier {
+	return &copier{id, lser, proc, quota.Unlimited}
 }
 
 func (cp *copier) Id() interface{}   { return cp.id }
@@ -48,41 +46,15 @@ func (cp *copier) Quota() uint64     { return cp.quota }
 func (cp *copier) SetQuota(q uint64) { cp.quota = q }
 
 func (cp *copier) Ls() ([]LsEntry, error) {
-	return cp.lsp.Ls()
+	return cp.lser.Ls()
 }
 
 func (cp *copier) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return cp.lsp.Process(c)
+	return cp.proc.Process(c)
 }
 
 func (cp *copier) Finish() error {
-	return cp.lsp.Finish()
-}
-
-type LsProc interface {
-	Lister
-	aprocs.Proc
-}
-
-type lsProc struct {
-	lister Lister
-	proc   aprocs.Proc
-}
-
-func NewLsProc(lister Lister, proc aprocs.Proc) LsProc {
-	return lsProc{lister: lister, proc: proc}
-}
-
-func (lsp lsProc) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return lsp.proc.Process(c)
-}
-
-func (lsp lsProc) Finish() error {
-	return lsp.proc.Finish()
-}
-
-func (lsp lsProc) Ls() ([]LsEntry, error) {
-	return lsp.lister.Ls()
+	return cp.proc.Finish()
 }
 
 type Reader interface {
@@ -98,7 +70,7 @@ type reader struct {
 }
 
 func NewReader(id interface{}, lser Lister, proc aprocs.Proc) Reader {
-	return reader{id: id, lser: lser, proc: proc}
+	return reader{id, lser, proc}
 }
 
 func (r reader) Id() interface{} {
@@ -115,6 +87,11 @@ func (r reader) Process(c *ss.Chunk) <-chan aprocs.Res {
 
 func (r reader) Finish() error {
 	return r.proc.Finish()
+}
+
+type LsProcUnprocer interface {
+	Lister
+	aprocs.ProcUnprocer
 }
 
 type LsEntryAdder interface {
