@@ -25,9 +25,14 @@ type indexProc struct {
 	finalsMu sync.Mutex
 }
 
+type finals struct {
+	entries  []indexEntry
+	complete bool
+}
+
 type indexEntry struct {
 	num  int
-	hash *checksum.Hash
+	hash checksum.Hash
 	size int
 }
 
@@ -60,7 +65,7 @@ func (idx *indexProc) Process(c *ss.Chunk) <-chan Res {
 func (idx *indexProc) ProcessFinal(c, final *ss.Chunk) error {
 	entry := indexEntry{
 		num:  final.Num,
-		hash: &final.Hash,
+		hash: final.Hash,
 		size: c.Size,
 	}
 	idx.finalsMu.Lock()
@@ -114,11 +119,12 @@ func (idx *indexProc) flush() (err error) {
 		idx.order.Drop(i)
 	}()
 	for n := len(sorted); i < n; i++ {
-		hash := sorted[i].(*checksum.Hash)
-		entries, ok := idx.completeFinals(*hash)
+		hash := sorted[i].(checksum.Hash)
+		finals, ok := idx.completeFinals(hash)
 		if !ok {
 			return
 		}
+		entries := finals.entries
 		num := func(i int) int {
 			return entries[i].num
 		}
@@ -134,43 +140,29 @@ func (idx *indexProc) flush() (err error) {
 }
 
 func (idx *indexProc) completeFinals(hash checksum.Hash) (
-	entries []indexEntry, ok bool,
+	finals *finals, ok bool,
 ) {
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	finals, ok := idx.finals[hash]
-	if !ok {
-		return
-	}
-	if !finals.complete {
+	finals, ok = idx.finals[hash]
+	if ok && !finals.complete {
 		ok = false
-		return
 	}
-	entries = finals.entries
 	return
 }
 
 func (idx *indexProc) setOrder(c *ss.Chunk) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
-	idx.order.Add(c.Num, &c.Hash)
+	idx.order.Add(c.Num, c.Hash)
 }
 
 func writeEntries(w io.Writer, entries []indexEntry) (err error) {
 	for _, entry := range entries {
-		_, err = index.Write(w, *entry.hash, entry.size)
+		_, err = index.Write(w, entry.hash, entry.size)
 		if err != nil {
 			return
 		}
 	}
 	return
-}
-
-type finals struct {
-	entries  []indexEntry
-	complete bool
-}
-
-func (f *finals) Add(e indexEntry) {
-	f.entries = append(f.entries, e)
 }
