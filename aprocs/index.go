@@ -3,6 +3,7 @@ package aprocs
 import (
 	"errors"
 	"io"
+	"sort"
 	"sync"
 
 	ss "secsplit"
@@ -25,9 +26,15 @@ type indexProc struct {
 }
 
 type indexEntry struct {
+	num  int
 	hash *checksum.Hash
 	size int
 }
+
+var (
+	ErrIndexUnprocessedChunk = errors.New("unprocessed chunk")
+	ErrIndexProcessEnded     = errors.New("process already ended")
+)
 
 func NewIndex(w io.Writer) Index {
 	return &indexProc{
@@ -51,12 +58,19 @@ func (idx *indexProc) Process(c *ss.Chunk) <-chan Res {
 }
 
 func (idx *indexProc) ProcessFinal(c, final *ss.Chunk) error {
-	entry := indexEntry{hash: &final.Hash, size: c.Size}
+	entry := indexEntry{
+		num:  final.Num,
+		hash: &final.Hash,
+		size: c.Size,
+	}
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
 	finals, ok := idx.finals[c.Hash]
 	if !ok {
-		return errors.New("attempted to add final to unprocessed chunk")
+		return ErrIndexUnprocessedChunk
+	}
+	if finals.complete {
+		return ErrIndexProcessEnded
 	}
 	finals.entries = append(finals.entries, entry)
 	return nil
@@ -75,7 +89,7 @@ func (idx *indexProc) setFinalsComplete(c *ss.Chunk) error {
 	defer idx.finalsMu.Unlock()
 	finals, ok := idx.finals[c.Hash]
 	if !ok {
-		return errors.New("attempted to process end of unprocessed chunk")
+		return ErrIndexUnprocessedChunk
 	}
 	finals.complete = true
 	return nil
@@ -105,6 +119,12 @@ func (idx *indexProc) flush() (err error) {
 		if !ok {
 			return
 		}
+		num := func(i int) int {
+			return entries[i].num
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return num(i) < num(j)
+		})
 		err = writeEntries(idx.w, entries)
 		if err != nil {
 			return
@@ -126,8 +146,7 @@ func (idx *indexProc) completeFinals(hash checksum.Hash) (
 		ok = false
 		return
 	}
-	entries = make([]indexEntry, len(finals.entries))
-	copy(entries, finals.entries)
+	entries = finals.entries
 	return
 }
 
