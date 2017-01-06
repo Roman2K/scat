@@ -50,11 +50,8 @@ func (chain chain) Finish() error {
 }
 
 func process(out chan<- Res, in <-chan Res, proc Proc) {
+	defer close(out)
 	wg := sync.WaitGroup{}
-	defer func() {
-		defer close(out)
-		wg.Wait()
-	}()
 	for res := range in {
 		var ch <-chan Res
 		if res.Err != nil {
@@ -75,6 +72,7 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 			}
 		}()
 	}
+	wg.Wait()
 	if ecp, ok := proc.(endCallProc); ok {
 		err := ecp.processEnd()
 		if err != nil {
