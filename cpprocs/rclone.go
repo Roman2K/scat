@@ -2,6 +2,7 @@ package cpprocs
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os/exec"
 
@@ -35,15 +36,12 @@ func (rc rclone) Unproc() aprocs.Proc {
 
 func (rc rclone) Ls() (entries []LsEntry, err error) {
 	cmd := rcloneLs(rc.remote)
-	out, err := cmd.StdoutPipe()
+	out, err := cmd.Output()
 	if err != nil {
 		return
 	}
-	err = cmd.Start()
-	if err != nil {
-		return
-	}
-	scan := bufio.NewScanner(out)
+	scan := bufio.NewScanner(bytes.NewReader(out))
+	entries = make([]LsEntry, 0, bytes.Count(out, []byte{'\n'}))
 	var (
 		buf   = make([]byte, checksum.Size)
 		entry LsEntry
@@ -59,7 +57,6 @@ func (rc rclone) Ls() (entries []LsEntry, err error) {
 		}
 		entries = append(entries, entry)
 	}
-	err = cmd.Wait()
 	return
 }
 
