@@ -55,38 +55,6 @@ func (cp *copier) Finish() error {
 	return cp.proc.Finish()
 }
 
-type Reader interface {
-	Identified
-	Lister
-	aprocs.Proc
-}
-
-type reader struct {
-	id   interface{}
-	lser Lister
-	proc aprocs.Proc
-}
-
-func NewReader(id interface{}, lser Lister, proc aprocs.Proc) Reader {
-	return reader{id, lser, proc}
-}
-
-func (r reader) Id() interface{} {
-	return r.id
-}
-
-func (r reader) Ls() ([]LsEntry, error) {
-	return r.lser.Ls()
-}
-
-func (r reader) Process(c *ss.Chunk) <-chan aprocs.Res {
-	return r.proc.Process(c)
-}
-
-func (r reader) Finish() error {
-	return r.proc.Finish()
-}
-
 type LsProcUnprocer interface {
 	Lister
 	aprocs.ProcUnprocer

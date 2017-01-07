@@ -9,18 +9,18 @@ import (
 
 type multireader struct {
 	reg     *copies.Reg
-	readers []Reader
+	copiers []Copier
 }
 
-func NewMultiReader(readers []Reader) (proc aprocs.Proc, err error) {
-	ml := make(MultiLister, len(readers))
-	for i, rd := range readers {
-		ml[i] = rd
+func NewMultiReader(copiers []Copier) (proc aprocs.Proc, err error) {
+	ml := make(MultiLister, len(copiers))
+	for i, cp := range copiers {
+		ml[i] = cp
 	}
 	reg := copies.NewReg()
 	proc = multireader{
 		reg:     reg,
-		readers: readers,
+		copiers: copiers,
 	}
 	err = ml.AddEntriesTo([]LsEntryAdder{CopiesEntryAdder{Reg: reg}})
 	return
@@ -41,13 +41,13 @@ func (mrd multireader) Process(c *ss.Chunk) <-chan aprocs.Res {
 }
 
 func (mrd multireader) Finish() error {
-	return finishFuncs(mrd.readers).FirstErr()
+	return finishFuncs(mrd.copiers).FirstErr()
 }
 
-func finishFuncs(readers []Reader) (fns concur.Funcs) {
-	fns = make(concur.Funcs, len(readers))
-	for i, rd := range readers {
-		fns[i] = rd.Finish
+func finishFuncs(copiers []Copier) (fns concur.Funcs) {
+	fns = make(concur.Funcs, len(copiers))
+	for i, cp := range copiers {
+		fns[i] = cp.Finish
 	}
 	return
 }
