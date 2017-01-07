@@ -7,39 +7,39 @@ import (
 	"secsplit/aprocs"
 )
 
-type logProc struct {
-	log  *Log
-	name string
-	proc aprocs.Proc
+type counterProc struct {
+	statsd *Statsd
+	id     Id
+	proc   aprocs.Proc
 }
 
-func NewProc(log *Log, name string, proc aprocs.Proc) aprocs.Proc {
-	return &logProc{
-		log:  log,
-		name: name,
-		proc: proc,
+func NewProc(d *Statsd, id Id, proc aprocs.Proc) aprocs.WrapperProc {
+	return &counterProc{
+		statsd: d,
+		id:     id,
+		proc:   proc,
 	}
 }
 
-func (p *logProc) Underlying() aprocs.Proc {
+func (p *counterProc) Underlying() aprocs.Proc {
 	return p.proc
 }
 
-func (p *logProc) Process(c *ss.Chunk) <-chan aprocs.Res {
+func (p *counterProc) Process(c *ss.Chunk) <-chan aprocs.Res {
 	out := make(chan aprocs.Res)
-	counters := p.log.Counter(p.name)
-	counters.addInstance()
+	cnt := p.statsd.counter(p.id)
+	cnt.addInst(1)
 	lastOut := time.Now()
 	ch := p.proc.Process(c)
 	go func() {
-		defer counters.removeInstance()
+		defer cnt.addInst(-1)
 		defer close(out)
 		for res := range ch {
 			now := time.Now()
 			dur := now.Sub(lastOut)
 			lastOut = now
 			if c := res.Chunk; c != nil {
-				counters.addOut(uint64(len(c.Data)), dur)
+				cnt.addOut(uint64(len(c.Data)), dur)
 			}
 			out <- res
 		}
@@ -47,10 +47,6 @@ func (p *logProc) Process(c *ss.Chunk) <-chan aprocs.Res {
 	return out
 }
 
-func (p *logProc) Finish() (err error) {
-	err = p.proc.Finish()
-	if err != nil {
-		return
-	}
-	return p.log.Finish()
+func (p *counterProc) Finish() error {
+	return p.proc.Finish()
 }

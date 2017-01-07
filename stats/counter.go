@@ -6,9 +6,9 @@ import (
 )
 
 type counter struct {
-	pos    uint
+	pos    uint32
 	start  time.Time
-	inst   uint
+	inst   uint32
 	instMu sync.Mutex
 	out    uint64
 	dur    time.Duration
@@ -29,22 +29,19 @@ func (cnt *counter) getOut() (uint64, time.Duration) {
 	return cnt.out, cnt.dur
 }
 
-func (cnt *counter) getInst() uint {
+func (cnt *counter) getInst() uint32 {
 	cnt.instMu.Lock()
 	defer cnt.instMu.Unlock()
 	return cnt.inst
 }
 
-func (cnt *counter) addInstance() {
+func (cnt *counter) addInst(delta int) {
 	cnt.instMu.Lock()
 	defer cnt.instMu.Unlock()
-	cnt.inst++
-	cnt.last = time.Now()
-}
-
-func (cnt *counter) removeInstance() {
-	cnt.instMu.Lock()
-	defer cnt.instMu.Unlock()
-	cnt.inst--
+	if delta > 0 {
+		cnt.inst += uint32(delta)
+	} else {
+		cnt.inst -= uint32(-delta)
+	}
 	cnt.last = time.Now()
 }

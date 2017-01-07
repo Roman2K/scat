@@ -3,33 +3,26 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
 
-	ss "secsplit"
+	"secsplit/ansirefresh"
 	"secsplit/aprocs"
 	"secsplit/cpprocs"
 	"secsplit/cpprocs/mincopies"
+	"secsplit/cpprocs/quota"
 	"secsplit/index"
 	"secsplit/procs"
 	"secsplit/split"
 	"secsplit/stats"
 	"secsplit/tmpdedup"
-
-	_ "net/http/pprof"
 )
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
 	if err := start(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		if exit, ok := err.(*exec.ExitError); ok {
@@ -61,10 +54,12 @@ const (
 )
 
 func cmdSplit() (err error) {
-	in, out := os.Stdin, os.Stdout
-
-	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
-	// log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
+	statsd := stats.New()
+	{
+		w := ansirefresh.NewWriter(os.Stderr)
+		t := ansirefresh.NewWriteTicker(w, statsd, 250*time.Millisecond)
+		defer t.Stop()
+	}
 
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
@@ -77,52 +72,59 @@ func cmdSplit() (err error) {
 	}
 	defer tmp.Finish()
 
-	copiers := copierList{}
-	copiers.Add(log, "drive",
-		cpprocs.NewRclone("drive:tmp", tmp),
-		7*humanize.GiByte,
-	)
-	copiers.Add(log, "drive2",
-		cpprocs.NewRclone("drive2:tmp", tmp),
-		14*humanize.GiByte,
-	)
+	qman := quota.NewMan()
+	addCopier := func(id interface{}, lsp cpprocs.LsProcUnprocer, quota uint64) {
+		proc := stats.NewProc(statsd, id, lsp.Proc())
+		copier := cpprocs.NewCopier(id, lsp, proc)
+		qman.AddResQuota(copier, quota)
+	}
 
-	minCopies, err := mincopies.New(2, copiers)
+	// addCopier("drive",
+	// 	cpprocs.NewRclone("drive:tmp", tmp),
+	// 	7*humanize.GiByte,
+	// )
+
+	// addCopier("drive2",
+	// 	cpprocs.NewRclone("drive2:tmp", tmp),
+	// 	14*humanize.GiByte,
+	// )
+
+	addCopier("cat1", cpprocs.NewCat("/Users/roman/tmp/cat1"), 10*humanize.MiByte)
+	addCopier("cat2", cpprocs.NewCat("/Users/roman/tmp/cat2"), quota.Unlimited)
+	addCopier("cat3", cpprocs.NewCat("/Users/roman/tmp/cat3"), quota.Unlimited)
+
+	minCopies, err := mincopies.New(2, qman)
 	if err != nil {
 		return
 	}
 
 	chain := aprocs.NewBacklog(10, aprocs.NewChain([]aprocs.Proc{
-		stats.NewProc(log, "checksum",
+		stats.NewProc(statsd, "checksum",
 			procs.A(procs.Checksum{}.Proc()),
 		),
-		stats.NewProc(log, "size",
+		stats.NewProc(statsd, "size",
 			procs.A(procs.Size),
 		),
-		stats.NewProc(log, "index",
-			aprocs.NewIndex(out),
+		stats.NewProc(statsd, "index",
+			aprocs.NewIndex(os.Stdout),
 		),
-		stats.NewProc(log, "parity",
+		stats.NewProc(statsd, "parity",
 			parity.Proc(),
 		),
-		stats.NewProc(log, "compress",
+		stats.NewProc(statsd, "compress",
 			procs.A((&procs.Compress{}).Proc()),
 		),
-		stats.NewProc(log, "checksum2",
+		stats.NewProc(statsd, "checksum2",
 			procs.A(procs.Checksum{}.Proc()),
 		),
-		aprocs.InplaceProcFunc(func(*ss.Chunk) error {
-			time.Sleep(200 * time.Millisecond)
-			return nil
-		}),
 		aprocs.NewConcur(10, minCopies),
-		// stats.NewProc(log, "drive",
+		// stats.NewProc(statsd, "drive",
 		// 	aprocs.NewPool(3, drive),
 		// ),
 	}))
 	defer chain.Finish()
 
-	splitter := split.NewSplitter(in)
+	splitter := split.NewSplitter(os.Stdin)
 	err = aprocs.Process(chain, splitter)
 	if err != nil {
 		return
@@ -130,21 +132,10 @@ func cmdSplit() (err error) {
 	return chain.Finish()
 }
 
-type copierList []cpprocs.Copier
-
-func (cl *copierList) Add(
-	log *stats.Log, id string, lsp cpprocs.LsProcUnprocer, quota uint64,
-) {
-	proc := stats.NewProc(log, id, lsp.Proc())
-	copier := cpprocs.NewCopier(id, lsp, proc)
-	copier.SetQuota(quota)
-	*cl = append(*cl, copier)
-}
-
 func cmdJoin() (err error) {
-	in, out := os.Stdin, os.Stdout
+	statsd := stats.New()
 
-	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
+	// TODO stats refresh ticker
 
 	parity, err := aprocs.NewParity(ndata, nparity)
 	if err != nil {
@@ -155,7 +146,7 @@ func cmdJoin() (err error) {
 	// for i, n := 0, len(cats); i < n; i++ {
 	// 	id := fmt.Sprintf("cat%d", i+1)
 	// 	cat := cpprocs.NewCat("/Users/roman/tmp/" + id)
-	// 	proc := stats.NewProc(log, id, cat.Proc())
+	// 	proc := stats.NewProc(statsd, id, cat.Proc())
 	// 	cats[i] = cpprocs.NewReader(id, cat, proc)
 	// }
 
@@ -165,35 +156,35 @@ func cmdJoin() (err error) {
 	// }
 
 	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
-		// stats.NewProc(log, "localstore",
+		// stats.NewProc(statsd, "localstore",
 		// 	procs.A((&procs.LocalStore{"out"}).Unproc()),
 		// ),
-		// stats.NewProc(log, "cats",
+		// stats.NewProc(statsd, "cats",
 		// 	mrd,
 		// ),
-		stats.NewProc(log, "checksum",
+		stats.NewProc(statsd, "checksum",
 			procs.A(procs.Checksum{}.Unproc()),
 		),
-		stats.NewProc(log, "compress",
+		stats.NewProc(statsd, "compress",
 			procs.A((&procs.Compress{}).Unproc()),
 		),
-		stats.NewProc(log, "group",
+		stats.NewProc(statsd, "group",
 			aprocs.NewGroup(ndata+nparity),
 		),
-		stats.NewProc(log, "parity",
+		stats.NewProc(statsd, "parity",
 			parity.Unproc(),
 		),
 		aprocs.NewMutex(aprocs.NewChain([]aprocs.Proc{
-			stats.NewProc(log, "sort",
+			stats.NewProc(statsd, "sort",
 				aprocs.NewSort(),
 			),
-			stats.NewProc(log, "writerto",
-				aprocs.NewWriterTo(out),
+			stats.NewProc(statsd, "writerto",
+				aprocs.NewWriterTo(os.Stdout),
 			),
 		})),
 	}))
 
-	scan := index.NewScanner(in)
+	scan := index.NewScanner(os.Stdin)
 	err = aprocs.Process(chain, scan)
 	if err != nil {
 		return

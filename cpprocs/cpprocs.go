@@ -7,6 +7,7 @@ import (
 	"secsplit/concur"
 	"secsplit/cpprocs/copies"
 	"secsplit/cpprocs/quota"
+	"sync"
 )
 
 type Lister interface {
@@ -26,24 +27,21 @@ type Copier interface {
 	Identified
 	Lister
 	aprocs.Proc
-	Quota() uint64
-	SetQuota(uint64)
 }
 
 type copier struct {
-	id    interface{}
-	lser  Lister
-	proc  aprocs.Proc
-	quota uint64
+	id   interface{}
+	lser Lister
+	proc aprocs.Proc
 }
 
 func NewCopier(id interface{}, lser Lister, proc aprocs.Proc) Copier {
-	return &copier{id, lser, proc, quota.Unlimited}
+	return &copier{id, lser, proc}
 }
 
-func (cp *copier) Id() interface{}   { return cp.id }
-func (cp *copier) Quota() uint64     { return cp.quota }
-func (cp *copier) SetQuota(q uint64) { cp.quota = q }
+func (cp *copier) Id() interface{} {
+	return cp.id
+}
 
 func (cp *copier) Ls() ([]LsEntry, error) {
 	return cp.lser.Ls()
@@ -127,4 +125,15 @@ type CopiesEntryAdder struct {
 func (a CopiesEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
 	owner := lser.(copies.Owner)
 	a.Reg.List(e.Hash).Add(owner)
+}
+
+type QuotaEntryAdder struct {
+	Qman quota.Man
+	mu   sync.Mutex
+}
+
+func (a *QuotaEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.Qman.AddUse(lser.(quota.Res), uint64(e.Size))
 }

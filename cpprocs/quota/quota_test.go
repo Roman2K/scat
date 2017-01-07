@@ -9,16 +9,17 @@ import (
 )
 
 func TestMan(t *testing.T) {
-	a := &resource{id: "a", quota: quota.Unlimited}
-	b := &resource{id: "b", quota: quota.Unlimited}
+	man := quota.NewMan()
+	a := resource("a")
+	b := resource("b")
+
 	ids := func(ress []quota.Res) (strs []string) {
 		strs = []string{}
 		for _, res := range ress {
-			strs = append(strs, res.Id().(string))
+			strs = append(strs, string(res.(resource)))
 		}
 		return
 	}
-	man := make(quota.Man)
 
 	// none
 	assert.Equal(t, []string{}, ids(man.Resources(4)))
@@ -33,7 +34,7 @@ func TestMan(t *testing.T) {
 	assert.Equal(t, []string{"a"}, ids(man.Resources(4)))
 
 	// a) quota = 100, used = 2
-	a.quota = 100
+	man.AddResQuota(a, 100)
 	man.AddUse(a, 1)
 	assert.Equal(t, []string{"a"}, ids(man.Resources(97)))
 	assert.Equal(t, []string{}, ids(man.Resources(98)))
@@ -62,15 +63,8 @@ func TestMan(t *testing.T) {
 	assert.Equal(t, []string{}, ids(man.Resources(0)))
 }
 
-type resource struct {
-	id    string
-	quota uint64
-}
+type resource string
 
-func (res *resource) Id() interface{} {
-	return res.id
-}
-
-func (res *resource) Quota() uint64 {
-	return res.quota
+func (res resource) Id() interface{} {
+	return res
 }

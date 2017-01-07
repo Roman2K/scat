@@ -15,48 +15,28 @@ import (
 )
 
 type minCopies struct {
-	min     int
-	copiers []cpprocs.Copier
-	reg     *copies.Reg
-	qman    quota.Man
-	qmanMu  sync.Mutex
+	min    int
+	qman   quota.Man
+	qmanMu sync.Mutex
+	reg    *copies.Reg
+	finish func() error
 }
 
-func New(min int, copiers []cpprocs.Copier) (dynp aprocs.DynProcer, err error) {
+func New(min int, qman quota.Man) (dynp aprocs.DynProcer, err error) {
 	reg := copies.NewReg()
-	qman := make(quota.Man)
-
-	for _, cp := range copiers {
-		qman.AddRes(cp)
-	}
-	ml := make(cpprocs.MultiLister, len(copiers))
-	for i, cp := range copiers {
-		ml[i] = cp
-	}
-	adders := []cpprocs.LsEntryAdder{
+	ress := qman.Resources(0)
+	ml := cpprocs.MultiLister(listers(ress))
+	err = ml.AddEntriesTo([]cpprocs.LsEntryAdder{
+		&cpprocs.QuotaEntryAdder{Qman: qman},
 		cpprocs.CopiesEntryAdder{Reg: reg},
-		&quotaEntryAdder{qman: qman},
-	}
-
+	})
 	dynp = &minCopies{
-		min:     min,
-		copiers: copiers,
-		reg:     reg,
-		qman:    qman,
+		min:    min,
+		qman:   qman,
+		reg:    reg,
+		finish: finishFuncs(ress).FirstErr,
 	}
-	err = ml.AddEntriesTo(adders)
 	return
-}
-
-type quotaEntryAdder struct {
-	qman quota.Man
-	mu   sync.Mutex
-}
-
-func (a *quotaEntryAdder) AddLsEntry(lser cpprocs.Lister, e cpprocs.LsEntry) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.qman.AddUse(lser.(quota.Res), uint64(e.Size))
 }
 
 func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
@@ -154,13 +134,21 @@ var shuffle = func(copiers []cpprocs.Copier) (res []cpprocs.Copier) {
 }
 
 func (mc *minCopies) Finish() error {
-	return finishFuncs(mc.copiers).FirstErr()
+	return mc.finish()
 }
 
-func finishFuncs(copiers []cpprocs.Copier) (fns concur.Funcs) {
-	fns = make(concur.Funcs, len(copiers))
-	for i, cp := range copiers {
-		fns[i] = cp.Finish
+func listers(ress []quota.Res) (lsers []cpprocs.Lister) {
+	lsers = make([]cpprocs.Lister, len(ress))
+	for i, res := range ress {
+		lsers[i] = res.(cpprocs.Lister)
+	}
+	return
+}
+
+func finishFuncs(ress []quota.Res) (fns concur.Funcs) {
+	fns = make(concur.Funcs, len(ress))
+	for i, res := range ress {
+		fns[i] = res.(aprocs.Proc).Finish
 	}
 	return
 }

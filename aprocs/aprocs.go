@@ -32,13 +32,14 @@ type ErrProc interface {
 	ProcessErr(*ss.Chunk, error) <-chan Res
 }
 
-type Wrapper interface {
+type WrapperProc interface {
+	Proc
 	Underlying() Proc
 }
 
 func underlying(p Proc) Proc {
 	for {
-		w, ok := p.(Wrapper)
+		w, ok := p.(WrapperProc)
 		if !ok {
 			break
 		}

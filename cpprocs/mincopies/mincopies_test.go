@@ -11,6 +11,7 @@ import (
 	"secsplit/aprocs"
 	"secsplit/checksum"
 	"secsplit/cpprocs"
+	"secsplit/cpprocs/quota"
 	"secsplit/testutil"
 )
 
@@ -36,25 +37,27 @@ func TestMinCopies(t *testing.T) {
 		})
 	}
 
-	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier("a",
+	newQman := func() (qman quota.Man) {
+		qman = quota.NewMan()
+		qman.AddRes(cpprocs.NewCopier("a",
 			testutil.SliceLister{{Hash: hash1}},
 			testProc("a"),
-		),
-		cpprocs.NewCopier("b",
+		))
+		qman.AddRes(cpprocs.NewCopier("b",
 			testutil.SliceLister{{Hash: hash1}, {Hash: hash2}},
 			testProc("b"),
-		),
-		cpprocs.NewCopier("c",
+		))
+		qman.AddRes(cpprocs.NewCopier("c",
 			testutil.SliceLister{},
 			testProc("c"),
-		),
+		))
+		return
 	}
 
 	var mc aprocs.DynProcer
 	resetMc := func() {
 		var err error
-		mc, err = New(min, copiers)
+		mc, err = New(min, newQman())
 		assert.NoError(t, err)
 	}
 	resetCalled := func() {
@@ -151,11 +154,16 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 	}
 
 	hash1 := checksum.Sum([]byte("hash1"))
-	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier("a", testutil.SliceLister{{Hash: hash1}}, testProc("a")),
-		cpprocs.NewCopier("b", testutil.SliceLister{{Hash: hash1}}, testProc("b")),
-	}
-	mc, err := New(1, copiers)
+	qman := quota.NewMan()
+	qman.AddRes(cpprocs.NewCopier("a",
+		testutil.SliceLister{{Hash: hash1}},
+		testProc("a"),
+	))
+	qman.AddRes(cpprocs.NewCopier("b",
+		testutil.SliceLister{{Hash: hash1}},
+		testProc("b"),
+	))
+	mc, err := New(1, qman)
 	assert.NoError(t, err)
 
 	procs, err := mc.Procs(&ss.Chunk{Hash: hash1})
@@ -166,13 +174,12 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 }
 
 func TestFinish(t *testing.T) {
-	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier(nil,
-			testutil.SliceLister{},
-			testutil.FinishErrProc{Err: nil},
-		),
-	}
-	mc, err := New(2, copiers)
+	qman := quota.NewMan()
+	qman.AddRes(cpprocs.NewCopier(nil,
+		testutil.SliceLister{},
+		testutil.FinishErrProc{Err: nil},
+	))
+	mc, err := New(2, qman)
 	assert.NoError(t, err)
 	err = mc.Finish()
 	assert.NoError(t, err)
@@ -180,13 +187,12 @@ func TestFinish(t *testing.T) {
 
 func TestFinishError(t *testing.T) {
 	someErr := errors.New("some err")
-	copiers := []cpprocs.Copier{
-		cpprocs.NewCopier(nil,
-			testutil.SliceLister{},
-			testutil.FinishErrProc{Err: someErr},
-		),
-	}
-	mc, err := New(2, copiers)
+	qman := quota.NewMan()
+	qman.AddRes(cpprocs.NewCopier(nil,
+		testutil.SliceLister{},
+		testutil.FinishErrProc{Err: someErr},
+	))
+	mc, err := New(2, qman)
 	assert.NoError(t, err)
 	err = mc.Finish()
 	assert.Equal(t, someErr, err)
