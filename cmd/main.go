@@ -20,7 +20,6 @@ import (
 	"secsplit/procs"
 	"secsplit/split"
 	"secsplit/stats"
-	"secsplit/testutil"
 	"secsplit/tmpdedup"
 
 	_ "net/http/pprof"
@@ -67,23 +66,10 @@ func cmdSplit() (err error) {
 	log := stats.NewLog(os.Stderr, 250*time.Millisecond)
 	// log := stats.NewLog(ioutil.Discard, 250*time.Millisecond)
 
-	// parity, err := aprocs.NewParity(ndata, nparity)
-	// if err != nil {
-	// 	return
-	// }
-
-	// cats := make([]cpprocs.Copier, 3)
-	// for i, n := 0, len(cats); i < n; i++ {
-	// 	id := fmt.Sprintf("cat%d", i+1)
-	// 	cat := cpprocs.NewCat("/Users/roman/tmp/"+id)
-	// 	cats[i] = cpprocs.NewCopier(id, cat, stats.NewProc(log, id, cat.Unproc()))
-	// }
-	// cats[0].SetQuota(10 * 1024 * 1024)
-	//
-	// minCopies, err := mincopies.New(2, cats)
-	// if err != nil {
-	// 	return
-	// }
+	parity, err := aprocs.NewParity(ndata, nparity)
+	if err != nil {
+		return
+	}
 
 	tmp, err := tmpdedup.TempDir("")
 	if err != nil {
@@ -101,24 +87,10 @@ func cmdSplit() (err error) {
 		14*humanize.GiByte,
 	)
 
-	id := "null"
-	lser := testutil.SliceLister{}
-	var proc aprocs.Proc = aprocs.InplaceProcFunc(func(*ss.Chunk) error {
-		time.Sleep(200 * time.Millisecond)
-		return nil
-	})
-	proc = stats.NewProc(log, id, proc)
-	null := cpprocs.NewCopier(id, lser, proc)
-	copiers = []cpprocs.Copier{null}
-
-	// minCopies, err := mincopies.New(2, copiers)
-	minCopies, err := mincopies.New(1, copiers)
+	minCopies, err := mincopies.New(2, copiers)
 	if err != nil {
 		return
 	}
-
-	_ = minCopies
-	_ = out
 
 	chain := aprocs.NewBacklog(10, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(log, "checksum",
@@ -130,12 +102,12 @@ func cmdSplit() (err error) {
 		stats.NewProc(log, "index",
 			aprocs.NewIndex(out),
 		),
-		// stats.NewProc(log, "parity",
-		// 	parity.Proc(),
-		// ),
-		// stats.NewProc(log, "compress",
-		// 	procs.A((&procs.Compress{}).Proc()),
-		// ),
+		stats.NewProc(log, "parity",
+			parity.Proc(),
+		),
+		stats.NewProc(log, "compress",
+			procs.A((&procs.Compress{}).Proc()),
+		),
 		stats.NewProc(log, "checksum2",
 			procs.A(procs.Checksum{}.Proc()),
 		),
