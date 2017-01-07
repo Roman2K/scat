@@ -54,7 +54,7 @@ type remote struct {
 	quota uint64
 }
 
-func remotes() []remote {
+func catRemotes() []remote {
 	cat := func(n int, quota uint64) remote {
 		name := fmt.Sprintf("cat%d", n)
 		lsp := cpprocs.NewCat("/Users/roman/tmp/" + name)
@@ -65,7 +65,9 @@ func remotes() []remote {
 		cat(2, quota.Unlimited),
 		cat(3, quota.Unlimited),
 	}
+}
 
+func driveRemotes() []remote {
 	// addCopier("drive",
 	// 	cpprocs.NewRclone("drive:tmp", tmp),
 	// 	7*humanize.GiByte,
@@ -74,10 +76,20 @@ func remotes() []remote {
 	// 	cpprocs.NewRclone("drive2:tmp", tmp),
 	// 	14*humanize.GiByte,
 	// )
+	return nil
+}
+
+func remotes() []remote {
+	return catRemotes()
 }
 
 func quotaMan(statsd *stats.Statsd) (qman quota.Man) {
 	qman = quota.NewMan()
+	qman.OnUse = func(res quota.Res, use, max uint64) {
+		cnt := statsd.Counter(res.Id())
+		cnt.QuotaUse = use
+		cnt.QuotaMax = max
+	}
 	for _, r := range remotes() {
 		proc := stats.NewProc(statsd, r.name, r.lsp.Proc())
 		copier := cpprocs.NewCopier(r.name, r.lsp, proc)

@@ -14,7 +14,7 @@ import (
 const aliveThreshold = 1 * time.Second
 
 type Statsd struct {
-	counters   map[Id]*counter
+	counters   map[Id]*Counter
 	countersMu sync.Mutex
 	nextPos    uint32
 }
@@ -23,15 +23,15 @@ type Id interface{}
 
 func New() *Statsd {
 	return &Statsd{
-		counters: make(map[Id]*counter),
+		counters: make(map[Id]*Counter),
 	}
 }
 
-func (st *Statsd) counter(id Id) *counter {
+func (st *Statsd) Counter(id Id) *Counter {
 	st.countersMu.Lock()
 	defer st.countersMu.Unlock()
 	if _, ok := st.counters[id]; !ok {
-		st.counters[id] = &counter{pos: st.nextPos, start: time.Now()}
+		st.counters[id] = &Counter{pos: st.nextPos, start: time.Now()}
 		st.nextPos++
 	}
 	return st.counters[id]
@@ -39,7 +39,7 @@ func (st *Statsd) counter(id Id) *counter {
 
 type sortedCounter struct {
 	id  Id
-	cnt *counter
+	cnt *Counter
 }
 
 func (st *Statsd) sortedCounters() (scnts []sortedCounter) {

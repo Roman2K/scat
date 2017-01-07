@@ -63,6 +63,28 @@ func TestMan(t *testing.T) {
 	assert.Equal(t, []string{}, ids(man.Resources(0)))
 }
 
+func TestManOnUse(t *testing.T) {
+	man := quota.NewMan()
+	type call struct {
+		res      resource
+		use, max uint64
+	}
+	calls := []call{}
+	man.OnUse = func(res quota.Res, use, max uint64) {
+		calls = append(calls, call{res.(resource), use, max})
+	}
+	a := resource("a")
+	man.AddResQuota(a, 3)
+	man.AddUse(a, 1)
+	man.AddUse(a, 3)
+	man.AddUse(a, 1)
+	expected := []call{
+		{a, 1, 3},
+		{a, 4, 3},
+	}
+	assert.Equal(t, expected, calls)
+}
+
 type resource string
 
 func (res resource) Id() interface{} {
