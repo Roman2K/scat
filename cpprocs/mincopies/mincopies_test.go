@@ -141,6 +141,30 @@ func TestMinCopies(t *testing.T) {
 	)
 }
 
+func TestMinCopiesNegativeMissing(t *testing.T) {
+	called := []string{}
+	testProc := func(id string) aprocs.Proc {
+		return aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+			called = append(called, id)
+			return nil
+		})
+	}
+
+	hash1 := checksum.Sum([]byte("hash1"))
+	copiers := []cpprocs.Copier{
+		cpprocs.NewCopier("a", testutil.SliceLister{{Hash: hash1}}, testProc("a")),
+		cpprocs.NewCopier("b", testutil.SliceLister{{Hash: hash1}}, testProc("b")),
+	}
+	mc, err := New(1, copiers)
+	assert.NoError(t, err)
+
+	procs, err := mc.Procs(&ss.Chunk{Hash: hash1})
+	assert.NoError(t, err)
+	_, err = processByAll(&ss.Chunk{Hash: hash1}, procs)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{}, called)
+}
+
 func TestFinish(t *testing.T) {
 	copiers := []cpprocs.Copier{
 		cpprocs.NewCopier(nil,

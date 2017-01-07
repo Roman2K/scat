@@ -65,8 +65,11 @@ func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
 	dataUse := uint64(len(c.Data))
 	all := shuffle(mc.getCopiers(dataUse))
 	ncopies := copies.Len()
-	missing := mc.min - ncopies
 	navail := len(all) - ncopies
+	missing := mc.min - ncopies
+	if missing < 0 {
+		missing = 0
+	}
 	if missing > navail {
 		return nil, errors.New(fmt.Sprintf(
 			"missing copiers to meet min requirement:"+
