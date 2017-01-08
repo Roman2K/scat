@@ -3,7 +3,7 @@ package aprocs
 import (
 	"sync"
 
-	ss "secsplit"
+	"scat"
 )
 
 type pool struct {
@@ -14,7 +14,7 @@ type pool struct {
 }
 
 type task struct {
-	chunk *ss.Chunk
+	chunk scat.Chunk
 	ch    chan<- Res
 }
 
@@ -44,7 +44,7 @@ func NewPool(size int, proc Proc) Proc {
 	}
 }
 
-func (p *pool) Process(c *ss.Chunk) <-chan Res {
+func (p *pool) Process(c scat.Chunk) <-chan Res {
 	ch := make(chan Res)
 	p.tasks <- task{chunk: c, ch: ch}
 	return ch

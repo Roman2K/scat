@@ -6,7 +6,7 @@ import (
 
 	"github.com/klauspost/reedsolomon"
 
-	ss "secsplit"
+	"scat"
 )
 
 type parity struct {
@@ -29,10 +29,10 @@ func (p *parity) Proc() Proc {
 }
 
 func (p *parity) Unproc() Proc {
-	return InplaceProcFunc(p.unprocess)
+	return ChunkFunc(p.unprocess)
 }
 
-func (p *parity) process(c *ss.Chunk) <-chan Res {
+func (p *parity) process(c scat.Chunk) <-chan Res {
 	ch := make(chan Res)
 	shards, err := p.split(c)
 	go func() {
@@ -42,18 +42,15 @@ func (p *parity) process(c *ss.Chunk) <-chan Res {
 			return
 		}
 		for i, shard := range shards {
-			chunk := &ss.Chunk{
-				Num:  c.Num*p.nshards + i,
-				Data: shard,
-			}
+			chunk := scat.NewChunk(c.Num()*p.nshards+i, shard)
 			ch <- Res{Chunk: chunk}
 		}
 	}()
 	return ch
 }
 
-func (p *parity) split(c *ss.Chunk) (shards [][]byte, err error) {
-	shards, err = p.enc.Split(c.Data)
+func (p *parity) split(c scat.Chunk) (shards [][]byte, err error) {
+	shards, err = p.enc.Split(c.Data())
 	if err != nil {
 		return
 	}
@@ -61,13 +58,13 @@ func (p *parity) split(c *ss.Chunk) (shards [][]byte, err error) {
 	return
 }
 
-func (p *parity) unprocess(c *ss.Chunk) (err error) {
+func (p *parity) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
 	data, err := p.join(c)
-	c.Data = data
+	new = c.WithData(data)
 	return
 }
 
-func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
+func (p *parity) join(c scat.Chunk) (joined []byte, err error) {
 	// Shard chunks
 	chunks, err := getGroup(c, p.nshards)
 	if err != nil {
@@ -75,7 +72,6 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 	}
 
 	// Shards slice
-	out := bytes.NewBuffer(make([]byte, 0, len(c.Data)*p.ndata))
 	shards := make([][]byte, len(chunks))
 	mustReconstruct := false
 	for i, c := range chunks {
@@ -87,7 +83,7 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 			mustReconstruct = true
 			continue
 		}
-		shards[i] = c.Data
+		shards[i] = c.Data()
 	}
 
 	// Reconstruct invalid shards
@@ -108,13 +104,14 @@ func (p *parity) join(c *ss.Chunk) (joined []byte, err error) {
 	}
 
 	// Join data shards, trim trailing padding
-	err = p.enc.Join(out, shards, c.Size)
+	out := bytes.NewBuffer(make([]byte, 0, len(c.Data())*p.ndata))
+	err = p.enc.Join(out, shards, c.TargetSize())
 	joined = out.Bytes()
 	return
 }
 
-func getGroup(c *ss.Chunk, size int) (chunks []*ss.Chunk, err error) {
-	chunks, ok := c.GetMeta("group").([]*ss.Chunk)
+func getGroup(c scat.Chunk, size int) (chunks []scat.Chunk, err error) {
+	chunks, ok := c.Meta().Get("group").([]scat.Chunk)
 	if !ok {
 		err = errors.New("missing group")
 		return
@@ -126,8 +123,8 @@ func getGroup(c *ss.Chunk, size int) (chunks []*ss.Chunk, err error) {
 	return
 }
 
-func getIntegrityCheck(c *ss.Chunk) (bool, error) {
-	err, ok := c.GetMeta("err").(error)
+func getIntegrityCheck(c scat.Chunk) (bool, error) {
+	err, ok := c.Meta().Get("err").(error)
 	if !ok {
 		return true, nil
 	}

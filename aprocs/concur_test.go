@@ -7,16 +7,16 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
+	"scat"
+	"scat/aprocs"
 )
 
 func TestConcur(t *testing.T) {
-	a := aprocs.InplaceProcFunc(func(c *ss.Chunk) error {
+	a := aprocs.InplaceFunc(func(c scat.Chunk) error {
 		time.Sleep(20 * time.Millisecond)
 		return nil
 	})
-	b := aprocs.InplaceProcFunc(func(c *ss.Chunk) error {
+	b := aprocs.InplaceFunc(func(c scat.Chunk) error {
 		time.Sleep(30 * time.Millisecond)
 		return nil
 	})
@@ -25,17 +25,17 @@ func TestConcur(t *testing.T) {
 	someErr := errors.New("some err")
 	dynp := testDynProcer{[]aprocs.Proc{a, a, b}, someErr}
 	conc := aprocs.NewConcur(2, dynp)
-	_, err := readChunks(conc.Process(&ss.Chunk{}))
+	_, err := readChunks(conc.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 
 	// no error
 	dynp = testDynProcer{[]aprocs.Proc{a, a, b}, nil}
-	c := &ss.Chunk{}
+	c := scat.NewChunk(0, nil)
 	conc = aprocs.NewConcur(2, dynp)
 	start := time.Now()
 	chunks, err := readChunks(conc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []*ss.Chunk{c, c, c}, chunks)
+	assert.Equal(t, []scat.Chunk{c, c, c}, chunks)
 	elapsed := time.Now().Sub(start)
 	assert.True(t, elapsed > 20*time.Millisecond)
 	assert.True(t, elapsed < 65*time.Millisecond)
@@ -46,7 +46,7 @@ type testDynProcer struct {
 	err   error
 }
 
-func (dynp testDynProcer) Procs(*ss.Chunk) ([]aprocs.Proc, error) {
+func (dynp testDynProcer) Procs(scat.Chunk) ([]aprocs.Proc, error) {
 	return dynp.procs, dynp.err
 }
 

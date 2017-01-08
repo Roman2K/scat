@@ -7,21 +7,18 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
-	"secsplit/testutil"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
+	"scat/testutil"
 )
 
 func testChunkNums(t *testing.T, proc aprocs.Proc, inChunks int) {
-	newChunk := func(num int) *ss.Chunk {
+	newChunk := func(num int) (c scat.Chunk) {
 		data := []byte{'a'}
-		return &ss.Chunk{
-			Num:  num,
-			Data: data,
-			Hash: checksum.Sum(data),
-			Size: len(data),
-		}
+		c = scat.NewChunk(num, data)
+		c.SetHash(checksum.Sum(data))
+		return
 	}
 
 	nums := []int{}
@@ -29,7 +26,7 @@ func testChunkNums(t *testing.T, proc aprocs.Proc, inChunks int) {
 		c := newChunk(i)
 		for res := range proc.Process(c) {
 			assert.NoError(t, res.Err)
-			nums = append(nums, res.Chunk.Num)
+			nums = append(nums, res.Chunk.Num())
 		}
 	}
 	sort.Ints(nums)
@@ -53,6 +50,6 @@ func getErr(t *testing.T, ch <-chan aprocs.Res) error {
 	return res.Err
 }
 
-func readChunks(ch <-chan aprocs.Res) ([]*ss.Chunk, error) {
+func readChunks(ch <-chan aprocs.Res) ([]scat.Chunk, error) {
 	return testutil.ReadChunks(ch)
 }

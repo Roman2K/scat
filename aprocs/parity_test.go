@@ -6,31 +6,31 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
+	"scat"
+	"scat/aprocs"
 )
 
 func TestParityNonIntegrityError(t *testing.T) {
 	parity, err := aprocs.NewParity(1, 1)
 	assert.NoError(t, err)
-	chunk := &ss.Chunk{}
-	shardChunks := []*ss.Chunk{
-		&ss.Chunk{},
-		&ss.Chunk{},
+	chunk := scat.NewChunk(0, nil)
+	shardChunks := []scat.Chunk{
+		scat.NewChunk(0, nil),
+		scat.NewChunk(0, nil),
 	}
-	chunk.SetMeta("group", shardChunks)
+	chunk.Meta().Set("group", shardChunks)
 	someErr := errors.New("some non-integrity err")
 
-	shardChunks[1].SetMeta("err", someErr)
+	shardChunks[1].Meta().Set("err", someErr)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Equal(t, someErr, err)
 
-	shardChunks[1].SetMeta("err", aprocs.ErrIntegrityCheckFailed)
+	shardChunks[1].Meta().Set("err", aprocs.ErrIntegrityCheckFailed)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, aprocs.ErrIntegrityCheckFailed, err)
 
-	shardChunks[1].SetMeta("err", nil)
+	shardChunks[1].Meta().Set("err", nil)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, someErr, err)

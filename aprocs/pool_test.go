@@ -6,8 +6,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"secsplit/aprocs"
-	"secsplit/testutil"
+	"scat/aprocs"
+	"scat/testutil"
 )
 
 func TestPoolFinish(t *testing.T) {

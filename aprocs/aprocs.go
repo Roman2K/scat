@@ -2,9 +2,9 @@ package aprocs
 
 import (
 	"errors"
-	"secsplit/concur"
+	"scat/concur"
 
-	ss "secsplit"
+	"scat"
 )
 
 var (
@@ -15,21 +15,21 @@ var (
 var Nop Proc
 
 func init() {
-	Nop = InplaceProcFunc(func(*ss.Chunk) error { return nil })
+	Nop = InplaceFunc(func(scat.Chunk) error { return nil })
 }
 
 type Proc interface {
-	Process(*ss.Chunk) <-chan Res
+	Process(scat.Chunk) <-chan Res
 	Finish() error
 }
 
 type EndProc interface {
-	ProcessFinal(*ss.Chunk, *ss.Chunk) error
-	ProcessEnd(*ss.Chunk) error
+	ProcessFinal(scat.Chunk, scat.Chunk) error
+	ProcessEnd(scat.Chunk) error
 }
 
 type ErrProc interface {
-	ProcessErr(*ss.Chunk, error) <-chan Res
+	ProcessErr(scat.Chunk, error) <-chan Res
 }
 
 type WrapperProc interface {
@@ -49,7 +49,7 @@ func underlying(p Proc) Proc {
 }
 
 type Res struct {
-	Chunk *ss.Chunk
+	Chunk scat.Chunk
 	Err   error
 }
 
@@ -67,7 +67,7 @@ type ProcUnprocer interface {
 }
 
 type DynProcer interface {
-	Procs(*ss.Chunk) ([]Proc, error)
+	Procs(scat.Chunk) ([]Proc, error)
 	Finish() error
 }
 

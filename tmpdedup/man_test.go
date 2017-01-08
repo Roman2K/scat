@@ -9,7 +9,7 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"secsplit/tmpdedup"
+	"scat/tmpdedup"
 )
 
 func TestMan(t *testing.T) {

@@ -3,8 +3,8 @@ package aprocs
 import (
 	"sync"
 
-	ss "secsplit"
-	"secsplit/seriessort"
+	"scat"
+	"scat/seriessort"
 )
 
 type sortProc struct {
@@ -16,15 +16,15 @@ func NewSort() Proc {
 	return &sortProc{}
 }
 
-func (s *sortProc) Process(c *ss.Chunk) <-chan Res {
+func (s *sortProc) Process(c scat.Chunk) <-chan Res {
 	s.seriesMu.Lock()
-	s.series.Add(c.Num, c)
+	s.series.Add(c.Num(), c)
 	sorted := s.series.Sorted()
 	s.series.Drop(len(sorted))
 	s.seriesMu.Unlock()
 	ch := make(chan Res, len(sorted))
 	for _, val := range sorted {
-		ch <- Res{Chunk: val.(*ss.Chunk)}
+		ch <- Res{Chunk: val.(scat.Chunk)}
 	}
 	close(ch)
 	return ch

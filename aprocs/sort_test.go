@@ -5,8 +5,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
+	"scat"
+	"scat/aprocs"
 )
 
 func TestSortFinish(t *testing.T) {
@@ -14,7 +14,7 @@ func TestSortFinish(t *testing.T) {
 
 	// 0 missing
 	// 1 ok
-	_, err := readChunks(sortp.Process(&ss.Chunk{Num: 1}))
+	_, err := readChunks(sortp.Process(scat.NewChunk(1, nil)))
 	assert.NoError(t, err)
 	err = sortp.Finish()
 	assert.Equal(t, aprocs.ErrShort, err)
@@ -25,7 +25,7 @@ func TestSortFinish(t *testing.T) {
 
 	// 0 ok
 	// 1 ok
-	_, err = readChunks(sortp.Process(&ss.Chunk{Num: 0}))
+	_, err = readChunks(sortp.Process(scat.NewChunk(0, nil)))
 	assert.NoError(t, err)
 	err = sortp.Finish()
 	assert.NoError(t, err)

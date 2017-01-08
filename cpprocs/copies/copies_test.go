@@ -5,8 +5,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"secsplit/checksum"
-	"secsplit/cpprocs/copies"
+	"scat/checksum"
+	"scat/cpprocs/copies"
 )
 
 func TestCopies(t *testing.T) {

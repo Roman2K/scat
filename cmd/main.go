@@ -10,16 +10,15 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 
-	"secsplit/ansirefresh"
-	"secsplit/aprocs"
-	"secsplit/cpprocs"
-	"secsplit/cpprocs/mincopies"
-	"secsplit/cpprocs/quota"
-	"secsplit/index"
-	"secsplit/procs"
-	"secsplit/split"
-	"secsplit/stats"
-	"secsplit/tmpdedup"
+	"scat/ansirefresh"
+	"scat/aprocs"
+	"scat/cpprocs"
+	"scat/cpprocs/mincopies"
+	"scat/cpprocs/quota"
+	"scat/index"
+	"scat/split"
+	"scat/stats"
+	"scat/tmpdedup"
 )
 
 func main() {
@@ -117,6 +116,7 @@ func cmdSplit() (err error) {
 	statsd := stats.New()
 	{
 		w := ansirefresh.NewWriter(os.Stderr)
+		// w := ansirefresh.NewWriter(ioutil.Discard)
 		t := ansirefresh.NewWriteTicker(w, statsd, 250*time.Millisecond)
 		defer t.Stop()
 	}
@@ -139,10 +139,7 @@ func cmdSplit() (err error) {
 
 	chain := aprocs.NewBacklog(10, aprocs.NewChain([]aprocs.Proc{
 		stats.NewProc(statsd, "checksum",
-			procs.A(procs.Checksum{}.Proc()),
-		),
-		stats.NewProc(statsd, "size",
-			procs.A(procs.Size),
+			aprocs.ChecksumProc,
 		),
 		stats.NewProc(statsd, "index",
 			aprocs.NewIndex(os.Stdout),
@@ -151,10 +148,10 @@ func cmdSplit() (err error) {
 			parity.Proc(),
 		),
 		stats.NewProc(statsd, "compress",
-			procs.A((&procs.Compress{}).Proc()),
+			aprocs.NewCompress().Proc(),
 		),
 		stats.NewProc(statsd, "checksum2",
-			procs.A(procs.Checksum{}.Proc()),
+			aprocs.ChecksumProc,
 		),
 		aprocs.NewConcur(10, minCopies),
 	}))
@@ -191,10 +188,10 @@ func cmdJoin() (err error) {
 			mrd,
 		),
 		stats.NewProc(statsd, "checksum",
-			procs.A(procs.Checksum{}.Unproc()),
+			aprocs.ChecksumUnproc,
 		),
 		stats.NewProc(statsd, "compress",
-			procs.A((&procs.Compress{}).Unproc()),
+			aprocs.NewCompress().Unproc(),
 		),
 		stats.NewProc(statsd, "group",
 			aprocs.NewGroup(ndata+nparity),

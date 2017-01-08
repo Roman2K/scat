@@ -4,23 +4,23 @@ import (
 	"bytes"
 	"os/exec"
 
-	ss "secsplit"
+	"scat"
 )
 
-type CmdInFunc func(*ss.Chunk) (*exec.Cmd, error)
+type CmdInFunc func(scat.Chunk) (*exec.Cmd, error)
 
 var _ Proc = CmdInFunc(nil)
 
-func (fn CmdInFunc) Process(c *ss.Chunk) <-chan Res {
-	return InplaceProcFunc(fn.process).Process(c)
+func (fn CmdInFunc) Process(c scat.Chunk) <-chan Res {
+	return InplaceFunc(fn.process).Process(c)
 }
 
-func (fn CmdInFunc) process(c *ss.Chunk) (err error) {
+func (fn CmdInFunc) process(c scat.Chunk) (err error) {
 	cmd, err := fn(c)
 	if err != nil {
 		return
 	}
-	cmd.Stdin = bytes.NewReader(c.Data)
+	cmd.Stdin = bytes.NewReader(c.Data())
 	return cmd.Run()
 }
 
@@ -28,15 +28,15 @@ func (fn CmdInFunc) Finish() error {
 	return nil
 }
 
-type CmdOutFunc func(*ss.Chunk) (*exec.Cmd, error)
+type CmdOutFunc func(scat.Chunk) (*exec.Cmd, error)
 
 var _ Proc = CmdOutFunc(nil)
 
-func (fn CmdOutFunc) Process(c *ss.Chunk) <-chan Res {
-	return InplaceProcFunc(fn.process).Process(c)
+func (fn CmdOutFunc) Process(c scat.Chunk) <-chan Res {
+	return ChunkFunc(fn.process).Process(c)
 }
 
-func (fn CmdOutFunc) process(c *ss.Chunk) (err error) {
+func (fn CmdOutFunc) process(c scat.Chunk) (new scat.Chunk, err error) {
 	cmd, err := fn(c)
 	if err != nil {
 		return
@@ -44,9 +44,7 @@ func (fn CmdOutFunc) process(c *ss.Chunk) (err error) {
 	buf := &bytes.Buffer{}
 	cmd.Stdout = buf
 	err = cmd.Run()
-	if err == nil {
-		c.Data = buf.Bytes()
-	}
+	new = c.WithData(buf.Bytes())
 	return
 }
 

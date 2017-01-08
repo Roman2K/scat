@@ -2,8 +2,8 @@ package index_test
 
 import (
 	"bytes"
-	"secsplit/checksum"
-	"secsplit/index"
+	"scat/checksum"
+	"scat/index"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"

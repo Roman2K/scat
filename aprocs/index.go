@@ -6,10 +6,10 @@ import (
 	"sort"
 	"sync"
 
-	ss "secsplit"
-	"secsplit/checksum"
-	"secsplit/index"
-	"secsplit/seriessort"
+	"scat"
+	"scat/checksum"
+	"scat/index"
+	"scat/seriessort"
 )
 
 type Index interface {
@@ -26,19 +26,21 @@ type indexProc struct {
 }
 
 type finals struct {
+	num      int
 	entries  []indexEntry
 	complete bool
 }
 
 type indexEntry struct {
-	num  int
-	hash checksum.Hash
-	size int
+	num        int
+	hash       checksum.Hash
+	targetSize int
 }
 
 var (
 	ErrIndexUnprocessedChunk = errors.New("unprocessed chunk")
 	ErrIndexProcessEnded     = errors.New("process already ended")
+	ErrIndexDup              = errors.New("won't process dup chunk")
 )
 
 func NewIndex(w io.Writer) Index {
@@ -49,39 +51,48 @@ func NewIndex(w io.Writer) Index {
 	}
 }
 
-func (idx *indexProc) Process(c *ss.Chunk) <-chan Res {
+func (idx *indexProc) Process(c scat.Chunk) <-chan Res {
 	idx.setOrder(c)
 	ch := make(chan Res, 1)
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	if _, ok := idx.finals[c.Hash]; !ok {
-		idx.finals[c.Hash] = &finals{entries: make([]indexEntry, 0, 1)}
+	if _, ok := idx.finals[c.Hash()]; !ok {
+		idx.finals[c.Hash()] = &finals{
+			num:     c.Num(),
+			entries: make([]indexEntry, 0, 1),
+		}
 		ch <- Res{Chunk: c}
 	}
 	close(ch)
 	return ch
 }
 
-func (idx *indexProc) ProcessFinal(c, final *ss.Chunk) error {
+func (idx *indexProc) ProcessFinal(c, final scat.Chunk) error {
 	entry := indexEntry{
-		num:  final.Num,
-		hash: final.Hash,
-		size: c.Size,
+		num:        final.Num(),
+		hash:       final.Hash(),
+		targetSize: c.TargetSize(),
 	}
+
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	finals, ok := idx.finals[c.Hash]
+
+	finals, ok := idx.finals[c.Hash()]
 	if !ok {
 		return ErrIndexUnprocessedChunk
 	}
 	if finals.complete {
 		return ErrIndexProcessEnded
 	}
+	if finals.num != c.Num() {
+		return ErrIndexDup
+	}
+
 	finals.entries = append(finals.entries, entry)
 	return nil
 }
 
-func (idx *indexProc) ProcessEnd(c *ss.Chunk) (err error) {
+func (idx *indexProc) ProcessEnd(c scat.Chunk) (err error) {
 	err = idx.setFinalsComplete(c)
 	if err != nil {
 		return
@@ -89,13 +100,18 @@ func (idx *indexProc) ProcessEnd(c *ss.Chunk) (err error) {
 	return idx.flush()
 }
 
-func (idx *indexProc) setFinalsComplete(c *ss.Chunk) error {
+func (idx *indexProc) setFinalsComplete(c scat.Chunk) error {
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
-	finals, ok := idx.finals[c.Hash]
+
+	finals, ok := idx.finals[c.Hash()]
 	if !ok {
 		return ErrIndexUnprocessedChunk
 	}
+	if finals.num != c.Num() {
+		return nil
+	}
+
 	finals.complete = true
 	return nil
 }
@@ -151,15 +167,15 @@ func (idx *indexProc) completeFinals(hash checksum.Hash) (
 	return
 }
 
-func (idx *indexProc) setOrder(c *ss.Chunk) {
+func (idx *indexProc) setOrder(c scat.Chunk) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
-	idx.order.Add(c.Num, c.Hash)
+	idx.order.Add(c.Num(), c.Hash())
 }
 
 func writeEntries(w io.Writer, entries []indexEntry) (err error) {
 	for _, entry := range entries {
-		_, err = index.Write(w, entry.hash, entry.size)
+		_, err = index.Write(w, entry.hash, entry.targetSize)
 		if err != nil {
 			return
 		}

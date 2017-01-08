@@ -1,7 +1,7 @@
 package aprocs
 
 import (
-	ss "secsplit"
+	"scat"
 	"sync"
 )
 
@@ -23,7 +23,7 @@ func NewChain(procs []Proc) Proc {
 	}
 }
 
-func (chain chain) Process(c *ss.Chunk) <-chan Res {
+func (chain chain) Process(c scat.Chunk) <-chan Res {
 	procs := chain.procs
 	if len(chain.enders) > 0 {
 		ecp := endCallProc{chunk: c, enders: chain.enders}
@@ -82,15 +82,15 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 }
 
 type endCallProc struct {
-	chunk  *ss.Chunk
+	chunk  scat.Chunk
 	enders []EndProc
 }
 
-func (ecp endCallProc) Process(c *ss.Chunk) <-chan Res {
-	return InplaceProcFunc(ecp.process).Process(c)
+func (ecp endCallProc) Process(c scat.Chunk) <-chan Res {
+	return InplaceFunc(ecp.process).Process(c)
 }
 
-func (ecp endCallProc) process(final *ss.Chunk) (err error) {
+func (ecp endCallProc) process(final scat.Chunk) (err error) {
 	for _, ender := range ecp.enders {
 		err = ender.ProcessFinal(ecp.chunk, final)
 		if err != nil {

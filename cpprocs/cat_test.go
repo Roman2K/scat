@@ -8,10 +8,10 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/checksum"
-	"secsplit/cpprocs"
-	"secsplit/testutil"
+	"scat"
+	"scat/checksum"
+	"scat/cpprocs"
+	"scat/testutil"
 )
 
 func TestCatProc(t *testing.T) {
@@ -32,10 +32,9 @@ func TestCatProc(t *testing.T) {
 
 	// Proc()
 	hash := checksum.Sum([]byte(hashData))
-	_, err = testutil.ReadChunks(cat.Proc().Process(&ss.Chunk{
-		Hash: hash,
-		Data: []byte(data),
-	}))
+	c := scat.NewChunk(0, []byte(data))
+	c.SetHash(hash)
+	_, err = testutil.ReadChunks(cat.Proc().Process(c))
 	assert.NoError(t, err)
 	path := filepath.Join(dir, hashStr)
 	fdata, err := ioutil.ReadFile(path)
@@ -66,10 +65,10 @@ func TestCatUnproc(t *testing.T) {
 	assert.NoError(t, err)
 
 	hash := checksum.Sum([]byte(hashData))
-	chunks, err := testutil.ReadChunks(cat.Unproc().Process(&ss.Chunk{
-		Hash: hash,
-	}))
+	c := scat.NewChunk(0, nil)
+	c.SetHash(hash)
+	chunks, err := testutil.ReadChunks(cat.Unproc().Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
-	assert.Equal(t, data, string(chunks[0].Data))
+	assert.Equal(t, data, string(chunks[0].Data()))
 }

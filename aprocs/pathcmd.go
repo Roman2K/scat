@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	ss "secsplit"
-	"secsplit/tmpdedup"
+	"scat"
+	"scat/tmpdedup"
 )
 
 type pathCmdIn struct {
@@ -14,25 +14,25 @@ type pathCmdIn struct {
 	tmp    *tmpdedup.Dir
 }
 
-type PathCmdInFn func(*ss.Chunk, string) (*exec.Cmd, error)
+type PathCmdInFn func(scat.Chunk, string) (*exec.Cmd, error)
 
 func NewPathCmdIn(newCmd PathCmdInFn, tmp *tmpdedup.Dir) Proc {
 	cmdp := pathCmdIn{
 		newCmd: newCmd,
 		tmp:    tmp,
 	}
-	return InplaceProcFunc(cmdp.process)
+	return InplaceFunc(cmdp.process)
 }
 
-func (cmdp *pathCmdIn) process(c *ss.Chunk) (err error) {
-	filename := fmt.Sprintf("%x", c.Hash)
+func (cmdp *pathCmdIn) process(c scat.Chunk) (err error) {
+	filename := fmt.Sprintf("%x", c.Hash())
 	path, wg, err := cmdp.tmp.Get(filename, func(path string) (err error) {
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {
 			return
 		}
 		defer f.Close()
-		_, err = f.Write(c.Data)
+		_, err = f.Write(c.Data())
 		return
 	})
 	if err != nil {

@@ -1,4 +1,4 @@
-package: secsplit
+package: scat
 import:
 - package: github.com/restic/chunker
 - package: github.com/stretchr/testify

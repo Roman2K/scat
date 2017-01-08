@@ -1,12 +1,12 @@
 package aprocs
 
-import ss "secsplit"
+import "scat"
 
 type Cascade []Proc
 
 var _ Proc = Cascade{}
 
-func (casc Cascade) Process(c *ss.Chunk) <-chan Res {
+func (casc Cascade) Process(c scat.Chunk) <-chan Res {
 	out := make(chan Res)
 	go func() {
 		defer close(out)

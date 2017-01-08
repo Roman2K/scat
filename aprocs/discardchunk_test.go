@@ -6,17 +6,17 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/testutil"
+	"scat"
+	"scat/aprocs"
+	"scat/testutil"
 )
 
 func TestDiscardChunks(t *testing.T) {
-	proc := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+	proc := aprocs.InplaceFunc(func(scat.Chunk) error {
 		return nil
 	})
 	dc := aprocs.NewDiscardChunks(proc)
-	c := &ss.Chunk{}
+	c := scat.NewChunk(0, nil)
 	chunks, err := readChunks(dc.Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(chunks))
@@ -24,13 +24,13 @@ func TestDiscardChunks(t *testing.T) {
 
 func TestDiscardChunksError(t *testing.T) {
 	someErr := errors.New("some err")
-	proc := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+	proc := aprocs.InplaceFunc(func(scat.Chunk) error {
 		return someErr
 	})
 	dc := aprocs.NewDiscardChunks(proc)
-	c := &ss.Chunk{}
+	c := scat.NewChunk(0, nil)
 	chunks, err := readChunks(dc.Process(c))
-	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, []scat.Chunk{c}, chunks)
 	assert.Equal(t, someErr, err)
 }
 

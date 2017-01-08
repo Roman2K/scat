@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"secsplit/checksum"
+	"scat/checksum"
 )
 
 func Write(w io.Writer, hash checksum.Hash, size int) (int, error) {

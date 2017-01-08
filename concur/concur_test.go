@@ -2,7 +2,7 @@ package concur_test
 
 import (
 	"errors"
-	"secsplit/concur"
+	"scat/concur"
 	"testing"
 	"time"
 

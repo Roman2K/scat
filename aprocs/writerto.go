@@ -3,7 +3,7 @@ package aprocs
 import (
 	"io"
 
-	ss "secsplit"
+	"scat"
 )
 
 type writeTo struct {
@@ -11,10 +11,10 @@ type writeTo struct {
 }
 
 func NewWriterTo(w io.Writer) Proc {
-	return InplaceProcFunc(writeTo{w: w}.process)
+	return InplaceFunc(writeTo{w: w}.process)
 }
 
-func (wt writeTo) process(c *ss.Chunk) (err error) {
-	_, err = wt.w.Write(c.Data)
+func (wt writeTo) process(c scat.Chunk) (err error) {
+	_, err = wt.w.Write(c.Data())
 	return
 }

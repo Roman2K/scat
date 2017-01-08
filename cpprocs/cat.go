@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
 )
 
 type cat struct {
@@ -24,8 +24,8 @@ func (cat cat) Proc() aprocs.Proc {
 	return aprocs.CmdInFunc(cat.procCmd)
 }
 
-func (cat cat) procCmd(c *ss.Chunk) (cmd *exec.Cmd, err error) {
-	path := cat.filePath(c.Hash)
+func (cat cat) procCmd(c scat.Chunk) (cmd *exec.Cmd, err error) {
+	path := cat.filePath(c.Hash())
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return
@@ -39,8 +39,8 @@ func (cat cat) Unproc() aprocs.Proc {
 	return aprocs.CmdOutFunc(cat.unprocCmd)
 }
 
-func (cat cat) unprocCmd(c *ss.Chunk) (*exec.Cmd, error) {
-	path := cat.filePath(c.Hash)
+func (cat cat) unprocCmd(c scat.Chunk) (*exec.Cmd, error) {
+	path := cat.filePath(c.Hash())
 	return exec.Command("cat", path), nil
 }
 

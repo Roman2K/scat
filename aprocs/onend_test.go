@@ -6,39 +6,39 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/testutil"
+	"scat"
+	"scat/aprocs"
+	"scat/testutil"
 )
 
 func TestOnEnd(t *testing.T) {
 	received := []error{}
-	proc := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+	proc := aprocs.InplaceFunc(func(scat.Chunk) error {
 		return nil
 	})
 	oe := aprocs.NewOnEnd(proc, func(err error) {
 		received = append(received, err)
 	})
-	c := &ss.Chunk{}
+	c := scat.NewChunk(0, nil)
 	chunks, err := readChunks(oe.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, []scat.Chunk{c}, chunks)
 	assert.Equal(t, []error{nil}, received)
 }
 
 func TestOnEndError(t *testing.T) {
 	received := []error{}
 	someErr := errors.New("some err")
-	proc := aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+	proc := aprocs.InplaceFunc(func(scat.Chunk) error {
 		return someErr
 	})
 	oe := aprocs.NewOnEnd(proc, func(err error) {
 		received = append(received, err)
 	})
-	c := &ss.Chunk{}
+	c := scat.NewChunk(0, nil)
 	chunks, err := readChunks(oe.Process(c))
 	assert.Equal(t, someErr, err)
-	assert.Equal(t, []*ss.Chunk{c}, chunks)
+	assert.Equal(t, []scat.Chunk{c}, chunks)
 	assert.Equal(t, []error{someErr}, received)
 }
 

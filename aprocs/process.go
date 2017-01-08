@@ -3,12 +3,12 @@ package aprocs
 import (
 	"sync"
 
-	ss "secsplit"
+	"scat"
 )
 
-func Process(proc Proc, iter ss.ChunkIterator) (err error) {
+func Process(proc Proc, iter scat.ChunkIter) (err error) {
 	errors := make(chan error)
-	chunks := make(chan *ss.Chunk)
+	chunks := make(chan scat.Chunk)
 	done := make(chan struct{})
 
 	go func() {

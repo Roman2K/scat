@@ -31,7 +31,7 @@ func (st *Statsd) Counter(id Id) *Counter {
 	st.countersMu.Lock()
 	defer st.countersMu.Unlock()
 	if _, ok := st.counters[id]; !ok {
-		st.counters[id] = &Counter{pos: st.nextPos, start: time.Now()}
+		st.counters[id] = &Counter{pos: st.nextPos}
 		st.nextPos++
 	}
 	return st.counters[id]
@@ -70,10 +70,7 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	}
 
 	// Headers
-	err = printf(
-		"%15s   \t%11s\t\x1b[90m%11s\x1b[0m\n",
-		"PROC", "PERF", "AVG OUT",
-	)
+	err = printf("%15s\t%s\t%11s\n", "PROC", "INST", "RATE")
 	if err != nil {
 		return
 	}
@@ -82,24 +79,21 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	now := time.Now()
 	for _, scnt := range st.sortedCounters() {
 		cnt := scnt.cnt
-		out, dur := cnt.getOut()
-		outRate := rateStr(out, now.Sub(cnt.start))
-		ownRate := rateStr(out, dur)
 		ninst := cnt.getInst()
-		info := ""
+		out, dur := cnt.getOut()
+		rate := rateStr(out, dur)
+		line := fmt.Sprintf("%15s\tx%d\t%9s/s\n", scnt.id, ninst, rate)
 		if ninst == 0 && now.Sub(cnt.last) > aliveThreshold {
-			info = fmt.Sprintf("\x1b[90m%11s\x1b[0m", "stopped")
-		} else {
-			info = fmt.Sprintf("%9s/s\t\x1b[90m%9s/s\x1b[0m", ownRate, outRate)
+			line = fmt.Sprintf("\x1b[90m%s\x1b[0m", line)
 		}
-		err = printf("%15s x%d\t%s\n", scnt.id, ninst, info)
+		err = printf(line)
 		if err != nil {
 			return
 		}
 	}
 
 	// Goroutines
-	err = printf("%15s x%d\n", "(goroutines)", runtime.NumGoroutine())
+	err = printf("%15s\tx%d\n", "(goroutines)", runtime.NumGoroutine())
 	return
 }
 

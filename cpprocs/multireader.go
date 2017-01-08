@@ -1,10 +1,10 @@
 package cpprocs
 
 import (
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/concur"
-	"secsplit/cpprocs/copies"
+	"scat"
+	"scat/aprocs"
+	"scat/concur"
+	"scat/cpprocs/copies"
 )
 
 type multireader struct {
@@ -26,8 +26,8 @@ func NewMultiReader(copiers []Copier) (proc aprocs.Proc, err error) {
 	return
 }
 
-func (mrd multireader) Process(c *ss.Chunk) <-chan aprocs.Res {
-	owners := mrd.reg.List(c.Hash).Owners()
+func (mrd multireader) Process(c scat.Chunk) <-chan aprocs.Res {
+	owners := mrd.reg.List(c.Hash()).Owners()
 	casc := make(aprocs.Cascade, len(owners))
 	for i, o := range owners {
 		proc := o.(aprocs.Proc)

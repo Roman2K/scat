@@ -9,11 +9,11 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
-	"secsplit/testutil"
-	"secsplit/tmpdedup"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
+	"scat/testutil"
+	"scat/tmpdedup"
 )
 
 func TestPathCmdIn(t *testing.T) {
@@ -24,7 +24,7 @@ func TestPathCmdIn(t *testing.T) {
 	)
 	fdata := &bytes.Buffer{}
 	paths := []string{}
-	newCmd := func(_ *ss.Chunk, path string) (*exec.Cmd, error) {
+	newCmd := func(_ scat.Chunk, path string) (*exec.Cmd, error) {
 		paths = append(paths, path)
 		cmd := exec.Command("cat", path)
 		cmd.Stdout = fdata
@@ -34,14 +34,12 @@ func TestPathCmdIn(t *testing.T) {
 	assert.NoError(t, err)
 	defer tmp.Finish()
 	cmdp := aprocs.NewPathCmdIn(newCmd, tmp)
-	c := &ss.Chunk{
-		Hash: checksum.Sum([]byte(hashData)),
-		Data: []byte(data),
-	}
+	c := scat.NewChunk(0, []byte(data))
+	c.SetHash(checksum.Sum([]byte(hashData)))
 	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []*ss.Chunk{c}, chunks)
-	assert.Equal(t, data, string(chunks[0].Data))
+	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, data, string(chunks[0].Data()))
 	assert.Equal(t, 1, len(paths))
 	assert.Equal(t, hashStr, filepath.Base(paths[0]))
 	assert.Equal(t, data, fdata.String())

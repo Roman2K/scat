@@ -1,12 +1,12 @@
 package testutil
 
 import (
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/cpprocs"
+	"scat"
+	"scat/aprocs"
+	"scat/cpprocs"
 )
 
-func ReadChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
+func ReadChunks(ch <-chan aprocs.Res) (chunks []scat.Chunk, err error) {
 	for res := range ch {
 		if e := res.Err; e != nil && err == nil {
 			err = e
@@ -17,12 +17,12 @@ func ReadChunks(ch <-chan aprocs.Res) (chunks []*ss.Chunk, err error) {
 }
 
 type SliceIter struct {
-	S     []*ss.Chunk
+	S     []scat.Chunk
 	i     int
-	chunk *ss.Chunk
+	chunk scat.Chunk
 }
 
-var _ ss.ChunkIterator = &SliceIter{}
+var _ scat.ChunkIter = &SliceIter{}
 
 func (it *SliceIter) Next() bool {
 	if it.i < len(it.S) {
@@ -33,7 +33,7 @@ func (it *SliceIter) Next() bool {
 	return false
 }
 
-func (it *SliceIter) Chunk() *ss.Chunk {
+func (it *SliceIter) Chunk() scat.Chunk {
 	return it.chunk
 }
 
@@ -55,7 +55,7 @@ type FinishErrProc struct {
 
 var _ aprocs.Proc = FinishErrProc{}
 
-func (p FinishErrProc) Process(*ss.Chunk) <-chan aprocs.Res {
+func (p FinishErrProc) Process(scat.Chunk) <-chan aprocs.Res {
 	panic("Process() not implemented")
 }
 

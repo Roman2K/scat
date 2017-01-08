@@ -1,8 +1,8 @@
 package aprocs
 
 import (
-	ss "secsplit"
-	"secsplit/slots"
+	"scat"
+	"scat/slots"
 )
 
 type backlog struct {
@@ -17,7 +17,7 @@ func NewBacklog(nslots int, proc Proc) Proc {
 	}
 }
 
-func (bl backlog) Process(c *ss.Chunk) <-chan Res {
+func (bl backlog) Process(c scat.Chunk) <-chan Res {
 	bl.slots.Take()
 	out := make(chan Res)
 	ch := bl.proc.Process(c)

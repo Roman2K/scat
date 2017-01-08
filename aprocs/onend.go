@@ -1,6 +1,6 @@
 package aprocs
 
-import ss "secsplit"
+import "scat"
 
 type onEnd struct {
 	proc Proc
@@ -11,7 +11,7 @@ func NewOnEnd(proc Proc, cb func(error)) Proc {
 	return onEnd{proc: proc, cb: cb}
 }
 
-func (oe onEnd) Process(c *ss.Chunk) <-chan Res {
+func (oe onEnd) Process(c scat.Chunk) <-chan Res {
 	out := make(chan Res)
 	ch := oe.proc.Process(c)
 	go func() {

@@ -6,12 +6,12 @@ import (
 	"math/rand"
 	"sync"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/concur"
-	"secsplit/cpprocs"
-	"secsplit/cpprocs/copies"
-	"secsplit/cpprocs/quota"
+	"scat"
+	"scat/aprocs"
+	"scat/concur"
+	"scat/cpprocs"
+	"scat/cpprocs/copies"
+	"scat/cpprocs/quota"
 )
 
 type minCopies struct {
@@ -39,10 +39,10 @@ func New(min int, qman quota.Man) (dynp aprocs.DynProcer, err error) {
 	return
 }
 
-func (mc *minCopies) Procs(c *ss.Chunk) ([]aprocs.Proc, error) {
-	copies := mc.reg.List(c.Hash)
+func (mc *minCopies) Procs(c scat.Chunk) ([]aprocs.Proc, error) {
+	copies := mc.reg.List(c.Hash())
 	copies.Mu.Lock()
-	dataUse := uint64(len(c.Data))
+	dataUse := uint64(len(c.Data()))
 	all := shuffle(mc.getCopiers(dataUse))
 	ncopies := copies.Len()
 	navail := len(all) - ncopies

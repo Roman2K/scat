@@ -7,14 +7,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/testutil"
+	"scat"
+	"scat/aprocs"
+	"scat/testutil"
 )
 
 func TestProcess(t *testing.T) {
-	chunks := []*ss.Chunk{
-		&ss.Chunk{Num: 0},
+	chunks := []scat.Chunk{
+		scat.NewChunk(0, nil),
 	}
 	processed, err := process(chunks)
 	assert.NoError(t, err)
@@ -23,12 +23,12 @@ func TestProcess(t *testing.T) {
 
 func TestProcessErr(t *testing.T) {
 	testErr := errors.New("test err")
-	errChunk := &ss.Chunk{Num: 1}
-	errChunk.SetMeta("testErr", testErr)
-	chunks := []*ss.Chunk{
-		&ss.Chunk{Num: 0},
+	errChunk := scat.NewChunk(1, nil)
+	errChunk.Meta().Set("testErr", testErr)
+	chunks := []scat.Chunk{
+		scat.NewChunk(0, nil),
 		errChunk,
-		&ss.Chunk{Num: 2},
+		scat.NewChunk(2, nil),
 	}
 	processed, err := process(chunks)
 	assert.Equal(t, testErr, err)
@@ -36,10 +36,10 @@ func TestProcessErr(t *testing.T) {
 	assert.Equal(t, []int{0}, processed[:1])
 }
 
-func process(chunks []*ss.Chunk) (processed []int, err error) {
-	proc := aprocs.ProcFunc(func(c *ss.Chunk) <-chan aprocs.Res {
-		processed = append(processed, c.Num)
-		err, _ := c.GetMeta("testErr").(error)
+func process(chunks []scat.Chunk) (processed []int, err error) {
+	proc := aprocs.ProcFunc(func(c scat.Chunk) <-chan aprocs.Res {
+		processed = append(processed, c.Num())
+		err, _ := c.Meta().Get("testErr").(error)
 		ch := make(chan aprocs.Res, 1)
 		ch <- aprocs.Res{Chunk: c, Err: err}
 		close(ch)

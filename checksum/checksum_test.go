@@ -2,7 +2,7 @@ package checksum_test
 
 import (
 	"fmt"
-	"secsplit/checksum"
+	"scat/checksum"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"

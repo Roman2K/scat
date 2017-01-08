@@ -3,7 +3,7 @@ package copies
 import (
 	"sync"
 
-	"secsplit/checksum"
+	"scat/checksum"
 )
 
 type Reg struct {

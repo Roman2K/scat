@@ -7,8 +7,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"secsplit/checksum"
-	"secsplit/index"
+	"scat/checksum"
+	"scat/index"
 )
 
 func TestScannerEmpty(t *testing.T) {
@@ -29,15 +29,15 @@ func TestScanner(t *testing.T) {
 
 	assert.True(t, scan.Next())
 	assert.NoError(t, scan.Err())
-	assert.Equal(t, 0, scan.Chunk().Num)
-	assert.Equal(t, h1, scan.Chunk().Hash)
-	assert.Equal(t, 123, scan.Chunk().Size)
+	assert.Equal(t, 0, scan.Chunk().Num())
+	assert.Equal(t, h1, scan.Chunk().Hash())
+	assert.Equal(t, 123, scan.Chunk().TargetSize())
 
 	assert.True(t, scan.Next())
 	assert.NoError(t, scan.Err())
-	assert.Equal(t, 1, scan.Chunk().Num)
-	assert.Equal(t, h2, scan.Chunk().Hash)
-	assert.Equal(t, 456, scan.Chunk().Size)
+	assert.Equal(t, 1, scan.Chunk().Num())
+	assert.Equal(t, h2, scan.Chunk().Hash())
+	assert.Equal(t, 456, scan.Chunk().TargetSize())
 
 	assert.False(t, scan.Next())
 	assert.NoError(t, scan.Err())

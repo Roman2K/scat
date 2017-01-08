@@ -6,7 +6,7 @@ import (
 
 	"github.com/restic/chunker"
 
-	ss "secsplit"
+	"scat"
 )
 
 const (
@@ -19,15 +19,15 @@ type splitter struct {
 	chunker *chunker.Chunker
 	buf     []byte
 	num     int // int for use as slice index
-	chunk   *ss.Chunk
+	chunk   scat.Chunk
 	err     error
 }
 
-func NewSplitter(r io.Reader) ss.ChunkIterator {
+func NewSplitter(r io.Reader) scat.ChunkIter {
 	return NewSplitterSize(r, defaultMinSize, defaultMaxSize)
 }
 
-func NewSplitterSize(r io.Reader, minSize, maxSize uint) ss.ChunkIterator {
+func NewSplitterSize(r io.Reader, minSize, maxSize uint) scat.ChunkIter {
 	if minSize < minMinSize {
 		panic(fmt.Sprintf("min size must be >= %d bytes", minMinSize))
 	}
@@ -51,10 +51,7 @@ func (s *splitter) Next() bool {
 	}
 	data := make([]byte, len(c.Data))
 	copy(data, c.Data)
-	s.chunk = &ss.Chunk{
-		Num:  s.num,
-		Data: data,
-	}
+	s.chunk = scat.NewChunk(s.num, data)
 	s.num++
 	// Check for overflow: uint resets to 0, int resets to -minInt
 	if s.num <= 0 {
@@ -63,7 +60,7 @@ func (s *splitter) Next() bool {
 	return true
 }
 
-func (s *splitter) Chunk() *ss.Chunk {
+func (s *splitter) Chunk() scat.Chunk {
 	return s.chunk
 }
 

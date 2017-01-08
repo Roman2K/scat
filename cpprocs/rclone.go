@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os/exec"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
-	"secsplit/tmpdedup"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
+	"scat/tmpdedup"
 )
 
 type rclone struct {
@@ -25,7 +25,7 @@ func (rc rclone) Proc() aprocs.Proc {
 	return aprocs.NewPathCmdIn(rc.procCmd, rc.tmp)
 }
 
-func (rc rclone) procCmd(_ *ss.Chunk, path string) (*exec.Cmd, error) {
+func (rc rclone) procCmd(_ scat.Chunk, path string) (*exec.Cmd, error) {
 	cmd := exec.Command("rclone", "copy", path, rc.remote, "-q")
 	return cmd, nil
 }

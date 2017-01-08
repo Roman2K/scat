@@ -7,12 +7,12 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
-	"secsplit/cpprocs"
-	"secsplit/cpprocs/quota"
-	"secsplit/testutil"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
+	"scat/cpprocs"
+	"scat/cpprocs/quota"
+	"scat/testutil"
 )
 
 func TestMinCopies(t *testing.T) {
@@ -31,7 +31,7 @@ func TestMinCopies(t *testing.T) {
 	called := []string{}
 	errs := map[string]error{}
 	testProc := func(id string) aprocs.Proc {
-		return aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+		return aprocs.InplaceFunc(func(scat.Chunk) error {
 			called = append(called, id)
 			return errs[id]
 		})
@@ -75,12 +75,12 @@ func TestMinCopies(t *testing.T) {
 	}
 
 	testProcsForHash := func(h checksum.Hash, expectedCalls []string) error {
-		c := &ss.Chunk{Hash: h}
+		c := chunkWithHash(h)
 		procs, err := mc.Procs(c)
 		assert.NoError(t, err)
 		chunks, err := processByAll(c, procs)
 		assert.Equal(t, 1, len(chunks))
-		assert.Equal(t, []*ss.Chunk{c}, chunks)
+		assert.Equal(t, []scat.Chunk{c}, chunks)
 		assert.Equal(t, expectedCalls, called)
 		return err
 	}
@@ -137,7 +137,7 @@ func TestMinCopies(t *testing.T) {
 	err := testProcsForHash(hash3, []string{"a", "c", "b"})
 	assert.Equal(t, err2, err)
 	resetCalled()
-	_, err = mc.Procs(&ss.Chunk{Hash: hash3})
+	_, err = mc.Procs(chunkWithHash(hash3))
 	assert.Equal(t, "missing copiers to meet min requirement:"+
 		" min=2 copies=1 missing=1 avail=0",
 		err.Error(),
@@ -147,7 +147,7 @@ func TestMinCopies(t *testing.T) {
 func TestMinCopiesNegativeMissing(t *testing.T) {
 	called := []string{}
 	testProc := func(id string) aprocs.Proc {
-		return aprocs.InplaceProcFunc(func(*ss.Chunk) error {
+		return aprocs.InplaceFunc(func(scat.Chunk) error {
 			called = append(called, id)
 			return nil
 		})
@@ -166,9 +166,9 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 	mc, err := New(1, qman)
 	assert.NoError(t, err)
 
-	procs, err := mc.Procs(&ss.Chunk{Hash: hash1})
+	procs, err := mc.Procs(chunkWithHash(hash1))
 	assert.NoError(t, err)
-	_, err = processByAll(&ss.Chunk{Hash: hash1}, procs)
+	_, err = processByAll(chunkWithHash(hash1), procs)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{}, called)
 }
@@ -198,8 +198,8 @@ func TestFinishError(t *testing.T) {
 	assert.Equal(t, someErr, err)
 }
 
-func processByAll(c *ss.Chunk, procs []aprocs.Proc) (
-	all []*ss.Chunk, err error,
+func processByAll(c scat.Chunk, procs []aprocs.Proc) (
+	all []scat.Chunk, err error,
 ) {
 	for _, proc := range procs {
 		chunks, e := testutil.ReadChunks(proc.Process(c))
@@ -260,5 +260,11 @@ func ids(s []cpprocs.Copier) (ids []string) {
 	for _, c := range s {
 		ids = append(ids, c.Id().(string))
 	}
+	return
+}
+
+func chunkWithHash(h checksum.Hash) (c scat.Chunk) {
+	c = scat.NewChunk(0, nil)
+	c.SetHash(h)
 	return
 }

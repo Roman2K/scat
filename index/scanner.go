@@ -3,20 +3,20 @@ package index
 import (
 	"fmt"
 	"io"
-	"secsplit/checksum"
 
-	ss "secsplit"
+	"scat"
+	"scat/checksum"
 )
 
 type scanner struct {
 	r       io.Reader
 	hashBuf []byte
 	num     int
-	chunk   *ss.Chunk
+	chunk   scat.Chunk
 	err     error
 }
 
-func NewScanner(r io.Reader) ss.ChunkIterator {
+func NewScanner(r io.Reader) scat.ChunkIter {
 	return &scanner{
 		r:       r,
 		hashBuf: make([]byte, len(checksum.Hash{})),
@@ -44,20 +44,20 @@ func (s *scanner) scan() (err error) {
 	if n != 2 {
 		return fmt.Errorf("invalid index line")
 	}
-	chunk := &ss.Chunk{
-		Num:  s.num,
-		Size: size,
-	}
-	err = chunk.Hash.LoadSlice(s.hashBuf)
+	chunk := scat.NewChunk(s.num, nil)
+	chunk.SetTargetSize(size)
+	hash := checksum.Hash{}
+	err = hash.LoadSlice(s.hashBuf)
 	if err != nil {
 		return
 	}
+	chunk.SetHash(hash)
 	s.chunk = chunk
 	s.num++
 	return
 }
 
-func (s *scanner) Chunk() *ss.Chunk {
+func (s *scanner) Chunk() scat.Chunk {
 	return s.chunk
 }
 

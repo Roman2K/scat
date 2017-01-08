@@ -1,12 +1,12 @@
 package cpprocs
 
 import (
-	ss "secsplit"
-	"secsplit/aprocs"
-	"secsplit/checksum"
-	"secsplit/concur"
-	"secsplit/cpprocs/copies"
-	"secsplit/cpprocs/quota"
+	"scat"
+	"scat/aprocs"
+	"scat/checksum"
+	"scat/concur"
+	"scat/cpprocs/copies"
+	"scat/cpprocs/quota"
 	"sync"
 )
 
@@ -47,7 +47,7 @@ func (cp *copier) Ls() ([]LsEntry, error) {
 	return cp.lser.Ls()
 }
 
-func (cp *copier) Process(c *ss.Chunk) <-chan aprocs.Res {
+func (cp *copier) Process(c scat.Chunk) <-chan aprocs.Res {
 	return cp.proc.Process(c)
 }
 
