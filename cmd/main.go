@@ -137,7 +137,7 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	chain := aprocs.NewBacklog(10, aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(10, aprocs.Chain{
 		stats.NewProc(statsd, "checksum",
 			aprocs.ChecksumProc,
 		),
@@ -154,7 +154,7 @@ func cmdSplit() (err error) {
 			aprocs.ChecksumProc,
 		),
 		aprocs.NewConcur(10, minCopies),
-	}))
+	})
 	defer chain.Finish()
 
 	splitter := split.NewSplitter(os.Stdin)
@@ -183,7 +183,7 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	chain := aprocs.NewBacklog(2, aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.NewBacklog(2, aprocs.Chain{
 		stats.NewProc(statsd, "mrd",
 			mrd,
 		),
@@ -199,15 +199,16 @@ func cmdJoin() (err error) {
 		stats.NewProc(statsd, "parity",
 			parity.Unproc(),
 		),
-		aprocs.NewMutex(aprocs.NewChain([]aprocs.Proc{
+		aprocs.NewMutex(aprocs.Chain{
 			stats.NewProc(statsd, "sort",
 				aprocs.NewSort(),
 			),
 			stats.NewProc(statsd, "writerto",
 				aprocs.NewWriterTo(os.Stdout),
 			),
-		})),
-	}))
+		}),
+	})
+	defer chain.Finish()
 
 	scan := index.NewScanner(os.Stdin)
 	err = aprocs.Process(chain, scan)

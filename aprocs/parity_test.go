@@ -45,8 +45,8 @@ func TestParityChunkNums(t *testing.T) {
 	parity, err := aprocs.NewParity(ndata, nparity)
 	assert.NoError(t, err)
 	testChunkNums(t, parity.Proc(), 2)
-	testChunkNums(t, aprocs.NewChain([]aprocs.Proc{
+	testChunkNums(t, aprocs.Chain{
 		aprocs.NewGroup(nshards),
 		parity.Unproc(),
-	}), nshards*2)
+	}, nshards*2)
 }

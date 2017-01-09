@@ -5,28 +5,15 @@ import (
 	"sync"
 )
 
-type chain struct {
-	procs  []Proc
-	enders []EndProc
-}
+type Chain []Proc
 
-func NewChain(procs []Proc) Proc {
-	enders := []EndProc{}
-	for _, p := range procs {
-		if e, ok := underlying(p).(EndProc); ok {
-			enders = append(enders, e)
-		}
-	}
-	return chain{
-		procs:  procs,
-		enders: enders,
-	}
-}
+var _ Proc = Chain{}
 
-func (chain chain) Process(c scat.Chunk) <-chan Res {
-	procs := chain.procs
-	if len(chain.enders) > 0 {
-		ecp := endCallProc{chunk: c, enders: chain.enders}
+func (chain Chain) Process(c scat.Chunk) <-chan Res {
+	procs := chain
+	enders := chain.endProcs()
+	if len(enders) > 0 {
+		ecp := endCallProc{chunk: c, enders: enders}
 		newProcs := make([]Proc, len(procs)+1)
 		copy(newProcs, procs)
 		newProcs[len(newProcs)-1] = ecp
@@ -45,8 +32,17 @@ func (chain chain) Process(c scat.Chunk) <-chan Res {
 	return out
 }
 
-func (chain chain) Finish() error {
-	return finishFuncs(chain.procs).FirstErr()
+func (procs Chain) endProcs() (enders []EndProc) {
+	for _, p := range procs {
+		if e, ok := underlying(p).(EndProc); ok {
+			enders = append(enders, e)
+		}
+	}
+	return
+}
+
+func (procs Chain) Finish() error {
+	return finishFuncs(procs).FirstErr()
 }
 
 func process(out chan<- Res, in <-chan Res, proc Proc) {

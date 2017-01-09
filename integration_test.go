@@ -89,14 +89,14 @@ func doSplit(
 	if err != nil {
 		return
 	}
-	chain := aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.Chain{
 		aprocs.ChecksumProc,
 		aprocs.NewIndex(indexw),
 		parity.Proc(),
 		aprocs.NewCompress().Proc(),
 		aprocs.ChecksumProc,
 		store,
-	})
+	}
 	defer chain.Finish()
 	return processFinish(chain, &testutil.SliceIter{S: in})
 }
@@ -111,14 +111,14 @@ func doJoin(
 	if err != nil {
 		return
 	}
-	chain := aprocs.NewChain([]aprocs.Proc{
+	chain := aprocs.Chain{
 		store,
 		aprocs.ChecksumUnproc,
 		aprocs.NewCompress().Unproc(),
 		aprocs.NewGroup(ndata + nparity),
 		parity.Unproc(),
 		aprocs.NewWriterTo(w),
-	})
+	}
 	defer chain.Finish()
 	return processFinish(chain, scan)
 }

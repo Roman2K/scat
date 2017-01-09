@@ -18,7 +18,7 @@ func TestChain(t *testing.T) {
 	b := aprocs.ChunkFunc(func(c scat.Chunk) (scat.Chunk, error) {
 		return c.WithData(append(c.Data(), 'b')), nil
 	})
-	chain := aprocs.NewChain([]aprocs.Proc{a, b})
+	chain := aprocs.Chain{a, b}
 	ch := chain.Process(scat.NewChunk(0, []byte{'x'}))
 	res := <-ch
 	_, ok := <-ch
@@ -58,7 +58,7 @@ func TestChainEndProc(t *testing.T) {
 		close(ch)
 		return ch
 	})
-	chain := aprocs.NewChain([]aprocs.Proc{a, b})
+	chain := aprocs.Chain{a, b}
 	chunk := scat.NewChunk(0, nil)
 	ch := chain.Process(chunk)
 	for range ch {
@@ -107,7 +107,7 @@ func TestChainErrRecovery(t *testing.T) {
 
 	// no recovery
 	reset()
-	chain := aprocs.NewChain([]aprocs.Proc{errp, okp})
+	chain := aprocs.Chain{errp, okp}
 	err := getErr(t, chain.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
@@ -115,7 +115,7 @@ func TestChainErrRecovery(t *testing.T) {
 
 	// recovery
 	reset()
-	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recover, okp})
+	chain = aprocs.Chain{errp, okp, recover, okp}
 	err = getErr(t, chain.Process(scat.NewChunk(0, nil)))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, okCount)
@@ -123,7 +123,7 @@ func TestChainErrRecovery(t *testing.T) {
 
 	// failed recovery
 	reset()
-	chain = aprocs.NewChain([]aprocs.Proc{errp, okp, recoverFail, okp})
+	chain = aprocs.Chain{errp, okp, recoverFail, okp}
 	err = getErr(t, chain.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
@@ -131,7 +131,7 @@ func TestChainErrRecovery(t *testing.T) {
 
 	// impossible recovery: err without chunk
 	reset()
-	chain = aprocs.NewChain([]aprocs.Proc{errpNoChunk, okp, recover, okp})
+	chain = aprocs.Chain{errpNoChunk, okp, recover, okp}
 	err = getErr(t, chain.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
