@@ -31,7 +31,13 @@ func (rc rclone) procCmd(_ scat.Chunk, path string) (*exec.Cmd, error) {
 }
 
 func (rc rclone) Unproc() aprocs.Proc {
-	return nil
+	return aprocs.CmdOutFunc(rc.unprocess)
+}
+
+func (rc rclone) unprocess(c scat.Chunk) (*exec.Cmd, error) {
+	remote := fmt.Sprintf("%s/%x", rc.remote, c.Hash())
+	cmd := exec.Command("rclone", "cat", remote)
+	return cmd, nil
 }
 
 func (rc rclone) Ls() (entries []LsEntry, err error) {

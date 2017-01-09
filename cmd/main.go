@@ -53,7 +53,7 @@ type remote struct {
 	quota uint64
 }
 
-func catRemotes() []remote {
+func catRemotes(*tmpdedup.Dir) []remote {
 	cat := func(n int, quota uint64) remote {
 		name := fmt.Sprintf("cat%d", n)
 		lsp := cpprocs.NewCat("/Users/roman/tmp/" + name)
@@ -66,30 +66,26 @@ func catRemotes() []remote {
 	}
 }
 
-func driveRemotes() []remote {
-	// addCopier("drive",
-	// 	cpprocs.NewRclone("drive:tmp", tmp),
-	// 	7*humanize.GiByte,
-	// )
-	// addCopier("drive2",
-	// 	cpprocs.NewRclone("drive2:tmp", tmp),
-	// 	14*humanize.GiByte,
-	// )
-	return nil
+func driveRemotes(tmp *tmpdedup.Dir) []remote {
+	return []remote{
+		{"drive", cpprocs.NewRclone("drive:tmp/2", tmp), 7 * humanize.GiByte},
+		{"drive2", cpprocs.NewRclone("drive2:tmp/2", tmp), 14 * humanize.GiByte},
+	}
 }
 
-func remotes() []remote {
-	return catRemotes()
+func remotes(tmp *tmpdedup.Dir) []remote {
+	// return catRemotes(tmp)
+	return driveRemotes(tmp)
 }
 
-func quotaMan(statsd *stats.Statsd) (qman quota.Man) {
+func quotaMan(statsd *stats.Statsd, tmp *tmpdedup.Dir) (qman quota.Man) {
 	qman = quota.NewMan()
 	qman.OnUse = func(res quota.Res, use, max uint64) {
 		cnt := statsd.Counter(res.Id())
 		cnt.QuotaUse = use
 		cnt.QuotaMax = max
 	}
-	for _, r := range remotes() {
+	for _, r := range remotes(tmp) {
 		proc := stats.NewProc(statsd, r.name, r.lsp.Proc())
 		copier := cpprocs.NewCopier(r.name, r.lsp, proc)
 		qman.AddResQuota(copier, r.quota)
@@ -97,8 +93,8 @@ func quotaMan(statsd *stats.Statsd) (qman quota.Man) {
 	return
 }
 
-func readers(statsd *stats.Statsd) (cps []cpprocs.Copier) {
-	rems := remotes()
+func readers(statsd *stats.Statsd, tmp *tmpdedup.Dir) (cps []cpprocs.Copier) {
+	rems := remotes(tmp)
 	cps = make([]cpprocs.Copier, len(rems))
 	for i, r := range rems {
 		proc := stats.NewProc(statsd, r.name, r.lsp.Unproc())
@@ -132,7 +128,7 @@ func cmdSplit() (err error) {
 	}
 	defer tmp.Finish()
 
-	minCopies, err := mincopies.New(2, quotaMan(statsd))
+	minCopies, err := mincopies.New(2, quotaMan(statsd, tmp))
 	if err != nil {
 		return
 	}
@@ -178,7 +174,13 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	mrd, err := cpprocs.NewMultiReader(readers(statsd))
+	tmp, err := tmpdedup.TempDir("")
+	if err != nil {
+		return
+	}
+	defer tmp.Finish()
+
+	mrd, err := cpprocs.NewMultiReader(readers(statsd, tmp))
 	if err != nil {
 		return
 	}

@@ -28,12 +28,16 @@ func NewMultiReader(copiers []Copier) (proc aprocs.Proc, err error) {
 
 func (mrd multireader) Process(c scat.Chunk) <-chan aprocs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
-	casc := make(aprocs.Cascade, len(owners))
+	copiers := make([]Copier, len(owners))
 	for i, o := range owners {
-		proc := o.(aprocs.Proc)
-		casc[i] = aprocs.NewOnEnd(proc, func(err error) {
+		copiers[i] = o.(Copier)
+	}
+	ShuffleCopiers(copiers)
+	casc := make(aprocs.Cascade, len(copiers))
+	for i, cp := range copiers {
+		casc[i] = aprocs.NewOnEnd(cp, func(err error) {
 			if err != nil {
-				mrd.reg.RemoveOwner(o)
+				mrd.reg.RemoveOwner(cp)
 			}
 		})
 	}

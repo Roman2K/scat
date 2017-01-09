@@ -3,7 +3,6 @@ package mincopies
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"sync"
 
 	"scat"
@@ -124,14 +123,7 @@ func (mc *minCopies) addUse(cp cpprocs.Copier, use uint64) {
 	mc.qman.AddUse(cp, use)
 }
 
-var shuffle = func(copiers []cpprocs.Copier) (res []cpprocs.Copier) {
-	indexes := rand.Perm(len(copiers))
-	res = make([]cpprocs.Copier, len(indexes))
-	for i, idx := range indexes {
-		res[i] = copiers[idx]
-	}
-	return
-}
+var shuffle = cpprocs.ShuffleCopiers
 
 func (mc *minCopies) Finish() error {
 	return mc.finish()

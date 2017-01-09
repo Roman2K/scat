@@ -1,13 +1,15 @@
 package cpprocs
 
 import (
+	"math/rand"
+	"sync"
+
 	"scat"
 	"scat/aprocs"
 	"scat/checksum"
 	"scat/concur"
 	"scat/cpprocs/copies"
 	"scat/cpprocs/quota"
-	"sync"
 )
 
 type Lister interface {
@@ -104,4 +106,13 @@ func (a *QuotaEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.Qman.AddUse(lser.(quota.Res), uint64(e.Size))
+}
+
+func ShuffleCopiers(copiers []Copier) (res []Copier) {
+	indexes := rand.Perm(len(copiers))
+	res = make([]Copier, len(indexes))
+	for i, idx := range indexes {
+		res[i] = copiers[idx]
+	}
+	return
 }
