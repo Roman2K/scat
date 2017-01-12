@@ -9,6 +9,8 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+
+	"scat/cpprocs/quota"
 )
 
 const aliveThreshold = 1 * time.Second
@@ -63,14 +65,16 @@ func (st *Statsd) sortedCounters() (scnts []sortedCounter) {
 }
 
 func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
-	printf := func(format string, args ...interface{}) error {
-		n, err := fmt.Fprintf(w, format, args...)
+	write := func(str string) error {
+		n, err := w.Write([]byte(str))
 		written += int64(n)
 		return err
 	}
 
 	// Headers
-	err = printf("%15s\t%s\t%11s\n", "PROC", "INST", "RATE")
+	err = write(fmt.Sprintf("%15s\t%s\t%12s\t%10s\t%10s\t%7s\n",
+		"PROC", "INST", "RATE", "USE", "QUOTA", "FILL",
+	))
 	if err != nil {
 		return
 	}
@@ -81,23 +85,52 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 		cnt := scnt.cnt
 		ninst := cnt.getInst()
 		out, dur := cnt.getOut()
-		rate := rateStr(out, dur)
-		line := fmt.Sprintf("%15s\tx%d\t%9s/s\n", scnt.id, ninst, rate)
+		line := fmt.Sprintf("%15s\tx%d\t%10s/s\t%10s\t%10s\t%7s\n",
+			scnt.id,
+			ninst,
+			rateStr(out, dur),
+			quotaStr(cnt.QuotaUse),
+			quotaStr(cnt.QuotaMax),
+			quotaFillStr(cnt.QuotaUse, cnt.QuotaMax),
+		)
 		if ninst == 0 && now.Sub(cnt.last) > aliveThreshold {
 			line = fmt.Sprintf("\x1b[90m%s\x1b[0m", line)
 		}
-		err = printf(line)
+		err = write(line)
 		if err != nil {
 			return
 		}
 	}
 
 	// Goroutines
-	err = printf("%15s\tx%d\n", "(goroutines)", runtime.NumGoroutine())
+	err = write(fmt.Sprintf("%15s\tx%d\n",
+		"(goroutines)", runtime.NumGoroutine(),
+	))
 	return
 }
 
 func rateStr(n uint64, d time.Duration) string {
 	rate := uint64(float64(n) / d.Seconds())
 	return humanize.IBytes(rate)
+}
+
+func quotaStr(n uint64) string {
+	switch n {
+	case quota.Unlimited:
+		return "\u221E"
+	case 0:
+		return ""
+	}
+	return humanize.IBytes(n)
+}
+
+func quotaFillStr(used, max uint64) string {
+	switch max {
+	case quota.Unlimited:
+		return "\u221E"
+	case 0:
+		return ""
+	}
+	pct := float64(used) / float64(max) * 100
+	return fmt.Sprintf("%.2f%%", pct)
 }

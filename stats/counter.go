@@ -9,10 +9,10 @@ type Counter struct {
 	pos                uint32
 	inst               uint32
 	since0             time.Time
+	dur                time.Duration
 	last               time.Time
 	instMu             sync.Mutex
 	out                uint64
-	dur                time.Duration
 	outMu              sync.Mutex
 	QuotaUse, QuotaMax uint64
 }
@@ -25,15 +25,15 @@ func (cnt *Counter) addOut(nbytes uint64) {
 
 func (cnt *Counter) getOut() (uint64, time.Duration) {
 	cnt.outMu.Lock()
-	cnt.instMu.Lock()
-	ninst := cnt.inst
-	since0 := cnt.since0
 	out := cnt.out
+	cnt.instMu.Lock()
+	inst := cnt.inst
+	since0 := cnt.since0
 	dur := cnt.dur
 	cnt.instMu.Unlock()
 	cnt.outMu.Unlock()
 	now := time.Now()
-	if ninst > 0 {
+	if inst > 0 {
 		dur += now.Sub(since0)
 	}
 	return out, dur
@@ -58,7 +58,8 @@ func (cnt *Counter) addInst(delta int) {
 	cnt.last = now
 	if was0 {
 		cnt.since0 = now
-	} else if cnt.inst == 0 {
+	}
+	if cnt.inst == 0 {
 		cnt.dur += now.Sub(cnt.since0)
 	}
 }

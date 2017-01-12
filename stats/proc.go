@@ -25,9 +25,9 @@ func (p *counterProc) Underlying() aprocs.Proc {
 
 func (p *counterProc) Process(c scat.Chunk) <-chan aprocs.Res {
 	out := make(chan aprocs.Res)
-	ch := p.proc.Process(c)
 	cnt := p.statsd.Counter(p.id)
 	cnt.addInst(1)
+	ch := p.proc.Process(c)
 	go func() {
 		defer cnt.addInst(-1)
 		defer close(out)
