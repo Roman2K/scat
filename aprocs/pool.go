@@ -7,10 +7,10 @@ import (
 )
 
 type pool struct {
-	proc   Proc
-	wg     *sync.WaitGroup
-	tasks  chan<- task
-	closed bool
+	proc      Proc
+	wg        *sync.WaitGroup
+	tasks     chan<- task
+	closeOnce sync.Once
 }
 
 type task struct {
@@ -51,10 +51,9 @@ func (p *pool) Process(c scat.Chunk) <-chan Res {
 }
 
 func (p *pool) Finish() error {
-	if !p.closed {
+	p.closeOnce.Do(func() {
 		close(p.tasks)
-		p.wg.Wait()
-		p.closed = true
-	}
+	})
+	p.wg.Wait()
 	return p.proc.Finish()
 }
