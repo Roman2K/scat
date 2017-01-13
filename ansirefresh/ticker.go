@@ -35,6 +35,7 @@ func NewTicker(fn func(), d time.Duration) Ticker {
 	go func() {
 		defer close(done)
 		defer timeTicker.Stop()
+		fn()
 		for {
 			select {
 			case <-timeTicker.C:

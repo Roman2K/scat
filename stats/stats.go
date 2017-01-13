@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"scat/slidecnt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-
-	"scat/cpprocs/quota"
 )
 
-const aliveThreshold = 1 * time.Second
+const (
+	aliveThreshold = 1 * time.Second
+)
 
 type Statsd struct {
 	counters   map[Id]*Counter
@@ -22,6 +24,35 @@ type Statsd struct {
 }
 
 type Id interface{}
+
+type Counter struct {
+	pos      uint32
+	last     time.Time
+	inst     int32
+	out      slidecnt.Counter
+	outMu    sync.Mutex
+	QuotaUse uint64
+	QuotaMax uint64
+}
+
+const unlimited = ^uint64(0)
+
+func (cnt *Counter) addInst(delta int32) {
+	atomic.AddInt32(&cnt.inst, delta)
+	cnt.last = time.Now()
+}
+
+func (cnt *Counter) addOut(delta uint64) {
+	cnt.outMu.Lock()
+	defer cnt.outMu.Unlock()
+	cnt.out.Add(delta)
+}
+
+func (cnt *Counter) outAvgRate(unit time.Duration) uint64 {
+	cnt.outMu.Lock()
+	defer cnt.outMu.Unlock()
+	return cnt.out.AvgRate(unit)
+}
 
 func New() *Statsd {
 	return &Statsd{
@@ -33,7 +64,10 @@ func (st *Statsd) Counter(id Id) *Counter {
 	st.countersMu.Lock()
 	defer st.countersMu.Unlock()
 	if _, ok := st.counters[id]; !ok {
-		st.counters[id] = &Counter{pos: st.nextPos}
+		st.counters[id] = &Counter{
+			pos: st.nextPos,
+			out: slidecnt.New(5 * time.Second),
+		}
 		st.nextPos++
 	}
 	return st.counters[id]
@@ -83,17 +117,21 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	now := time.Now()
 	for _, scnt := range st.sortedCounters() {
 		cnt := scnt.cnt
-		ninst := cnt.getInst()
-		out, dur := cnt.getOut()
-		line := fmt.Sprintf("%15s\tx%d\t%10s/s\t%10s\t%10s\t%7s\n",
+		inst := cnt.inst
+		dead := inst == 0 && now.Sub(cnt.last) > aliveThreshold
+		out := ""
+		if !dead {
+			out = humanize.IBytes(cnt.outAvgRate(time.Second)) + "/s"
+		}
+		line := fmt.Sprintf("%15s\tx%d\t%12s\t%10s\t%10s\t%7s\n",
 			scnt.id,
-			ninst,
-			rateStr(out, dur),
+			inst,
+			out,
 			quotaStr(cnt.QuotaUse),
 			quotaStr(cnt.QuotaMax),
 			quotaFillStr(cnt.QuotaUse, cnt.QuotaMax),
 		)
-		if ninst == 0 && now.Sub(cnt.last) > aliveThreshold {
+		if dead {
 			line = fmt.Sprintf("\x1b[90m%s\x1b[0m", line)
 		}
 		err = write(line)
@@ -109,14 +147,9 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	return
 }
 
-func rateStr(n uint64, d time.Duration) string {
-	rate := uint64(float64(n) / d.Seconds())
-	return humanize.IBytes(rate)
-}
-
 func quotaStr(n uint64) string {
 	switch n {
-	case quota.Unlimited:
+	case unlimited:
 		return "\u221E"
 	case 0:
 		return ""
@@ -126,7 +159,7 @@ func quotaStr(n uint64) string {
 
 func quotaFillStr(used, max uint64) string {
 	switch max {
-	case quota.Unlimited:
+	case unlimited:
 		return "\u221E"
 	case 0:
 		return ""

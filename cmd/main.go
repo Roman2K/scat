@@ -68,8 +68,8 @@ func catRemotes(*tmpdedup.Dir) []remote {
 
 func driveRemotes(tmp *tmpdedup.Dir) []remote {
 	return []remote{
-		{"drive", cpprocs.NewRclone("drive:tmp/2", tmp), 7 * humanize.GiByte},
-		{"drive2", cpprocs.NewRclone("drive2:tmp/2", tmp), 14 * humanize.GiByte},
+		{"drive", cpprocs.NewRclone("drive:tmp", tmp), 7 * humanize.GiByte},
+		{"drive2", cpprocs.NewRclone("drive2:tmp", tmp), 14 * humanize.GiByte},
 	}
 }
 
@@ -113,7 +113,7 @@ func cmdSplit() (err error) {
 	{
 		w := ansirefresh.NewWriter(os.Stderr)
 		// w := ansirefresh.NewWriter(ioutil.Discard)
-		t := ansirefresh.NewWriteTicker(w, statsd, 250*time.Millisecond)
+		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
 		defer t.Stop()
 	}
 
@@ -165,7 +165,7 @@ func cmdJoin() (err error) {
 	statsd := stats.New()
 	{
 		w := ansirefresh.NewWriter(os.Stderr)
-		t := ansirefresh.NewWriteTicker(w, statsd, 250*time.Millisecond)
+		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
 		defer t.Stop()
 	}
 
