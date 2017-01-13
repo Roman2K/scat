@@ -15,6 +15,7 @@ import (
 
 const (
 	aliveThreshold = 1 * time.Second
+	outRateWindow  = 2 * time.Second
 )
 
 type Statsd struct {
@@ -26,13 +27,15 @@ type Statsd struct {
 type Id interface{}
 
 type Counter struct {
-	pos      uint32
-	last     time.Time
-	inst     int32
-	out      slidecnt.Counter
-	outMu    sync.Mutex
-	QuotaUse uint64
-	QuotaMax uint64
+	pos   uint32
+	last  time.Time
+	inst  int32
+	out   slidecnt.Counter
+	outMu sync.Mutex
+	Quota struct {
+		Init     bool
+		Use, Max uint64
+	}
 }
 
 const unlimited = ^uint64(0)
@@ -66,7 +69,7 @@ func (st *Statsd) Counter(id Id) *Counter {
 	if _, ok := st.counters[id]; !ok {
 		st.counters[id] = &Counter{
 			pos: st.nextPos,
-			out: slidecnt.New(5 * time.Second),
+			out: slidecnt.New(outRateWindow),
 		}
 		st.nextPos++
 	}
@@ -106,7 +109,7 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	}
 
 	// Headers
-	err = write(fmt.Sprintf("%15s\t%s\t%12s\t%10s\t%10s\t%7s\n",
+	err = write(fmt.Sprintf("%15s\t%s\t%12s\t%11s\t%10s\t%7s\n",
 		"PROC", "INST", "RATE", "USE", "QUOTA", "FILL",
 	))
 	if err != nil {
@@ -123,13 +126,19 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 		if !dead {
 			out = humanize.IBytes(cnt.outAvgRate(time.Second)) + "/s"
 		}
-		line := fmt.Sprintf("%15s\tx%d\t%12s\t%10s\t%10s\t%7s\n",
+		quotaUse := ""
+		if cnt.Quota.Max != 0 && cnt.Quota.Init {
+			quotaUse = "\x1b[33mcalculating\x1b[0m"
+		} else {
+			quotaUse = quotaStr(cnt.Quota.Use, cnt.Quota.Max == 0)
+		}
+		line := fmt.Sprintf("%15s\tx%d\t%12s\t%11s\t%10s\t%7s\n",
 			scnt.id,
 			inst,
 			out,
-			quotaStr(cnt.QuotaUse),
-			quotaStr(cnt.QuotaMax),
-			quotaFillStr(cnt.QuotaUse, cnt.QuotaMax),
+			quotaUse,
+			quotaStr(cnt.Quota.Max, true),
+			quotaFillStr(cnt.Quota.Use, cnt.Quota.Max),
 		)
 		if dead {
 			line = fmt.Sprintf("\x1b[90m%s\x1b[0m", line)
@@ -147,11 +156,11 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	return
 }
 
-func quotaStr(n uint64) string {
-	switch n {
-	case unlimited:
+func quotaStr(n uint64, blankZero bool) string {
+	if n == unlimited {
 		return "\u221E"
-	case 0:
+	}
+	if n == 0 && blankZero {
 		return ""
 	}
 	return humanize.IBytes(n)

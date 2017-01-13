@@ -82,15 +82,32 @@ func quotaMan(statsd *stats.Statsd, tmp *tmpdedup.Dir) (qman quota.Man) {
 	qman = quota.NewMan()
 	qman.OnUse = func(res quota.Res, use, max uint64) {
 		cnt := statsd.Counter(res.Id())
-		cnt.QuotaUse = use
-		cnt.QuotaMax = max
+		cnt.Quota.Use = use
+		cnt.Quota.Max = max
 	}
 	for _, r := range remotes(tmp) {
+		id := r.name
+		cnt := statsd.Counter(id)
+		cnt.Quota.Max = r.quota
 		proc := stats.NewProc(statsd, r.name, r.lsp.Proc())
-		copier := cpprocs.NewCopier(r.name, r.lsp, proc)
+		lser := quotaInitReport{r.lsp, cnt}
+		copier := cpprocs.NewCopier(id, lser, proc)
 		qman.AddResQuota(copier, r.quota)
 	}
 	return
+}
+
+type quotaInitReport struct {
+	lser cpprocs.Lister
+	cnt  *stats.Counter
+}
+
+func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
+	r.cnt.Quota.Init = true
+	defer func() {
+		r.cnt.Quota.Init = false
+	}()
+	return r.lser.Ls()
 }
 
 func readers(statsd *stats.Statsd, tmp *tmpdedup.Dir) (cps []cpprocs.Copier) {
