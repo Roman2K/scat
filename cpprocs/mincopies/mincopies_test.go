@@ -228,11 +228,11 @@ func TestShuffle(t *testing.T) {
 func byId(s []cpprocs.Copier) (res []cpprocs.Copier) {
 	res = make([]cpprocs.Copier, len(s))
 	copy(res, s)
-	sortable := func(i int) string {
+	idStr := func(i int) string {
 		return res[i].Id().(string)
 	}
 	sort.Slice(res, func(i, j int) bool {
-		return sortable(i) < sortable(j)
+		return idStr(i) < idStr(j)
 	})
 	return
 }
