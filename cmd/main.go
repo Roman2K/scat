@@ -11,11 +11,11 @@ import (
 	humanize "github.com/dustin/go-humanize"
 
 	"scat/ansirefresh"
-	"scat/procs"
 	"scat/cpprocs"
 	"scat/cpprocs/mincopies"
 	"scat/cpprocs/quota"
 	"scat/index"
+	"scat/procs"
 	"scat/split"
 	"scat/stats"
 	"scat/tmpdedup"
@@ -161,7 +161,7 @@ func cmdSplit() (err error) {
 			parity.Proc(),
 		),
 		stats.NewProc(statsd, "compress",
-			procs.NewCompress().Proc(),
+			procs.NewGzip().Proc(),
 		),
 		stats.NewProc(statsd, "checksum2",
 			procs.ChecksumProc,
@@ -210,7 +210,7 @@ func cmdJoin() (err error) {
 			procs.ChecksumUnproc,
 		),
 		stats.NewProc(statsd, "compress",
-			procs.NewCompress().Unproc(),
+			procs.NewGzip().Unproc(),
 		),
 		stats.NewProc(statsd, "group",
 			procs.NewGroup(ndata+nparity),

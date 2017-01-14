@@ -9,9 +9,9 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
 	"scat/index"
+	"scat/procs"
 	"scat/testutil"
 )
 
@@ -93,7 +93,7 @@ func doSplit(
 		procs.ChecksumProc,
 		procs.NewIndex(indexw),
 		parity.Proc(),
-		procs.NewCompress().Proc(),
+		procs.NewGzip().Proc(),
 		procs.ChecksumProc,
 		store,
 	}
@@ -114,7 +114,7 @@ func doJoin(
 	chain := procs.Chain{
 		store,
 		procs.ChecksumUnproc,
-		procs.NewCompress().Unproc(),
+		procs.NewGzip().Unproc(),
 		procs.NewGroup(ndata + nparity),
 		parity.Unproc(),
 		procs.NewWriterTo(w),

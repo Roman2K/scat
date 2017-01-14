@@ -8,23 +8,23 @@ import (
 	"scat"
 )
 
-type compress struct {
+type gzipProc struct {
 	// TODO level
 }
 
-func NewCompress() ProcUnprocer {
-	return compress{}
+func NewGzip() ProcUnprocer {
+	return gzipProc{}
 }
 
-func (c compress) Proc() Proc {
-	return ChunkFunc(c.process)
+func (gp gzipProc) Proc() Proc {
+	return ChunkFunc(gp.process)
 }
 
-func (c compress) Unproc() Proc {
-	return ChunkFunc(c.unprocess)
+func (gp gzipProc) Unproc() Proc {
+	return ChunkFunc(gp.unprocess)
 }
 
-func (compress) process(c scat.Chunk) (new scat.Chunk, err error) {
+func (gzipProc) process(c scat.Chunk) (new scat.Chunk, err error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(c.Data())))
 	w := gzip.NewWriter(buf)
 	_, err = w.Write(c.Data())
@@ -36,7 +36,7 @@ func (compress) process(c scat.Chunk) (new scat.Chunk, err error) {
 	return
 }
 
-func (compress) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
+func (gzipProc) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
 	r, err := gzip.NewReader(bytes.NewReader(c.Data()))
 	if err != nil {
 		return
