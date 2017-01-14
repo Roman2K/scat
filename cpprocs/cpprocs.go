@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/checksum"
 	"scat/concur"
 	"scat/cpprocs/copies"
@@ -28,16 +28,16 @@ type Identified interface {
 type Copier interface {
 	Identified
 	Lister
-	aprocs.Proc
+	procs.Proc
 }
 
 type copier struct {
 	id   interface{}
 	lser Lister
-	proc aprocs.Proc
+	proc procs.Proc
 }
 
-func NewCopier(id interface{}, lser Lister, proc aprocs.Proc) Copier {
+func NewCopier(id interface{}, lser Lister, proc procs.Proc) Copier {
 	return &copier{id, lser, proc}
 }
 
@@ -49,7 +49,7 @@ func (cp *copier) Ls() ([]LsEntry, error) {
 	return cp.lser.Ls()
 }
 
-func (cp *copier) Process(c scat.Chunk) <-chan aprocs.Res {
+func (cp *copier) Process(c scat.Chunk) <-chan procs.Res {
 	return cp.proc.Process(c)
 }
 
@@ -59,7 +59,7 @@ func (cp *copier) Finish() error {
 
 type LsProcUnprocer interface {
 	Lister
-	aprocs.ProcUnprocer
+	procs.ProcUnprocer
 }
 
 type LsEntryAdder interface {

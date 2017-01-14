@@ -7,7 +7,7 @@ import (
 	"os/exec"
 
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/checksum"
 	"scat/tmpdedup"
 )
@@ -21,8 +21,8 @@ func NewRclone(remote string, tmp *tmpdedup.Dir) LsProcUnprocer {
 	return rclone{remote, tmp}
 }
 
-func (rc rclone) Proc() aprocs.Proc {
-	return aprocs.NewPathCmdIn(rc.procCmd, rc.tmp)
+func (rc rclone) Proc() procs.Proc {
+	return procs.NewPathCmdIn(rc.procCmd, rc.tmp)
 }
 
 func (rc rclone) procCmd(_ scat.Chunk, path string) (*exec.Cmd, error) {
@@ -30,8 +30,8 @@ func (rc rclone) procCmd(_ scat.Chunk, path string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-func (rc rclone) Unproc() aprocs.Proc {
-	return aprocs.CmdOutFunc(rc.unprocess)
+func (rc rclone) Unproc() procs.Proc {
+	return procs.CmdOutFunc(rc.unprocess)
 }
 
 func (rc rclone) unprocess(c scat.Chunk) (*exec.Cmd, error) {

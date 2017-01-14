@@ -9,7 +9,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/checksum"
 	"scat/index"
 	"scat/testutil"
@@ -81,20 +81,20 @@ func testParity(t *testing.T, cor corruption) {
 }
 
 func doSplit(
-	indexw io.Writer, in []scat.Chunk, ndata, nparity int, store aprocs.Proc,
+	indexw io.Writer, in []scat.Chunk, ndata, nparity int, store procs.Proc,
 ) (
 	err error,
 ) {
-	parity, err := aprocs.NewParity(ndata, nparity)
+	parity, err := procs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
-	chain := aprocs.Chain{
-		aprocs.ChecksumProc,
-		aprocs.NewIndex(indexw),
+	chain := procs.Chain{
+		procs.ChecksumProc,
+		procs.NewIndex(indexw),
 		parity.Proc(),
-		aprocs.NewCompress().Proc(),
-		aprocs.ChecksumProc,
+		procs.NewCompress().Proc(),
+		procs.ChecksumProc,
 		store,
 	}
 	defer chain.Finish()
@@ -102,29 +102,29 @@ func doSplit(
 }
 
 func doJoin(
-	w io.Writer, indexr io.Reader, ndata, nparity int, store aprocs.Proc,
+	w io.Writer, indexr io.Reader, ndata, nparity int, store procs.Proc,
 ) (
 	err error,
 ) {
 	scan := index.NewScanner(indexr)
-	parity, err := aprocs.NewParity(ndata, nparity)
+	parity, err := procs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
-	chain := aprocs.Chain{
+	chain := procs.Chain{
 		store,
-		aprocs.ChecksumUnproc,
-		aprocs.NewCompress().Unproc(),
-		aprocs.NewGroup(ndata + nparity),
+		procs.ChecksumUnproc,
+		procs.NewCompress().Unproc(),
+		procs.NewGroup(ndata + nparity),
 		parity.Unproc(),
-		aprocs.NewWriterTo(w),
+		procs.NewWriterTo(w),
 	}
 	defer chain.Finish()
 	return processFinish(chain, scan)
 }
 
-func processFinish(proc aprocs.Proc, iter scat.ChunkIter) (err error) {
-	err = aprocs.Process(proc, iter)
+func processFinish(proc procs.Proc, iter scat.ChunkIter) (err error) {
+	err = procs.Process(proc, iter)
 	if err != nil {
 		return
 	}
@@ -133,12 +133,12 @@ func processFinish(proc aprocs.Proc, iter scat.ChunkIter) (err error) {
 
 type memStore map[checksum.Hash][]byte
 
-func (ms memStore) Proc() aprocs.Proc {
-	return aprocs.InplaceFunc(ms.process)
+func (ms memStore) Proc() procs.Proc {
+	return procs.InplaceFunc(ms.process)
 }
 
-func (ms memStore) Unproc() aprocs.Proc {
-	return aprocs.ChunkFunc(ms.unprocess)
+func (ms memStore) Unproc() procs.Proc {
+	return procs.ChunkFunc(ms.unprocess)
 }
 
 func (ms memStore) process(c scat.Chunk) error {

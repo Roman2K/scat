@@ -2,7 +2,7 @@ package cpprocs
 
 import (
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/concur"
 	"scat/cpprocs/copies"
 )
@@ -12,7 +12,7 @@ type multireader struct {
 	copiers []Copier
 }
 
-func NewMultiReader(copiers []Copier) (proc aprocs.Proc, err error) {
+func NewMultiReader(copiers []Copier) (proc procs.Proc, err error) {
 	ml := make(MultiLister, len(copiers))
 	for i, cp := range copiers {
 		ml[i] = cp
@@ -26,16 +26,16 @@ func NewMultiReader(copiers []Copier) (proc aprocs.Proc, err error) {
 	return
 }
 
-func (mrd multireader) Process(c scat.Chunk) <-chan aprocs.Res {
+func (mrd multireader) Process(c scat.Chunk) <-chan procs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
 	copiers := make([]Copier, len(owners))
 	for i, o := range owners {
 		copiers[i] = o.(Copier)
 	}
 	ShuffleCopiers(copiers)
-	casc := make(aprocs.Cascade, len(copiers))
+	casc := make(procs.Cascade, len(copiers))
 	for i, cp := range copiers {
-		casc[i] = aprocs.NewOnEnd(cp, func(err error) {
+		casc[i] = procs.NewOnEnd(cp, func(err error) {
 			if err != nil {
 				mrd.reg.RemoveOwner(cp)
 			}

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/checksum"
 )
 
@@ -20,8 +20,8 @@ func NewCat(dir string) LsProcUnprocer {
 	return cat{dir: dir}
 }
 
-func (cat cat) Proc() aprocs.Proc {
-	return aprocs.CmdInFunc(cat.procCmd)
+func (cat cat) Proc() procs.Proc {
+	return procs.CmdInFunc(cat.procCmd)
 }
 
 func (cat cat) procCmd(c scat.Chunk) (cmd *exec.Cmd, err error) {
@@ -35,8 +35,8 @@ func (cat cat) procCmd(c scat.Chunk) (cmd *exec.Cmd, err error) {
 	return
 }
 
-func (cat cat) Unproc() aprocs.Proc {
-	return aprocs.CmdOutFunc(cat.unprocCmd)
+func (cat cat) Unproc() procs.Proc {
+	return procs.CmdOutFunc(cat.unprocCmd)
 }
 
 func (cat cat) unprocCmd(c scat.Chunk) (*exec.Cmd, error) {

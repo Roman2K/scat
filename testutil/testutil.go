@@ -2,11 +2,11 @@ package testutil
 
 import (
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/cpprocs"
 )
 
-func ReadChunks(ch <-chan aprocs.Res) (chunks []scat.Chunk, err error) {
+func ReadChunks(ch <-chan procs.Res) (chunks []scat.Chunk, err error) {
 	for res := range ch {
 		if e := res.Err; e != nil && err == nil {
 			err = e
@@ -53,9 +53,9 @@ type FinishErrProc struct {
 	Err error
 }
 
-var _ aprocs.Proc = FinishErrProc{}
+var _ procs.Proc = FinishErrProc{}
 
-func (p FinishErrProc) Process(scat.Chunk) <-chan aprocs.Res {
+func (p FinishErrProc) Process(scat.Chunk) <-chan procs.Res {
 	panic("Process() not implemented")
 }
 

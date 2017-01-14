@@ -2,16 +2,16 @@ package stats
 
 import (
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 )
 
 type counterProc struct {
 	statsd *Statsd
 	id     Id
-	proc   aprocs.Proc
+	proc   procs.Proc
 }
 
-func NewProc(d *Statsd, id Id, proc aprocs.Proc) aprocs.WrapperProc {
+func NewProc(d *Statsd, id Id, proc procs.Proc) procs.WrapperProc {
 	return &counterProc{
 		statsd: d,
 		id:     id,
@@ -19,12 +19,12 @@ func NewProc(d *Statsd, id Id, proc aprocs.Proc) aprocs.WrapperProc {
 	}
 }
 
-func (p *counterProc) Underlying() aprocs.Proc {
+func (p *counterProc) Underlying() procs.Proc {
 	return p.proc
 }
 
-func (p *counterProc) Process(c scat.Chunk) <-chan aprocs.Res {
-	out := make(chan aprocs.Res)
+func (p *counterProc) Process(c scat.Chunk) <-chan procs.Res {
+	out := make(chan procs.Res)
 	cnt := p.statsd.Counter(p.id)
 	cnt.addInst(1)
 	ch := p.proc.Process(c)

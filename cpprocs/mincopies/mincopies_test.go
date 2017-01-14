@@ -8,7 +8,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/checksum"
 	"scat/cpprocs"
 	"scat/cpprocs/quota"
@@ -30,8 +30,8 @@ func TestMinCopies(t *testing.T) {
 
 	called := []string{}
 	errs := map[string]error{}
-	testProc := func(id string) aprocs.Proc {
-		return aprocs.InplaceFunc(func(scat.Chunk) error {
+	testProc := func(id string) procs.Proc {
+		return procs.InplaceFunc(func(scat.Chunk) error {
 			called = append(called, id)
 			return errs[id]
 		})
@@ -54,7 +54,7 @@ func TestMinCopies(t *testing.T) {
 		return
 	}
 
-	var mc aprocs.DynProcer
+	var mc procs.DynProcer
 	resetMc := func() {
 		var err error
 		mc, err = New(min, newQman())
@@ -146,8 +146,8 @@ func TestMinCopies(t *testing.T) {
 
 func TestMinCopiesNegativeMissing(t *testing.T) {
 	called := []string{}
-	testProc := func(id string) aprocs.Proc {
-		return aprocs.InplaceFunc(func(scat.Chunk) error {
+	testProc := func(id string) procs.Proc {
+		return procs.InplaceFunc(func(scat.Chunk) error {
 			called = append(called, id)
 			return nil
 		})
@@ -198,7 +198,7 @@ func TestFinishError(t *testing.T) {
 	assert.Equal(t, someErr, err)
 }
 
-func processByAll(c scat.Chunk, procs []aprocs.Proc) (
+func processByAll(c scat.Chunk, procs []procs.Proc) (
 	all []scat.Chunk, err error,
 ) {
 	for _, proc := range procs {

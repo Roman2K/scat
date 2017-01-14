@@ -11,7 +11,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 
 	"scat/ansirefresh"
-	"scat/aprocs"
+	"scat/procs"
 	"scat/cpprocs"
 	"scat/cpprocs/mincopies"
 	"scat/cpprocs/quota"
@@ -134,7 +134,7 @@ func cmdSplit() (err error) {
 		defer t.Stop()
 	}
 
-	parity, err := aprocs.NewParity(ndata, nparity)
+	parity, err := procs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
@@ -150,28 +150,28 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	chain := aprocs.NewBacklog(10, aprocs.Chain{
+	chain := procs.NewBacklog(10, procs.Chain{
 		stats.NewProc(statsd, "checksum",
-			aprocs.ChecksumProc,
+			procs.ChecksumProc,
 		),
 		stats.NewProc(statsd, "index",
-			aprocs.NewIndex(os.Stdout),
+			procs.NewIndex(os.Stdout),
 		),
 		stats.NewProc(statsd, "parity",
 			parity.Proc(),
 		),
 		stats.NewProc(statsd, "compress",
-			aprocs.NewCompress().Proc(),
+			procs.NewCompress().Proc(),
 		),
 		stats.NewProc(statsd, "checksum2",
-			aprocs.ChecksumProc,
+			procs.ChecksumProc,
 		),
-		aprocs.NewConcur(10, minCopies),
+		procs.NewConcur(10, minCopies),
 	})
 	defer chain.Finish()
 
 	splitter := split.NewSplitter(os.Stdin)
-	err = aprocs.Process(chain, splitter)
+	err = procs.Process(chain, splitter)
 	if err != nil {
 		return
 	}
@@ -186,7 +186,7 @@ func cmdJoin() (err error) {
 		defer t.Stop()
 	}
 
-	parity, err := aprocs.NewParity(ndata, nparity)
+	parity, err := procs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
@@ -202,35 +202,35 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	chain := aprocs.NewBacklog(2, aprocs.Chain{
+	chain := procs.NewBacklog(2, procs.Chain{
 		stats.NewProc(statsd, "mrd",
 			mrd,
 		),
 		stats.NewProc(statsd, "checksum",
-			aprocs.ChecksumUnproc,
+			procs.ChecksumUnproc,
 		),
 		stats.NewProc(statsd, "compress",
-			aprocs.NewCompress().Unproc(),
+			procs.NewCompress().Unproc(),
 		),
 		stats.NewProc(statsd, "group",
-			aprocs.NewGroup(ndata+nparity),
+			procs.NewGroup(ndata+nparity),
 		),
 		stats.NewProc(statsd, "parity",
 			parity.Unproc(),
 		),
-		aprocs.NewMutex(aprocs.Chain{
+		procs.NewMutex(procs.Chain{
 			stats.NewProc(statsd, "sort",
-				aprocs.NewSort(),
+				procs.NewSort(),
 			),
 			stats.NewProc(statsd, "writerto",
-				aprocs.NewWriterTo(os.Stdout),
+				procs.NewWriterTo(os.Stdout),
 			),
 		}),
 	})
 	defer chain.Finish()
 
 	scan := index.NewScanner(os.Stdin)
-	err = aprocs.Process(chain, scan)
+	err = procs.Process(chain, scan)
 	if err != nil {
 		return
 	}

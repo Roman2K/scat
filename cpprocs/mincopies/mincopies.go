@@ -6,11 +6,11 @@ import (
 	"sync"
 
 	"scat"
-	"scat/aprocs"
 	"scat/concur"
 	"scat/cpprocs"
 	"scat/cpprocs/copies"
 	"scat/cpprocs/quota"
+	"scat/procs"
 )
 
 type minCopies struct {
@@ -21,7 +21,7 @@ type minCopies struct {
 	finish func() error
 }
 
-func New(min int, qman quota.Man) (dynp aprocs.DynProcer, err error) {
+func New(min int, qman quota.Man) (dynp procs.DynProcer, err error) {
 	reg := copies.NewReg()
 	ress := qman.Resources(0)
 	ml := cpprocs.MultiLister(listers(ress))
@@ -38,7 +38,7 @@ func New(min int, qman quota.Man) (dynp aprocs.DynProcer, err error) {
 	return
 }
 
-func (mc *minCopies) Procs(c scat.Chunk) ([]aprocs.Proc, error) {
+func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 	copies := mc.reg.List(c.Hash())
 	copies.Mu.Lock()
 	dataUse := uint64(len(c.Data()))
@@ -75,14 +75,14 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]aprocs.Proc, error) {
 		defer copies.Mu.Unlock()
 		wg.Wait()
 	}()
-	procs := make([]aprocs.Proc, len(elected)+1)
-	procs[0] = aprocs.Nop
-	copierProc := func(copier cpprocs.Copier) aprocs.Proc {
+	cpProcs := make([]procs.Proc, len(elected)+1)
+	cpProcs[0] = procs.Nop
+	copierProc := func(copier cpprocs.Copier) procs.Proc {
 		copiers := append([]cpprocs.Copier{copier}, failover...)
-		casc := make(aprocs.Cascade, len(copiers))
+		casc := make(procs.Cascade, len(copiers))
 		for i := range copiers {
 			cp := copiers[i]
-			casc[i] = aprocs.NewOnEnd(cp, func(err error) {
+			casc[i] = procs.NewOnEnd(cp, func(err error) {
 				if err != nil {
 					mc.deleteCopier(cp)
 					return
@@ -91,13 +91,13 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]aprocs.Proc, error) {
 				mc.addUse(cp, dataUse)
 			})
 		}
-		proc := aprocs.NewDiscardChunks(casc)
-		return aprocs.NewOnEnd(proc, func(error) { wg.Done() })
+		proc := procs.NewDiscardChunks(casc)
+		return procs.NewOnEnd(proc, func(error) { wg.Done() })
 	}
 	for i, copier := range elected {
-		procs[i+1] = copierProc(copier)
+		cpProcs[i+1] = copierProc(copier)
 	}
-	return procs, nil
+	return cpProcs, nil
 }
 
 func (mc *minCopies) getCopiers(use uint64) (cps []cpprocs.Copier) {
@@ -140,7 +140,7 @@ func listers(ress []quota.Res) (lsers []cpprocs.Lister) {
 func finishFuncs(ress []quota.Res) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(ress))
 	for i, res := range ress {
-		fns[i] = res.(aprocs.Proc).Finish
+		fns[i] = res.(procs.Proc).Finish
 	}
 	return
 }
