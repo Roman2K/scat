@@ -1,16 +1,16 @@
-hash: cf550ca7d0bed8f5d5915ffaa41e74e4af31d33ff6c76bc932bc47feb576eda7
-updated: 2017-01-02T17:20:20.985261744+01:00
+hash: 4a810086765f221a45c14aaa1bd228f204c707563ee10ea31e95648c0058a64a
+updated: 2017-01-14T11:24:41.983833349+01:00
 imports:
 - name: github.com/dustin/go-humanize
-  version: ef638b6c2e62b857442c6443dace9366a48c0ee2
+  version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/reedsolomon
-  version: d0a56f72c0d40a6cdde43a1575ad9686a0098b70
+  version: c056598956acbb4a085b3c23914415937b3335e5
 - name: github.com/restic/chunker
-  version: 50428e727f50c16e1bcb3050209fc2758427a6af
+  version: 15748add008169ebbec6800155db55c8568700f6
 - name: github.com/stretchr/testify
-  version: 18a02ba4a312f95da08ff4cfc0055750ce50ae9e
+  version: 2402e8e7a02fc811447d11f881aa9746cdc57983
   subpackages:
   - assert
   - require
