@@ -127,18 +127,18 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 			out = humanize.IBytes(cnt.outAvgRate(time.Second)) + "/s"
 		}
 		quotaUse := ""
-		if cnt.Quota.Max != 0 && cnt.Quota.Init {
+		if cnt.Quota.Init {
 			quotaUse = "\x1b[33mcalculating\x1b[0m"
 		} else {
-			quotaUse = quotaStr(cnt.Quota.Use, cnt.Quota.Max == 0)
+			quotaUse = formatQuota(cnt.Quota.Use, cnt.Quota.Max == 0)
 		}
 		line := fmt.Sprintf("%15s\tx%d\t%12s\t%11s\t%10s\t%7s\n",
 			scnt.id,
 			inst,
 			out,
 			quotaUse,
-			quotaStr(cnt.Quota.Max, true),
-			quotaFillStr(cnt.Quota.Use, cnt.Quota.Max),
+			formatQuota(cnt.Quota.Max, true),
+			formatQuotaFill(cnt.Quota.Use, cnt.Quota.Max),
 		)
 		if dead {
 			line = fmt.Sprintf("\x1b[90m%s\x1b[0m", line)
@@ -156,17 +156,17 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	return
 }
 
-func quotaStr(n uint64, blankZero bool) string {
-	if n == unlimited {
+func formatQuota(n uint64, blankZero bool) string {
+	switch {
+	case n == unlimited:
 		return "\u221E"
-	}
-	if n == 0 && blankZero {
+	case n == 0 && blankZero:
 		return ""
 	}
 	return humanize.IBytes(n)
 }
 
-func quotaFillStr(used, max uint64) string {
+func formatQuotaFill(used, max uint64) string {
 	switch max {
 	case unlimited:
 		return "\u221E"

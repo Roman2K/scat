@@ -114,7 +114,7 @@ type sizedData interface {
 
 type BytesData []byte
 
-var _ sizedData = BytesData(nil)
+var _ sizedData = BytesData{}
 
 func (b BytesData) Reader() io.Reader {
 	return bytes.NewReader([]byte(b))

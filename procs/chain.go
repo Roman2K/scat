@@ -1,8 +1,9 @@
 package procs
 
 import (
-	"scat"
 	"sync"
+
+	"scat"
 )
 
 type Chain []Proc
@@ -23,8 +24,7 @@ func (chain Chain) Process(c scat.Chunk) <-chan Res {
 	in <- Res{Chunk: c}
 	close(in)
 	var out chan Res
-	for i, n := 0, len(procs); i < n; i++ {
-		proc := procs[i]
+	for _, proc := range procs {
 		out = make(chan Res)
 		go process(out, in, proc)
 		in = out

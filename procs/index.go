@@ -54,6 +54,7 @@ func NewIndexProc(w io.Writer) IndexProc {
 func (idx *indexProc) Process(c scat.Chunk) <-chan Res {
 	idx.setOrder(c)
 	ch := make(chan Res, 1)
+	defer close(ch)
 	idx.finalsMu.Lock()
 	defer idx.finalsMu.Unlock()
 	if _, ok := idx.finals[c.Hash()]; !ok {
@@ -63,7 +64,6 @@ func (idx *indexProc) Process(c scat.Chunk) <-chan Res {
 		}
 		ch <- Res{Chunk: c}
 	}
-	close(ch)
 	return ch
 }
 

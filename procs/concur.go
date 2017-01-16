@@ -23,8 +23,8 @@ func (concp concurProc) Process(c scat.Chunk) <-chan Res {
 	procs, err := concp.dynp.Procs(c)
 	if err != nil {
 		ch := make(chan Res, 1)
+		defer close(ch)
 		ch <- Res{Chunk: c, Err: err}
-		close(ch)
 		return ch
 	}
 	out := make(chan Res)

@@ -16,9 +16,9 @@ type InplaceFunc func(scat.Chunk) error
 
 func (fn InplaceFunc) Process(c scat.Chunk) <-chan Res {
 	ch := make(chan Res, 1)
+	defer close(ch)
 	err := fn(c)
 	ch <- Res{Chunk: c, Err: err}
-	close(ch)
 	return ch
 }
 
@@ -30,13 +30,12 @@ type ChunkFunc func(scat.Chunk) (scat.Chunk, error)
 
 func (fn ChunkFunc) Process(c scat.Chunk) <-chan Res {
 	ch := make(chan Res, 1)
-	new, err := fn(c)
-	if err != nil {
+	defer close(ch)
+	if new, err := fn(c); err != nil {
 		ch <- Res{Chunk: c, Err: err}
 	} else {
 		ch <- Res{Chunk: new}
 	}
-	close(ch)
 	return ch
 }
 

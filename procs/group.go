@@ -39,6 +39,7 @@ func (g *group) ProcessErr(c scat.Chunk, err error) <-chan Res {
 func (g *group) Process(c scat.Chunk) <-chan Res {
 	head, grouped, ok, err := g.build(c)
 	ch := make(chan Res, 1)
+	defer close(ch)
 	if err != nil {
 		ch <- Res{Chunk: c, Err: err}
 	} else if ok {
@@ -47,7 +48,6 @@ func (g *group) Process(c scat.Chunk) <-chan Res {
 		agg.Meta().Set("group", grouped)
 		ch <- Res{Chunk: agg}
 	}
-	close(ch)
 	return ch
 }
 
