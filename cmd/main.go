@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"scat"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -14,9 +15,7 @@ import (
 	"scat/cpprocs"
 	"scat/cpprocs/mincopies"
 	"scat/cpprocs/quota"
-	"scat/index"
 	"scat/procs"
-	"scat/split"
 	"scat/stats"
 	"scat/tmpdedup"
 )
@@ -150,38 +149,39 @@ func cmdSplit() (err error) {
 		return
 	}
 
-	chain := procs.NewBacklog(10, procs.Chain{
-		stats.NewProc(statsd, "checksum",
-			procs.ChecksumProc,
+	chain := procs.Chain{
+		stats.NewProc(statsd, "split",
+			procs.NewSplit(2*humanize.MiByte, 16*humanize.MiByte),
 		),
-		stats.NewProc(statsd, "index",
-			procs.NewIndex(os.Stdout),
-		),
-		stats.NewProc(statsd, "parity",
-			parity.Proc(),
-		),
-		stats.NewProc(statsd, "compress",
-			procs.NewGzip().Proc(),
-		),
-		stats.NewProc(statsd, "checksum2",
-			procs.ChecksumProc,
-		),
-		procs.NewConcur(10, minCopies),
-	})
-	defer chain.Finish()
-
-	splitter := split.NewSplitter(os.Stdin)
-	err = procs.Process(chain, splitter)
-	if err != nil {
-		return
+		procs.NewBacklog(10, procs.Chain{
+			stats.NewProc(statsd, "checksum",
+				procs.ChecksumProc,
+			),
+			stats.NewProc(statsd, "index",
+				procs.NewIndexProc(os.Stdout),
+			),
+			stats.NewProc(statsd, "parity",
+				parity.Proc(),
+			),
+			stats.NewProc(statsd, "compress",
+				procs.NewGzip().Proc(),
+			),
+			stats.NewProc(statsd, "checksum2",
+				procs.ChecksumProc,
+			),
+			procs.NewConcur(10, minCopies),
+		}),
 	}
-	return chain.Finish()
+
+	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
+	return procs.Process(chain, seed)
 }
 
 func cmdJoin() (err error) {
 	statsd := stats.New()
 	{
 		w := ansirefresh.NewWriter(os.Stderr)
+		// w := ansirefresh.NewWriter(ioutil.Discard)
 		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
 		defer t.Stop()
 	}
@@ -202,37 +202,32 @@ func cmdJoin() (err error) {
 		return
 	}
 
-	chain := procs.NewBacklog(2, procs.Chain{
-		stats.NewProc(statsd, "mrd",
-			mrd,
+	chain := procs.Chain{
+		stats.NewProc(statsd, "index",
+			procs.IndexUnproc,
 		),
-		stats.NewProc(statsd, "checksum",
-			procs.ChecksumUnproc,
-		),
-		stats.NewProc(statsd, "compress",
-			procs.NewGzip().Unproc(),
-		),
-		stats.NewProc(statsd, "group",
-			procs.NewGroup(ndata+nparity),
-		),
-		stats.NewProc(statsd, "parity",
-			parity.Unproc(),
-		),
-		procs.NewMutex(procs.Chain{
-			stats.NewProc(statsd, "sort",
-				procs.NewSort(),
+		procs.NewBacklog(10, procs.Chain{
+			stats.NewProc(statsd, "mrd",
+				mrd,
 			),
-			stats.NewProc(statsd, "writerto",
-				procs.NewWriterTo(os.Stdout),
+			stats.NewProc(statsd, "checksum",
+				procs.ChecksumUnproc,
+			),
+			stats.NewProc(statsd, "compress",
+				procs.NewGzip().Unproc(),
+			),
+			stats.NewProc(statsd, "group",
+				procs.NewGroup(ndata+nparity),
+			),
+			stats.NewProc(statsd, "parity",
+				parity.Unproc(),
+			),
+			stats.NewProc(statsd, "join",
+				procs.NewJoin(os.Stdout),
 			),
 		}),
-	})
-	defer chain.Finish()
-
-	scan := index.NewScanner(os.Stdin)
-	err = procs.Process(chain, scan)
-	if err != nil {
-		return
 	}
-	return chain.Finish()
+
+	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
+	return procs.Process(chain, seed)
 }

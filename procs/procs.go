@@ -71,6 +71,16 @@ type DynProcer interface {
 	Finish() error
 }
 
+func Process(proc Proc, seed scat.Chunk) error {
+	defer proc.Finish()
+	for res := range proc.Process(seed) {
+		if res.Err != nil {
+			return res.Err
+		}
+	}
+	return proc.Finish()
+}
+
 func finishFuncs(procs []Proc) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(procs))
 	for i, p := range procs {

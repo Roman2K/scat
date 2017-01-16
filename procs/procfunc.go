@@ -44,8 +44,30 @@ func (ChunkFunc) Finish() error {
 	return nil
 }
 
+type ChunkIterFunc func(scat.Chunk) scat.ChunkIter
+
+func (fn ChunkIterFunc) Process(c scat.Chunk) <-chan Res {
+	iter := fn(c)
+	ch := make(chan Res)
+	go func() {
+		defer close(ch)
+		for iter.Next() {
+			ch <- Res{Chunk: iter.Chunk()}
+		}
+		if err := iter.Err(); err != nil {
+			ch <- Res{Chunk: c, Err: err}
+		}
+	}()
+	return ch
+}
+
+func (ChunkIterFunc) Finish() error {
+	return nil
+}
+
 var (
 	_ Proc = ProcFunc(nil)
 	_ Proc = InplaceFunc(nil)
 	_ Proc = ChunkFunc(nil)
+	_ Proc = ChunkIterFunc(nil)
 )

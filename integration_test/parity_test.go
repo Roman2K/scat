@@ -11,9 +11,7 @@ import (
 
 	"scat"
 	"scat/checksum"
-	"scat/index"
 	"scat/procs"
-	"scat/testutil"
 )
 
 func TestParityCorruptNone(t *testing.T) {
@@ -46,11 +44,10 @@ func testParity(t *testing.T, cor corruption) {
 	indexBuf := &bytes.Buffer{}
 	outputBuf := &bytes.Buffer{}
 	store := memStore{}
-	chunk := scat.NewChunk(0, scat.BytesData(inputStr))
-	chunk.SetTargetSize(len(inputStr))
-	input := []scat.Chunk{chunk}
+	seed := scat.NewChunk(0, scat.BytesData(inputStr))
+	seed.SetTargetSize(len(inputStr))
 
-	err := doSplit(indexBuf, input, ndata, nparity, store.Proc())
+	err := doSplit(indexBuf, seed, ndata, nparity, store.Proc())
 	assert.NoError(t, err)
 
 	corrupt := func(n int) {
@@ -84,7 +81,7 @@ func testParity(t *testing.T, cor corruption) {
 }
 
 func doSplit(
-	indexw io.Writer, in []scat.Chunk, ndata, nparity int, store procs.Proc,
+	indexw io.Writer, seed scat.Chunk, ndata, nparity int, store procs.Proc,
 ) (
 	err error,
 ) {
@@ -94,14 +91,14 @@ func doSplit(
 	}
 	chain := procs.Chain{
 		procs.ChecksumProc,
-		procs.NewIndex(indexw),
+		procs.NewIndexProc(indexw),
 		parity.Proc(),
 		procs.NewGzip().Proc(),
 		procs.ChecksumProc,
 		store,
 	}
 	defer chain.Finish()
-	return processFinish(chain, &testutil.SliceIter{S: in})
+	return processFinish(chain, seed)
 }
 
 func doJoin(
@@ -109,12 +106,13 @@ func doJoin(
 ) (
 	err error,
 ) {
-	scan := index.NewScanner(indexr)
+	seed := scat.NewChunk(0, scat.NewReaderData(indexr))
 	parity, err := procs.NewParity(ndata, nparity)
 	if err != nil {
 		return
 	}
 	chain := procs.Chain{
+		procs.IndexUnproc,
 		store,
 		procs.ChecksumUnproc,
 		procs.NewGzip().Unproc(),
@@ -123,11 +121,11 @@ func doJoin(
 		procs.NewWriterTo(w),
 	}
 	defer chain.Finish()
-	return processFinish(chain, scan)
+	return processFinish(chain, seed)
 }
 
-func processFinish(proc procs.Proc, iter scat.ChunkIter) (err error) {
-	err = procs.Process(proc, iter)
+func processFinish(proc procs.Proc, seed scat.Chunk) (err error) {
+	err = procs.Process(proc, seed)
 	if err != nil {
 		return
 	}

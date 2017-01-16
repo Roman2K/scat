@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
+	"scat/procs"
 )
 
 type cat struct {

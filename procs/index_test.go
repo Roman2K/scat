@@ -17,7 +17,7 @@ import (
 
 func TestIndex(t *testing.T) {
 	buf := &bytes.Buffer{}
-	idx := procs.NewIndex(buf)
+	idx := procs.NewIndexProc(buf)
 	nlines := func() int {
 		return strings.Count(buf.String(), "\n")
 	}
@@ -76,7 +76,7 @@ func TestIndex(t *testing.T) {
 
 func TestIndexSameChunkNewData(t *testing.T) {
 	buf := &bytes.Buffer{}
-	idx := procs.NewIndex(buf)
+	idx := procs.NewIndexProc(buf)
 	c := testIndexChunk(0, 123, sum("a"))
 	_, err := testutil.ReadChunks(idx.Process(c))
 	assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestIndexSameChunkNewData(t *testing.T) {
 }
 
 func TestIndexProcessFinalDup(t *testing.T) {
-	idx := procs.NewIndex(ioutil.Discard)
+	idx := procs.NewIndexProc(ioutil.Discard)
 	c0 := testIndexChunk(0, 0, sum("c0"))
 	c01 := testIndexChunk(1, 0, sum("c0"))
 
@@ -115,7 +115,7 @@ func TestIndexProcessFinalDup(t *testing.T) {
 
 func TestIndexFinalsOutOfOrder(t *testing.T) {
 	buf := &bytes.Buffer{}
-	idx := procs.NewIndex(buf)
+	idx := procs.NewIndexProc(buf)
 	c0 := testIndexChunk(0, 0, sum("c0"))
 	c1 := testIndexChunk(1, 1, sum("c1"))
 	c2 := testIndexChunk(2, 2, sum("c2"))
@@ -143,7 +143,7 @@ func TestIndexFinalsOutOfOrder(t *testing.T) {
 }
 
 func TestIndexProcessFinalError(t *testing.T) {
-	idx := procs.NewIndex(ioutil.Discard)
+	idx := procs.NewIndexProc(ioutil.Discard)
 	c0 := testIndexChunk(0, 0, sum("c0"))
 	c01 := testIndexChunk(1, 0, sum("c0"))
 
@@ -168,7 +168,7 @@ func TestIndexProcessFinalError(t *testing.T) {
 }
 
 func TestIndexProcessEndError(t *testing.T) {
-	idx := procs.NewIndex(ioutil.Discard)
+	idx := procs.NewIndexProc(ioutil.Discard)
 	c0 := testIndexChunk(0, 0, sum("c0"))
 	c01 := testIndexChunk(1, 0, sum("c0"))
 

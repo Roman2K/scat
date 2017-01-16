@@ -12,7 +12,7 @@ import (
 	"scat/seriessort"
 )
 
-type Index interface {
+type IndexProc interface {
 	Proc
 	EndProc
 }
@@ -43,7 +43,7 @@ var (
 	ErrIndexDup              = errors.New("won't process dup chunk")
 )
 
-func NewIndex(w io.Writer) Index {
+func NewIndexProc(w io.Writer) IndexProc {
 	return &indexProc{
 		w:      w,
 		order:  seriessort.Series{},
@@ -181,4 +181,10 @@ func writeEntries(w io.Writer, entries []indexEntry) (err error) {
 		}
 	}
 	return
+}
+
+var IndexUnproc Proc = ChunkIterFunc(indexUnprocess)
+
+func indexUnprocess(c scat.Chunk) scat.ChunkIter {
+	return index.NewScanner(c.Num(), c.Data().Reader())
 }

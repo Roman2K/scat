@@ -16,10 +16,11 @@ type scanner struct {
 	err     error
 }
 
-func NewScanner(r io.Reader) scat.ChunkIter {
+func NewScanner(num int, r io.Reader) scat.ChunkIter {
 	return &scanner{
 		r:       r,
 		hashBuf: make([]byte, len(checksum.Hash{})),
+		num:     num,
 	}
 }
 
