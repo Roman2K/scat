@@ -8,16 +8,16 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
+	"scat/procs"
 	"scat/testutil"
 )
 
 func testChunkNums(t *testing.T, proc procs.Proc, inChunks int) {
 	newChunk := func(num int) (c scat.Chunk) {
-		data := []byte{'a'}
+		data := scat.BytesData{'a'}
 		c = scat.NewChunk(num, data)
-		c.SetHash(checksum.Sum(data))
+		c.SetHash(checksum.SumBytes(data))
 		return
 	}
 

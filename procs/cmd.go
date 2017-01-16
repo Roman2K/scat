@@ -20,7 +20,7 @@ func (fn CmdInFunc) process(c scat.Chunk) (err error) {
 	if err != nil {
 		return
 	}
-	cmd.Stdin = bytes.NewReader(c.Data())
+	cmd.Stdin = c.Data().Reader()
 	return cmd.Run()
 }
 
@@ -44,7 +44,7 @@ func (fn CmdOutFunc) process(c scat.Chunk) (new scat.Chunk, err error) {
 	buf := &bytes.Buffer{}
 	cmd.Stdout = buf
 	err = cmd.Run()
-	new = c.WithData(buf.Bytes())
+	new = c.WithData(scat.BytesData(buf.Bytes()))
 	return
 }
 

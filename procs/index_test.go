@@ -10,8 +10,8 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
+	"scat/procs"
 	"scat/testutil"
 )
 
@@ -185,12 +185,12 @@ func TestIndexProcessEndError(t *testing.T) {
 }
 
 func sumStr(s string) string {
-	h := checksum.Sum([]byte(s))
+	h := checksum.SumBytes([]byte(s))
 	return fmt.Sprintf("%x", h)
 }
 
 func sum(data string) checksum.Hash {
-	return checksum.Sum([]byte(data))
+	return checksum.SumBytes([]byte(data))
 }
 
 func testIndexChunk(num, targetSize int, hash checksum.Hash) (c scat.Chunk) {

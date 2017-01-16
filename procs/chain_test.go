@@ -11,20 +11,30 @@ import (
 	"scat/procs"
 )
 
+func appendData(c scat.Chunk, b byte) (scat.Chunk, error) {
+	bytes, err := c.Data().Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return c.WithData(append(scat.BytesData(bytes), b)), nil
+}
+
 func TestChain(t *testing.T) {
 	a := procs.ChunkFunc(func(c scat.Chunk) (scat.Chunk, error) {
-		return c.WithData(append(c.Data(), 'a')), nil
+		return appendData(c, 'a')
 	})
 	b := procs.ChunkFunc(func(c scat.Chunk) (scat.Chunk, error) {
-		return c.WithData(append(c.Data(), 'b')), nil
+		return appendData(c, 'b')
 	})
 	chain := procs.Chain{a, b}
-	ch := chain.Process(scat.NewChunk(0, []byte{'x'}))
+	ch := chain.Process(scat.NewChunk(0, scat.BytesData{'x'}))
 	res := <-ch
 	_, ok := <-ch
 	assert.False(t, ok)
 	assert.NoError(t, res.Err)
-	assert.Equal(t, "xab", string(res.Chunk.Data()))
+	bytes, err := res.Chunk.Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, "xab", string(bytes))
 }
 
 func TestChainEndProc(t *testing.T) {

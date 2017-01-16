@@ -42,7 +42,7 @@ func (p *parity) process(c scat.Chunk) <-chan Res {
 			return
 		}
 		for i, shard := range shards {
-			chunk := scat.NewChunk(c.Num()*p.nshards+i, shard)
+			chunk := scat.NewChunk(c.Num()*p.nshards+i, scat.BytesData(shard))
 			ch <- Res{Chunk: chunk}
 		}
 	}()
@@ -50,7 +50,11 @@ func (p *parity) process(c scat.Chunk) <-chan Res {
 }
 
 func (p *parity) split(c scat.Chunk) (shards [][]byte, err error) {
-	shards, err = p.enc.Split(c.Data())
+	bytes, err := c.Data().Bytes()
+	if err != nil {
+		return
+	}
+	shards, err = p.enc.Split(bytes)
 	if err != nil {
 		return
 	}
@@ -60,7 +64,7 @@ func (p *parity) split(c scat.Chunk) (shards [][]byte, err error) {
 
 func (p *parity) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
 	data, err := p.join(c)
-	new = c.WithData(data)
+	new = c.WithData(scat.BytesData(data))
 	return
 }
 
@@ -83,7 +87,11 @@ func (p *parity) join(c scat.Chunk) (joined []byte, err error) {
 			mustReconstruct = true
 			continue
 		}
-		shards[i] = c.Data()
+		bytes, err := c.Data().Bytes()
+		if err != nil {
+			return nil, err
+		}
+		shards[i] = bytes
 	}
 
 	// Reconstruct invalid shards
@@ -104,7 +112,7 @@ func (p *parity) join(c scat.Chunk) (joined []byte, err error) {
 	}
 
 	// Join data shards, trim trailing padding
-	out := bytes.NewBuffer(make([]byte, 0, len(c.Data())*p.ndata))
+	out := bytes.NewBuffer(make([]byte, 0, c.TargetSize()))
 	err = p.enc.Join(out, shards, c.TargetSize())
 	joined = out.Bytes()
 	return

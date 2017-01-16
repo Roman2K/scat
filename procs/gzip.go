@@ -3,6 +3,7 @@ package procs
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
 	"io/ioutil"
 
 	"scat"
@@ -25,23 +26,23 @@ func (gp gzipProc) Unproc() Proc {
 }
 
 func (gzipProc) process(c scat.Chunk) (new scat.Chunk, err error) {
-	buf := bytes.NewBuffer(make([]byte, 0, len(c.Data())))
+	buf := &bytes.Buffer{}
 	w := gzip.NewWriter(buf)
-	_, err = w.Write(c.Data())
+	_, err = io.Copy(w, c.Data().Reader())
 	if err != nil {
 		return
 	}
 	err = w.Close()
-	new = c.WithData(buf.Bytes())
+	new = c.WithData(scat.BytesData(buf.Bytes()))
 	return
 }
 
 func (gzipProc) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
-	r, err := gzip.NewReader(bytes.NewReader(c.Data()))
+	r, err := gzip.NewReader(c.Data().Reader())
 	if err != nil {
 		return
 	}
 	buf, err := ioutil.ReadAll(r)
-	new = c.WithData(buf)
+	new = c.WithData(scat.BytesData(buf))
 	return
 }

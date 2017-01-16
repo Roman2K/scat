@@ -38,10 +38,21 @@ func New(min int, qman quota.Man) (dynp procs.DynProcer, err error) {
 	return
 }
 
+func calcDataUse(d scat.Data) (uint64, error) {
+	sz, ok := d.(scat.Sizer)
+	if !ok {
+		return 0, errors.New("sized-data required for calculating data use")
+	}
+	return uint64(sz.Size()), nil
+}
+
 func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 	copies := mc.reg.List(c.Hash())
 	copies.Mu.Lock()
-	dataUse := uint64(len(c.Data()))
+	dataUse, err := calcDataUse(c.Data())
+	if err != nil {
+		return nil, err
+	}
 	all := shuffle(mc.getCopiers(dataUse))
 	ncopies := copies.Len()
 	navail := len(all) - ncopies

@@ -22,8 +22,8 @@ func TestScanner(t *testing.T) {
 	buf := &bytes.Buffer{}
 	scan := index.NewScanner(buf)
 
-	h1 := checksum.Sum([]byte("a"))
-	h2 := checksum.Sum([]byte("b"))
+	h1 := checksum.SumBytes([]byte("a"))
+	h2 := checksum.SumBytes([]byte("b"))
 	fmt.Fprintf(buf, "%x 123\n", h1)
 	fmt.Fprintf(buf, "%x 456\n", h2)
 

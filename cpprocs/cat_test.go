@@ -31,8 +31,8 @@ func TestCatProc(t *testing.T) {
 	assert.Equal(t, 0, len(entries))
 
 	// Proc()
-	hash := checksum.Sum([]byte(hashData))
-	c := scat.NewChunk(0, []byte(data))
+	hash := checksum.SumBytes([]byte(hashData))
+	c := scat.NewChunk(0, scat.BytesData(data))
 	c.SetHash(hash)
 	_, err = testutil.ReadChunks(cat.Proc().Process(c))
 	assert.NoError(t, err)
@@ -64,11 +64,13 @@ func TestCatUnproc(t *testing.T) {
 	err = ioutil.WriteFile(path, []byte(data), 0644)
 	assert.NoError(t, err)
 
-	hash := checksum.Sum([]byte(hashData))
+	hash := checksum.SumBytes([]byte(hashData))
 	c := scat.NewChunk(0, nil)
 	c.SetHash(hash)
 	chunks, err := testutil.ReadChunks(cat.Unproc().Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
-	assert.Equal(t, data, string(chunks[0].Data()))
+	b, err := chunks[0].Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(b))
 }

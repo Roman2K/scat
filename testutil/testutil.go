@@ -2,8 +2,8 @@ package testutil
 
 import (
 	"scat"
-	"scat/procs"
 	"scat/cpprocs"
+	"scat/procs"
 )
 
 func ReadChunks(ch <-chan procs.Res) (chunks []scat.Chunk, err error) {

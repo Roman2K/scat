@@ -48,9 +48,10 @@ func (s *splitter) Next() bool {
 		s.err = err
 		return false
 	}
-	data := make([]byte, len(c.Data))
+	data := make(scat.BytesData, len(c.Data))
 	copy(data, c.Data)
 	s.chunk = scat.NewChunk(s.num, data)
+	s.chunk.SetTargetSize(len(data))
 	s.num++
 	// Check for overflow: uint resets to 0, int resets to -minInt
 	if s.num <= 0 {

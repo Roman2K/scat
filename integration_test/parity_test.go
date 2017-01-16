@@ -1,8 +1,9 @@
-package scat_test
+package integration_test
 
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/klauspost/reedsolomon"
@@ -45,7 +46,9 @@ func testParity(t *testing.T, cor corruption) {
 	indexBuf := &bytes.Buffer{}
 	outputBuf := &bytes.Buffer{}
 	store := memStore{}
-	input := []scat.Chunk{scat.NewChunk(0, []byte(inputStr))}
+	chunk := scat.NewChunk(0, scat.BytesData(inputStr))
+	chunk.SetTargetSize(len(inputStr))
+	input := []scat.Chunk{chunk}
 
 	err := doSplit(indexBuf, input, ndata, nparity, store.Proc())
 	assert.NoError(t, err)
@@ -131,7 +134,7 @@ func processFinish(proc procs.Proc, iter scat.ChunkIter) (err error) {
 	return proc.Finish()
 }
 
-type memStore map[checksum.Hash][]byte
+type memStore map[checksum.Hash]scat.BytesData
 
 func (ms memStore) Proc() procs.Proc {
 	return procs.InplaceFunc(ms.process)
@@ -141,9 +144,13 @@ func (ms memStore) Unproc() procs.Proc {
 	return procs.ChunkFunc(ms.unprocess)
 }
 
-func (ms memStore) process(c scat.Chunk) error {
-	ms[c.Hash()] = append([]byte{}, c.Data()...)
-	return nil
+func (ms memStore) process(c scat.Chunk) (err error) {
+	buf, err := ioutil.ReadAll(c.Data().Reader())
+	if err != nil {
+		return
+	}
+	ms[c.Hash()] = scat.BytesData(buf)
+	return
 }
 
 func (ms memStore) unprocess(c scat.Chunk) (scat.Chunk, error) {

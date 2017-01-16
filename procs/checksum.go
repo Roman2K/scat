@@ -14,14 +14,22 @@ var (
 	ChecksumUnproc Proc = InplaceFunc(checksumUnprocess)
 )
 
-func checksumProcess(c scat.Chunk) error {
-	c.SetHash(checksum.Sum(c.Data()))
-	return nil
+func checksumProcess(c scat.Chunk) (err error) {
+	h, err := checksum.Sum(c.Data().Reader())
+	if err != nil {
+		return
+	}
+	c.SetHash(h)
+	return
 }
 
-func checksumUnprocess(c scat.Chunk) error {
-	if checksum.Sum(c.Data()) != c.Hash() {
+func checksumUnprocess(c scat.Chunk) (err error) {
+	h, err := checksum.Sum(c.Data().Reader())
+	if err != nil {
+		return
+	}
+	if h != c.Hash() {
 		return ErrIntegrityCheckFailed
 	}
-	return nil
+	return
 }

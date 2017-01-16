@@ -11,8 +11,8 @@ import (
 
 func TestCopies(t *testing.T) {
 	reg := copies.NewReg()
-	hash1 := checksum.Sum([]byte("hash1"))
-	hash2 := checksum.Sum([]byte("hash2"))
+	hash1 := checksum.SumBytes([]byte("hash1"))
+	hash2 := checksum.SumBytes([]byte("hash2"))
 	a := owner("a")
 	b := owner("b")
 	reg.List(hash1).Add(a)

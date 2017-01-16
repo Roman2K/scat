@@ -33,7 +33,9 @@ func (p *counterProc) Process(c scat.Chunk) <-chan procs.Res {
 		defer close(out)
 		for res := range ch {
 			if c := res.Chunk; c != nil {
-				cnt.addOut(uint64(len(c.Data())))
+				if sz, ok := c.Data().(scat.Sizer); ok {
+					cnt.addOut(uint64(sz.Size()))
+				}
 			}
 			out <- res
 		}

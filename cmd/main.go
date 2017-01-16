@@ -74,8 +74,8 @@ func driveRemotes(tmp *tmpdedup.Dir) []remote {
 }
 
 func remotes(tmp *tmpdedup.Dir) []remote {
-	// return catRemotes(tmp)
-	return driveRemotes(tmp)
+	return catRemotes(tmp)
+	// return driveRemotes(tmp)
 }
 
 func quotaMan(statsd *stats.Statsd, tmp *tmpdedup.Dir) (qman quota.Man) {

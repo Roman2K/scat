@@ -2,6 +2,7 @@ package procs
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 
@@ -32,7 +33,7 @@ func (cmdp *pathCmdIn) process(c scat.Chunk) (err error) {
 			return
 		}
 		defer f.Close()
-		_, err = f.Write(c.Data())
+		_, err = io.Copy(f, c.Data().Reader())
 		return
 	})
 	if err != nil {

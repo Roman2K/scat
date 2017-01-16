@@ -3,12 +3,13 @@ package checksum_test
 import (
 	"fmt"
 	"scat/checksum"
+	"strings"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestChecksum(t *testing.T) {
+func TestHash(t *testing.T) {
 	const (
 		valid = "348df4eb47f9230bfe89637afe7409bec883424d822257b6cbbce93ee780d992"
 	)
@@ -21,4 +22,14 @@ func TestChecksum(t *testing.T) {
 	err = h.LoadSlice(slice)
 	assert.NoError(t, err)
 	assert.Equal(t, valid, fmt.Sprintf("%x", h))
+}
+
+func TestSum(t *testing.T) {
+	const (
+		data = "abc"
+		hex  = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+	)
+	h, err := checksum.Sum(strings.NewReader(data))
+	assert.NoError(t, err)
+	assert.Equal(t, hex, fmt.Sprintf("%x", h))
 }

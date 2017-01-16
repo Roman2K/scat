@@ -10,8 +10,8 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
+	"scat/procs"
 	"scat/testutil"
 	"scat/tmpdedup"
 )
@@ -34,12 +34,14 @@ func TestPathCmdIn(t *testing.T) {
 	assert.NoError(t, err)
 	defer tmp.Finish()
 	cmdp := procs.NewPathCmdIn(newCmd, tmp)
-	c := scat.NewChunk(0, []byte(data))
-	c.SetHash(checksum.Sum([]byte(hashData)))
+	c := scat.NewChunk(0, scat.BytesData(data))
+	c.SetHash(checksum.SumBytes([]byte(hashData)))
 	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, []scat.Chunk{c}, chunks)
-	assert.Equal(t, data, string(chunks[0].Data()))
+	b, err := chunks[0].Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(b))
 	assert.Equal(t, 1, len(paths))
 	assert.Equal(t, hashStr, filepath.Base(paths[0]))
 	assert.Equal(t, data, fdata.String())

@@ -20,7 +20,7 @@ func TestCmdInFunc(t *testing.T) {
 		cmd.Stdout = buf
 		return cmd, nil
 	})
-	c := scat.NewChunk(0, []byte(data))
+	c := scat.NewChunk(0, scat.BytesData(data))
 	ch := cmdp.Process(c)
 	chunks, err := testutil.ReadChunks(ch)
 	assert.NoError(t, err)
@@ -49,7 +49,9 @@ func TestCmdOutFunc(t *testing.T) {
 	chunks, err := testutil.ReadChunks(ch)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
-	assert.Equal(t, output, string(chunks[0].Data()))
+	b, err := chunks[0].Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, output, string(b))
 }
 
 func TestCmdOutFuncError(t *testing.T) {

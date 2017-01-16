@@ -3,6 +3,7 @@ package checksum
 import (
 	"crypto/sha256"
 	"errors"
+	"io"
 )
 
 const Size = sha256.Size
@@ -17,6 +18,16 @@ func (h *Hash) LoadSlice(s []byte) error {
 	return nil
 }
 
-func Sum(b []byte) Hash {
+func Sum(rd io.Reader) (cks Hash, err error) {
+	hash := sha256.New()
+	_, err = io.Copy(hash, rd)
+	if err != nil {
+		return
+	}
+	hash.Sum(cks[:0])
+	return
+}
+
+func SumBytes(b []byte) Hash {
 	return sha256.Sum256(b)
 }

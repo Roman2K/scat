@@ -8,10 +8,10 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
 	"scat/cpprocs"
 	"scat/cpprocs/quota"
+	"scat/procs"
 	"scat/testutil"
 )
 
@@ -23,10 +23,10 @@ func TestMinCopies(t *testing.T) {
 		shuffle = shuffleOrig
 	}()
 
-	hash1 := checksum.Sum([]byte("hash1"))
-	hash2 := checksum.Sum([]byte("hash2"))
-	hash3 := checksum.Sum([]byte("hash3"))
-	hash4 := checksum.Sum([]byte("hash4"))
+	hash1 := checksum.SumBytes([]byte("hash1"))
+	hash2 := checksum.SumBytes([]byte("hash2"))
+	hash3 := checksum.SumBytes([]byte("hash3"))
+	hash4 := checksum.SumBytes([]byte("hash4"))
 
 	called := []string{}
 	errs := map[string]error{}
@@ -153,7 +153,7 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 		})
 	}
 
-	hash1 := checksum.Sum([]byte("hash1"))
+	hash1 := checksum.SumBytes([]byte("hash1"))
 	qman := quota.NewMan()
 	qman.AddRes(cpprocs.NewCopier("a",
 		testutil.SliceLister{{Hash: hash1}},
