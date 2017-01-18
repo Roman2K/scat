@@ -3,20 +3,18 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
-	"scat"
+	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
-
-	"scat/ansirefresh"
 	"scat/cpprocs"
 	"scat/cpprocs/mincopies"
 	"scat/cpprocs/quota"
 	"scat/procs"
-	"scat/stats"
 	"scat/tmpdedup"
 )
 
@@ -39,195 +37,185 @@ func start() error {
 	cmd := args[0]
 	switch cmd {
 	case "split":
-		return cmdSplit()
-	case "join":
-		return cmdJoin()
+		return cmdIndexSplit(args[1:])
 	}
 	return fmt.Errorf("unknown cmd: %s", cmd)
 }
 
-type remote struct {
-	name  string
-	lsp   cpprocs.LsProcUnprocer
-	quota uint64
-}
-
-func catRemotes(*tmpdedup.Dir) []remote {
-	cat := func(n int, quota uint64) remote {
-		name := fmt.Sprintf("cat%d", n)
-		lsp := cpprocs.NewCat("/Users/roman/tmp/" + name)
-		return remote{name, lsp, quota}
+func cmdIndexSplit(args []string) error {
+	const sconcur = "10"
+	if len(args) < 2 {
+		return errors.New("usage: <split args> [<proc> ...] <mincopies args>")
 	}
-	return []remote{
-		cat(1, 10*humanize.MiByte),
-		cat(2, quota.Unlimited),
-		cat(3, quota.Unlimited),
+	args = []string{"-", "" +
+		"chain[" +
+		"  split[" + args[0] + "]" +
+		"  backlog[" + sconcur + " chain[" +
+		"    checksum" +
+		"    index[-]" +
+		"    " + strings.Join(args[1:len(args)-1], " ") +
+		"    checksum" +
+		"    concur[" + sconcur + " mincopies[" + args[len(args)-1] + "]]" +
+		"  ]]" +
+		"]",
 	}
+	return cmdSplit(args)
 }
 
-func driveRemotes(tmp *tmpdedup.Dir) []remote {
-	return []remote{
-		{"drive", cpprocs.NewRclone("drive:tmp", tmp), 7 * humanize.GiByte},
-		{"drive2", cpprocs.NewRclone("drive2:tmp", tmp), 14 * humanize.GiByte},
+func cmdSplit(args []string) (err error) {
+	if len(args) < 2 {
+		return errors.New("usage: <seed> <proc>")
 	}
-}
-
-func remotes(tmp *tmpdedup.Dir) []remote {
-	return catRemotes(tmp)
-	// return driveRemotes(tmp)
-}
-
-func quotaMan(statsd *stats.Statsd, tmp *tmpdedup.Dir) (qman quota.Man) {
-	qman = quota.NewMan()
-	qman.OnUse = func(res quota.Res, use, max uint64) {
-		cnt := statsd.Counter(res.Id())
-		cnt.Quota.Use = use
-		cnt.Quota.Max = max
-	}
-	for _, r := range remotes(tmp) {
-		id := r.name
-		cnt := statsd.Counter(id)
-		cnt.Quota.Max = r.quota
-		proc := stats.NewProc(statsd, r.name, r.lsp.Proc())
-		lser := quotaInitReport{r.lsp, cnt}
-		copier := cpprocs.NewCopier(id, lser, proc)
-		qman.AddResQuota(copier, r.quota)
-	}
-	return
-}
-
-type quotaInitReport struct {
-	lser cpprocs.Lister
-	cnt  *stats.Counter
-}
-
-func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
-	r.cnt.Quota.Init = true
-	defer func() {
-		r.cnt.Quota.Init = false
-	}()
-	return r.lser.Ls()
-}
-
-func readers(statsd *stats.Statsd, tmp *tmpdedup.Dir) (cps []cpprocs.Copier) {
-	rems := remotes(tmp)
-	cps = make([]cpprocs.Copier, len(rems))
-	for i, r := range rems {
-		proc := stats.NewProc(statsd, r.name, r.lsp.Unproc())
-		cps[i] = cpprocs.NewCopier(r.name, r.lsp, proc)
-	}
-	return
-}
-
-const (
-	ndata   = 2
-	nparity = 1
-)
-
-func cmdSplit() (err error) {
-	statsd := stats.New()
-	{
-		w := ansirefresh.NewWriter(os.Stderr)
-		// w := ansirefresh.NewWriter(ioutil.Discard)
-		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
-		defer t.Stop()
-	}
-
-	parity, err := procs.NewParity(ndata, nparity)
+	proc, err := parseProc(args[1])
 	if err != nil {
 		return
 	}
-
-	tmp, err := tmpdedup.TempDir("")
+	seedrd, err := openIn(args[0])
 	if err != nil {
 		return
 	}
-	defer tmp.Finish()
-
-	minCopies, err := mincopies.New(2, quotaMan(statsd, tmp))
-	if err != nil {
-		return
-	}
-
-	chain := procs.Chain{
-		stats.NewProc(statsd, "split",
-			procs.NewSplit(2*humanize.MiByte, 16*humanize.MiByte),
-		),
-		procs.NewBacklog(10, procs.Chain{
-			stats.NewProc(statsd, "checksum",
-				procs.ChecksumProc,
-			),
-			stats.NewProc(statsd, "index",
-				procs.NewIndexProc(os.Stdout),
-			),
-			stats.NewProc(statsd, "parity",
-				parity.Proc(),
-			),
-			stats.NewProc(statsd, "compress",
-				procs.NewGzip().Proc(),
-			),
-			stats.NewProc(statsd, "checksum2",
-				procs.ChecksumProc,
-			),
-			procs.NewConcur(10, minCopies),
-		}),
-	}
-
-	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
-	return procs.Process(chain, seed)
+	defer seedrd.Close()
+	return nil
 }
 
-func cmdJoin() (err error) {
-	statsd := stats.New()
-	{
-		w := ansirefresh.NewWriter(os.Stderr)
-		// w := ansirefresh.NewWriter(ioutil.Discard)
-		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
-		defer t.Stop()
+func openIn(path string) (io.ReadCloser, error) {
+	if path == "-" {
+		return ioutil.NopCloser(os.Stdin), nil
 	}
+	return os.Open(path)
+}
 
-	parity, err := procs.NewParity(ndata, nparity)
-	if err != nil {
-		return
+func openOut(path string) (io.WriteCloser, error) {
+	if path == "-" {
+		return nopWriteCloser{os.Stdout}, nil
 	}
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+}
 
-	tmp, err := tmpdedup.TempDir("")
-	if err != nil {
-		return
+type nopWriteCloser struct {
+	io.Writer
+}
+
+func (nopWriteCloser) Close() error {
+	return nil
+}
+
+func procParsers(tmp *tmpdedup.Dir) map[string]parser {
+	return map[string]parser{
+		"chain": parser{
+			args: []arg{argVariadic{argProc}},
+			build: func(procs []interface{}) (interface{}, error) {
+				chain := make(procs.Chain, len(procs))
+				for i, p := range procs {
+					chain[i] = p
+				}
+				return chain, nil
+			},
+		},
+		"split": parser{
+			args: []arg{argBytes, argBytes},
+			build: func(args []interface{}) (interface{}, error) {
+				return procs.NewSplit(args[0].(uint64), args[1].(uint64)), nil
+			},
+		},
+		"backlog": parser{
+			args: []arg{argInt, argProc},
+			build: func(args []interface{}) (interface{}, error) {
+				return procs.NewBacklog(args[0].(int), args[1].(procs.Proc)), nil
+			},
+		},
+		"checksum": parser{
+			build: func([]interface{}) (interface{}, error) {
+				return procs.ChecksumProc, nil
+			},
+		},
+		"index": parser{
+			args: []arg{argString},
+			build: func(args []interface{}) (interface{}, error) {
+				w, err := openOut(args[0].(string))
+				if err != nil {
+					return nil, err
+				}
+				return procs.NewIndexProc(w), nil
+			},
+		},
+		"parity": parser{
+			args: []arg{argInt, argInt},
+			build: func(args []interface{}) (interface{}, error) {
+				parity, err := procs.NewParity(args[0].(int), args[1].(int))
+				if err != nil {
+					return nil, err
+				}
+				return parity.Proc(), nil
+			},
+		},
+		"gzip": parser{
+			build: func([]interface{}) (interface{}, error) {
+				return procs.NewGzip().Proc(), nil
+			},
+		},
+		"concur": parser{
+			args: []arg{argInt, argDynProcer},
+			build: func(args []interface{}) (interface{}, error) {
+				return procs.NewConcur(args[0].(int), args[1].(procs.DynProcer)), nil
+			},
+		},
+		"mincopies": parser{
+			args: []arg{argInt, argVariadic{argQuotaRes}},
+			build: func(args []interface{}) (interface{}, error) {
+				qman := quota.NewMan()
+				for _, ires := range args[1:] {
+					res := ires.(quotaRes)
+					qman.AddResQuota(res.copier, res.max)
+				}
+				return mincopies.New(args[0].(int), qman)
+			},
+		},
+		"quota": parser{
+			args: []arg{argBytes, argCopier},
+			build: func(args []interface{}) (interface{}, error) {
+				res := quotaRes{
+					max:    args[0].(uint64),
+					copier: args[1].(cpprocs.Copier),
+				}
+				return res, nil
+			},
+		},
+		"copier": parser{
+			args: []arg{argString, argLsProc},
+			build: func(args []interface{}) (interface{}, error) {
+				lsp := args[1].(lsProc)
+				return cpprocs.NewCopier(args[0].(string), lsp, lsp)
+			},
+		},
+		"rclone": parser{
+			args: []arg{argString},
+			build: func(args []interface{}) (interface{}, error) {
+				rclone := cpprocs.NewRclone(args[0].(string), tmp)
+				return lsProc{rclone, rclone.Proc()}, nil
+			},
+		},
+		"cat": parser{
+			args: []arg{argString},
+			build: func(args []interface{}) (interface{}, error) {
+				cat := cpprocs.NewCopier(args[0].(string))
+				return lsProc{cat, cat.Proc()}, nil
+			},
+		},
 	}
-	defer tmp.Finish()
+}
 
-	mrd, err := cpprocs.NewMultiReader(readers(statsd, tmp))
-	if err != nil {
-		return
-	}
+type lsProc struct {
+	cpprocs.Lister
+	procs.Proc
+}
 
-	chain := procs.Chain{
-		stats.NewProc(statsd, "index",
-			procs.IndexUnproc,
-		),
-		procs.NewBacklog(10, procs.Chain{
-			stats.NewProc(statsd, "mrd",
-				mrd,
-			),
-			stats.NewProc(statsd, "checksum",
-				procs.ChecksumUnproc,
-			),
-			stats.NewProc(statsd, "compress",
-				procs.NewGzip().Unproc(),
-			),
-			stats.NewProc(statsd, "group",
-				procs.NewGroup(ndata+nparity),
-			),
-			stats.NewProc(statsd, "parity",
-				parity.Unproc(),
-			),
-			stats.NewProc(statsd, "join",
-				procs.NewJoin(os.Stdout),
-			),
-		}),
-	}
+type quotaRes struct {
+	copier cpprocs.Copier
+	max    uint64
+}
 
-	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
-	return procs.Process(chain, seed)
+type parser struct {
+	args  []arg
+	build func([]interface{}) (interface{}, error)
 }
