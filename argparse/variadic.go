@@ -4,6 +4,10 @@ type ArgVariadic struct {
 	Arg Parser
 }
 
+func (ArgVariadic) Empty() (interface{}, error) {
+	return []interface{}{}, nil
+}
+
 func (arg ArgVariadic) Parse(str string) (interface{}, int, error) {
 	values := []interface{}{}
 	nparsed, inLen := 0, len(str)

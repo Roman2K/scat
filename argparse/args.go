@@ -10,6 +10,15 @@ func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
 	for i, arg := range args {
 		nparsed += countLeftSpaces(str[nparsed:])
 		if nparsed >= inLen {
+			if ep, ok := arg.(EmptyParser); ok {
+				val, e := ep.Empty()
+				if e != nil {
+					err = e
+					return
+				}
+				values[i] = val
+				continue
+			}
 			err = ErrTooFewArgs
 			return
 		}

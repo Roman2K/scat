@@ -235,10 +235,48 @@ func TestArgVariadic(t *testing.T) {
 	assert.Equal(t, someErr, err)
 }
 
+func TestArgsWithVariadic(t *testing.T) {
+	arg := argparse.Args{argparse.ArgVariadic{argparse.ArgStr}}
+	res, n, err := arg.Parse(" ")
+	vals := res.([]interface{})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(vals))
+	assert.Equal(t, 0, len(vals[0].([]interface{})))
+	assert.Equal(t, 1, n)
+
+	arg = argparse.Args{argparse.ArgStr, argparse.ArgVariadic{argparse.ArgStr}}
+	res, n, err = arg.Parse("a")
+	vals = res.([]interface{})
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(vals))
+	assert.Equal(t, "a", vals[0])
+	assert.Equal(t, 0, len(vals[1].([]interface{})))
+	assert.Equal(t, 1, n)
+}
+
+func TestArgsEmptyErr(t *testing.T) {
+	someErr := errors.New("some err")
+	arg := argparse.Args{argEmptyErr{someErr}}
+	_, _, err := arg.Parse("")
+	assert.Equal(t, someErr, err)
+}
+
 type argErr struct {
 	err error
 }
 
 func (a argErr) Parse(string) (interface{}, int, error) {
 	return nil, 0, a.err
+}
+
+type argEmptyErr struct {
+	err error
+}
+
+func (argEmptyErr) Parse(string) (interface{}, int, error) {
+	return nil, 0, nil
+}
+
+func (a argEmptyErr) Empty() (interface{}, error) {
+	return nil, a.err
 }
