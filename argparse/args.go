@@ -1,5 +1,12 @@
 package argparse
 
+import "errors"
+
+var (
+	ErrTooManyArgs = errors.New("too many args")
+	ErrTooFewArgs  = errors.New("too few args")
+)
+
 type Args []Parser
 
 var _ Parser = Args{}

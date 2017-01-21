@@ -1,15 +1,8 @@
 package argparse
 
 import (
-	"errors"
 	"strings"
 	"unicode"
-)
-
-var (
-	ErrFnInvalidSyntax = errors.New("invalid syntax for function arg")
-	ErrTooManyArgs     = errors.New("too many args")
-	ErrTooFewArgs      = errors.New("too few args")
 )
 
 type Parser interface {
