@@ -1,20 +1,21 @@
 package main
 
 import (
-	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
-	"strings"
+	"scat"
 	"time"
 
-	"scat/cpprocs"
-	"scat/cpprocs/mincopies"
-	"scat/cpprocs/quota"
+	"scat/ansirefresh"
+	"scat/argparse"
+	"scat/argproc"
 	"scat/procs"
+	"scat/stats"
 	"scat/tmpdedup"
 )
 
@@ -28,54 +29,73 @@ func main() {
 	}
 }
 
-func start() error {
+func start() (err error) {
 	rand.Seed(time.Now().UnixNano())
-	args := os.Args[1:]
-	if len(args) != 1 {
-		return errors.New("usage: split|join")
-	}
-	cmd := args[0]
-	switch cmd {
-	case "split":
-		return cmdIndexSplit(args[1:])
-	}
-	return fmt.Errorf("unknown cmd: %s", cmd)
-}
 
-func cmdIndexSplit(args []string) error {
-	const sconcur = "10"
-	if len(args) < 2 {
-		return errors.New("usage: <split args> [<proc> ...] <mincopies args>")
+	name, args := os.Args[0], os.Args[1:]
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(ioutil.Discard)
+	usage := func(w io.Writer) {
+		fmt.Fprintf(w, "usage: %s [options] <seed> <proc>\n", name)
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t<seed>\tpath to data of seed chunk\n")
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t\tex: -\n")
+		fmt.Fprintf(w, "\t\tex: path/to/file\n")
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t<proc>\tproc string\n")
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t\tex: chain[gzip writerTo[-]]\n")
+		fmt.Fprintf(w, "\t\tex: gzip writerTo[-]\n")
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "options:\n")
+		flags.SetOutput(w)
+		defer flags.SetOutput(ioutil.Discard)
+		flags.PrintDefaults()
 	}
-	args = []string{"-", "" +
-		"chain[" +
-		"  split[" + args[0] + "]" +
-		"  backlog[" + sconcur + " chain[" +
-		"    checksum" +
-		"    index[-]" +
-		"    " + strings.Join(args[1:len(args)-1], " ") +
-		"    checksum" +
-		"    concur[" + sconcur + " mincopies[" + args[len(args)-1] + "]]" +
-		"  ]]" +
-		"]",
+	err = flags.Parse(args)
+	if err != nil || flags.NArg() != 2 {
+		w, code := os.Stderr, 2
+		if err == flag.ErrHelp {
+			w, code = os.Stdout, 0
+		}
+		usage(w)
+		os.Exit(code)
 	}
-	return cmdSplit(args)
-}
+	var (
+		seedPath = flags.Arg(0)
+		procStr  = flags.Arg(1)
+	)
 
-func cmdSplit(args []string) (err error) {
-	if len(args) < 2 {
-		return errors.New("usage: <seed> <proc>")
-	}
-	proc, err := parseProc(args[1])
+	tmp, err := tmpdedup.TempDir("")
 	if err != nil {
 		return
 	}
-	seedrd, err := openIn(args[0])
+	defer tmp.Finish()
+
+	statsd := stats.New()
+	{
+		w := ansirefresh.NewWriter(os.Stderr)
+		// w := ansirefresh.NewWriter(ioutil.Discard)
+		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
+		defer t.Stop()
+	}
+
+	argProc := argproc.NewArgChain(argproc.New(tmp, statsd))
+	res, _, err := argparse.Args{argProc}.Parse(procStr)
+	if err != nil {
+		return
+	}
+
+	proc := res.([]interface{})[0].(procs.Proc)
+	seedrd, err := openIn(seedPath)
 	if err != nil {
 		return
 	}
 	defer seedrd.Close()
-	return nil
+
+	seed := scat.NewChunk(0, scat.NewReaderData(seedrd))
+	return procs.Process(proc, seed)
 }
 
 func openIn(path string) (io.ReadCloser, error) {
@@ -83,139 +103,4 @@ func openIn(path string) (io.ReadCloser, error) {
 		return ioutil.NopCloser(os.Stdin), nil
 	}
 	return os.Open(path)
-}
-
-func openOut(path string) (io.WriteCloser, error) {
-	if path == "-" {
-		return nopWriteCloser{os.Stdout}, nil
-	}
-	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-}
-
-type nopWriteCloser struct {
-	io.Writer
-}
-
-func (nopWriteCloser) Close() error {
-	return nil
-}
-
-func procParsers(tmp *tmpdedup.Dir) map[string]parser {
-	return map[string]parser{
-		"chain": parser{
-			args: []arg{argVariadic{argProc}},
-			build: func(procs []interface{}) (interface{}, error) {
-				chain := make(procs.Chain, len(procs))
-				for i, p := range procs {
-					chain[i] = p
-				}
-				return chain, nil
-			},
-		},
-		"split": parser{
-			args: []arg{argBytes, argBytes},
-			build: func(args []interface{}) (interface{}, error) {
-				return procs.NewSplit(args[0].(uint64), args[1].(uint64)), nil
-			},
-		},
-		"backlog": parser{
-			args: []arg{argInt, argProc},
-			build: func(args []interface{}) (interface{}, error) {
-				return procs.NewBacklog(args[0].(int), args[1].(procs.Proc)), nil
-			},
-		},
-		"checksum": parser{
-			build: func([]interface{}) (interface{}, error) {
-				return procs.ChecksumProc, nil
-			},
-		},
-		"index": parser{
-			args: []arg{argString},
-			build: func(args []interface{}) (interface{}, error) {
-				w, err := openOut(args[0].(string))
-				if err != nil {
-					return nil, err
-				}
-				return procs.NewIndexProc(w), nil
-			},
-		},
-		"parity": parser{
-			args: []arg{argInt, argInt},
-			build: func(args []interface{}) (interface{}, error) {
-				parity, err := procs.NewParity(args[0].(int), args[1].(int))
-				if err != nil {
-					return nil, err
-				}
-				return parity.Proc(), nil
-			},
-		},
-		"gzip": parser{
-			build: func([]interface{}) (interface{}, error) {
-				return procs.NewGzip().Proc(), nil
-			},
-		},
-		"concur": parser{
-			args: []arg{argInt, argDynProcer},
-			build: func(args []interface{}) (interface{}, error) {
-				return procs.NewConcur(args[0].(int), args[1].(procs.DynProcer)), nil
-			},
-		},
-		"mincopies": parser{
-			args: []arg{argInt, argVariadic{argQuotaRes}},
-			build: func(args []interface{}) (interface{}, error) {
-				qman := quota.NewMan()
-				for _, ires := range args[1:] {
-					res := ires.(quotaRes)
-					qman.AddResQuota(res.copier, res.max)
-				}
-				return mincopies.New(args[0].(int), qman)
-			},
-		},
-		"quota": parser{
-			args: []arg{argBytes, argCopier},
-			build: func(args []interface{}) (interface{}, error) {
-				res := quotaRes{
-					max:    args[0].(uint64),
-					copier: args[1].(cpprocs.Copier),
-				}
-				return res, nil
-			},
-		},
-		"copier": parser{
-			args: []arg{argString, argLsProc},
-			build: func(args []interface{}) (interface{}, error) {
-				lsp := args[1].(lsProc)
-				return cpprocs.NewCopier(args[0].(string), lsp, lsp)
-			},
-		},
-		"rclone": parser{
-			args: []arg{argString},
-			build: func(args []interface{}) (interface{}, error) {
-				rclone := cpprocs.NewRclone(args[0].(string), tmp)
-				return lsProc{rclone, rclone.Proc()}, nil
-			},
-		},
-		"cat": parser{
-			args: []arg{argString},
-			build: func(args []interface{}) (interface{}, error) {
-				cat := cpprocs.NewCopier(args[0].(string))
-				return lsProc{cat, cat.Proc()}, nil
-			},
-		},
-	}
-}
-
-type lsProc struct {
-	cpprocs.Lister
-	procs.Proc
-}
-
-type quotaRes struct {
-	copier cpprocs.Copier
-	max    uint64
-}
-
-type parser struct {
-	args  []arg
-	build func([]interface{}) (interface{}, error)
 }

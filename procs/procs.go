@@ -71,9 +71,9 @@ type DynProcer interface {
 	Finish() error
 }
 
-func Process(proc Proc, seed scat.Chunk) error {
+func Process(proc Proc, chunk scat.Chunk) error {
 	defer proc.Finish()
-	for res := range proc.Process(seed) {
+	for res := range proc.Process(chunk) {
 		if res.Err != nil {
 			return res.Err
 		}

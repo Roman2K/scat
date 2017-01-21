@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"io"
 	"runtime"
-	"scat/slidecnt"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+
+	"scat/slidecnt"
 )
 
 const (

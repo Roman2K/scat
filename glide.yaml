@@ -6,7 +6,5 @@ import:
   - assert
 - package: github.com/klauspost/reedsolomon
 - package: github.com/dustin/go-humanize
-
-# cpuid is a dependency of reedsolomon. Not detected by glide, must be added 
-# manually
-- package: github.com/klauspost/cpuid
+- package: github.com/klauspost/cpuid # dependency of reedsolomon not detected
+                                      # by glide

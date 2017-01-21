@@ -6,15 +6,15 @@ import (
 	"scat"
 )
 
-type writeTo struct {
+type writerTo struct {
 	w io.Writer
 }
 
 func NewWriterTo(w io.Writer) Proc {
-	return InplaceFunc(writeTo{w: w}.process)
+	return InplaceFunc(writerTo{w: w}.process)
 }
 
-func (wt writeTo) process(c scat.Chunk) (err error) {
+func (wt writerTo) process(c scat.Chunk) (err error) {
 	_, err = io.Copy(wt.w, c.Data().Reader())
 	return
 }
