@@ -17,18 +17,18 @@ func TestArgFn(t *testing.T) {
 	someErr := errors.New("some err")
 
 	argFn := argparse.ArgFn{
-		"abc": argparse.Fn{
+		"abc": argparse.ArgLambda{
 			Run: func(iargs []interface{}) (interface{}, error) {
 				received = append(received, iargs)
 				return "some str", nil
 			},
 		},
-		"abcerr": argparse.Fn{
+		"abcerr": argparse.ArgLambda{
 			Run: func([]interface{}) (interface{}, error) {
 				return nil, someErr
 			},
 		},
-		"xyz": argparse.Fn{
+		"xyz": argparse.ArgLambda{
 			Args: argparse.Args{argparse.ArgBytes, argparse.ArgBytes},
 			Run: func(iargs []interface{}) (interface{}, error) {
 				return iargs, nil
@@ -56,7 +56,7 @@ func TestArgFn(t *testing.T) {
 	_, _, err = argFn.Parse(str)
 	assert.Equal(t, argparse.ErrTooManyArgs, err)
 
-	// optional []
+	// optional brackets
 	str = "abc"
 	res, n, err = argFn.Parse(str)
 	assert.NoError(t, err)
@@ -90,54 +90,4 @@ func TestArgFn(t *testing.T) {
 	str = "xxx[]"
 	_, _, err = argFn.Parse(str)
 	assert.Equal(t, `no such function: "xxx"`, err.Error())
-}
-
-func TestArgFnArgErr(t *testing.T) {
-	someErr := errors.New("some err")
-	argFn := argparse.ArgFn{
-		"a": argparse.Fn{
-			Args: argparse.Args{argErr{someErr}},
-			Run: func([]interface{}) (interface{}, error) {
-				return nil, nil
-			},
-		},
-	}
-	_, _, err := argFn.Parse("a[b]")
-	assert.Equal(t, someErr, err)
-}
-
-func TestArgFnNested(t *testing.T) {
-	argFn := argparse.ArgFn{}
-	argFn["a"] = argparse.Fn{
-		Args: argparse.Args{argparse.ArgVariadic{argFn}},
-		Run: func(args []interface{}) (interface{}, error) {
-			varArgs := args[0].([]interface{})
-			return varArgs, nil
-		},
-	}
-	argFn["b"] = argparse.Fn{
-		Args: argparse.Args{argparse.ArgStr},
-		Run: func(args []interface{}) (interface{}, error) {
-			return args[0], nil
-		},
-	}
-
-	str := "a[b[xxx] a[]]"
-	res, n, err := argFn.Parse(str)
-	assert.NoError(t, err)
-	vals := res.([]interface{})
-	assert.Equal(t, 2, len(vals))
-	assert.Equal(t, "xxx", vals[0].(string))
-	a2vals := vals[1].([]interface{})
-	assert.Equal(t, 0, len(a2vals))
-	assert.Equal(t, len(str), n)
-
-	str = "a[[]"
-	_, _, err = argFn.Parse(str)
-	assert.Equal(t, argparse.ErrFnUnclosedBracket, err)
-
-	str = "a[]]"
-	_, n, err = argFn.Parse(str)
-	assert.NoError(t, err)
-	assert.Equal(t, len(str)-1, n)
 }

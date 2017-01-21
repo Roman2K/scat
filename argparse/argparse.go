@@ -1,8 +1,13 @@
 package argparse
 
 import (
+	"errors"
 	"strings"
 	"unicode"
+)
+
+var (
+	ErrInvalidSyntax = errors.New("invalid syntax for function arg")
 )
 
 type Parser interface {
