@@ -11,7 +11,7 @@ func (ArgVariadic) Empty() (interface{}, error) {
 func (arg ArgVariadic) Parse(str string) (interface{}, int, error) {
 	values := []interface{}{}
 	nparsed, inLen := 0, len(str)
-	for nparsed < inLen {
+	for {
 		nparsed += countLeftSpaces(str[nparsed:])
 		if nparsed >= inLen {
 			break

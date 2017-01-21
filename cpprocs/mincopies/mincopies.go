@@ -69,8 +69,7 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 	}
 	elected := make([]cpprocs.Copier, 0, missing)
 	failover := make([]cpprocs.Copier, 0, navail-missing)
-	for i, n := 0, len(all); i < n; i++ {
-		cp := all[i]
+	for _, cp := range all {
 		if copies.Contains(cp) {
 			continue
 		}
