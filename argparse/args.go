@@ -31,7 +31,7 @@ func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
 		}
 		val, n, e := arg.Parse(str[nparsed:])
 		if e != nil {
-			err = e
+			err = errDetails(e, arg, str, nparsed)
 			return
 		}
 		nparsed += n

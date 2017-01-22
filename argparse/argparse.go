@@ -2,12 +2,14 @@ package argparse
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 )
 
 var (
-	ErrInvalidSyntax = errors.New("invalid syntax for function arg")
+	ErrInvalidSyntax = errors.New("invalid syntax")
 )
 
 type Parser interface {
@@ -28,4 +30,12 @@ func spaceEndIndex(str string) int {
 		return i
 	}
 	return len(str)
+}
+
+func errDetails(err error, parser interface{}, str string, n int) error {
+	pt := strings.TrimPrefix(reflect.TypeOf(parser).Name(), "Arg")
+	if strings.Count(err.Error(), "\n") > 0 {
+		return fmt.Errorf("%s: %v", pt, err)
+	}
+	return fmt.Errorf("%s: %v\n  in \"%s\"\n%*s^", pt, err, str, n+6, " ")
 }

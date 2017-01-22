@@ -2,6 +2,7 @@ package argparse
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -15,9 +16,11 @@ var (
 )
 
 type ArgLambda struct {
-	Args Args
-	Run  func([]interface{}) (interface{}, error)
+	Args Parser
+	Run  RunFn
 }
+
+type RunFn func([]interface{}) (interface{}, error)
 
 func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
 	if len(str) < 2 || []rune(str)[0] != lambdaOpen {
@@ -43,11 +46,40 @@ func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
 		return
 	}
 	str = str[:i]
-	args, _, err := a.Args.Parse(str)
+	iargs, _, err := a.args().Parse(str)
 	if err != nil {
 		return
 	}
-	res, err = a.Run(args.([]interface{}))
+	args, argsErr := func() (res []interface{}, err interface{}) {
+		defer func() {
+			err = recover()
+		}()
+		res = iargs.([]interface{})
+		return
+	}()
+	if argsErr != nil {
+		err = fmt.Errorf("wrong return type of Args parser: %v", argsErr)
+		return
+	}
+	res, err = a.run()(args)
 	nparsed = i + 2
 	return
+}
+
+func (a ArgLambda) args() Parser {
+	if a.Args == nil {
+		return Args{}
+	}
+	return a.Args
+}
+
+func (a ArgLambda) run() RunFn {
+	if a.Run == nil {
+		return nopRun
+	}
+	return a.Run
+}
+
+var nopRun RunFn = func([]interface{}) (interface{}, error) {
+	return nil, nil
 }

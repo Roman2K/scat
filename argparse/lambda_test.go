@@ -10,15 +10,14 @@ import (
 )
 
 func TestArgLambdaArgErr(t *testing.T) {
-	someErr := errors.New("some err")
 	arg := argparse.ArgLambda{
-		Args: argparse.Args{argErr{someErr}},
+		Args: argparse.Args{argErr{errors.New("some err")}},
 		Run: func([]interface{}) (interface{}, error) {
 			return nil, nil
 		},
 	}
 	_, _, err := arg.Parse("[a]")
-	assert.Equal(t, someErr, err)
+	assert.Regexp(t, "some err", err)
 }
 
 func TestArgLambdaNested(t *testing.T) {
@@ -54,4 +53,13 @@ func TestArgLambdaNested(t *testing.T) {
 	vals = res.([]interface{})
 	assert.Equal(t, 0, len(vals))
 	assert.Equal(t, 2, n)
+}
+
+func TestArgLambdaWrongArgsType(t *testing.T) {
+	arg := argparse.ArgLambda{
+		Args: argparse.ArgStr,
+	}
+	_, _, err := arg.Parse("[a]")
+	expected := `Args parser.*is string.* not \[\]interface {}`
+	assert.Regexp(t, expected, err.Error())
 }
