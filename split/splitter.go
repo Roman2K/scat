@@ -24,7 +24,7 @@ type splitter struct {
 
 func NewSplitter(num int, r io.Reader, min, max uint) scat.ChunkIter {
 	if min < minMinSize {
-		panic(fmt.Sprintf("min size must be >= %d bytes", minMinSize))
+		panic(fmt.Errorf("min size must be >= %d bytes", minMinSize))
 	}
 	chunker := chunker.NewWithBoundaries(r, pol, min, max)
 	return &splitter{

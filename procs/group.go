@@ -23,7 +23,7 @@ type Group interface {
 func NewGroup(size int) Group {
 	const min = 1
 	if size < min {
-		panic(fmt.Sprintf("size must be >= %d", min))
+		panic(fmt.Errorf("size must be >= %d", min))
 	}
 	return &group{
 		size:    size,
