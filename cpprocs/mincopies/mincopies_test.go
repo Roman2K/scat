@@ -116,7 +116,7 @@ func TestMinCopies(t *testing.T) {
 	resetCalled()
 	testProcsForHashNoErr(hash3, []string{})
 
-	// Failover: OK
+	// failover: OK
 	reset()
 	shuffle = byId
 	someErr := errors.New("some err")
@@ -127,7 +127,7 @@ func TestMinCopies(t *testing.T) {
 	resetCalled()
 	testProcsForHashNoErr(hash4, []string{"b", "c"})
 
-	// Failover: all KO
+	// failover: all KO
 	reset()
 	shuffle = byId
 	err1 := errors.New("err1")
