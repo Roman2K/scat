@@ -3,7 +3,6 @@ package argparse
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"unicode"
 )
@@ -32,10 +31,22 @@ func spaceEndIndex(str string) int {
 	return len(str)
 }
 
-func errDetails(err error, parser interface{}, str string, n int) error {
-	pt := strings.TrimPrefix(reflect.TypeOf(parser).Name(), "Arg")
-	if strings.Count(err.Error(), "\n") > 0 {
-		return fmt.Errorf("%s: %v", pt, err)
+func errDetails(err error, str string, nparsed int) error {
+	return ErrDetails{err, str, nparsed}
+}
+
+type ErrDetails struct {
+	Err     error
+	str     string
+	nparsed int
+}
+
+func (e ErrDetails) Error() string {
+	msg := e.Err.Error()
+	if ed, ok := e.Err.(ErrDetails); ok {
+		if ed.str == e.str && ed.nparsed == e.nparsed {
+			return msg
+		}
 	}
-	return fmt.Errorf("%s: %v\n  in \"%s\"\n%*s^", pt, err, str, n+6, " ")
+	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.str, e.nparsed+6, " ")
 }

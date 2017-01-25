@@ -49,12 +49,12 @@ func TestArgFn(t *testing.T) {
 	// fn error
 	str = "abcerr"
 	_, _, err = argFn.Parse(str)
-	assert.Equal(t, someErr, err)
+	assert.Equal(t, someErr, err.(argparse.ErrDetails).Err)
 
 	// too many args
 	str = "abc[xxx]"
 	_, _, err = argFn.Parse(str)
-	assert.Equal(t, argparse.ErrTooManyArgs, err)
+	assert.Equal(t, argparse.ErrTooManyArgs, err.(argparse.ErrDetails).Err)
 
 	// optional brackets
 	str = "abc"
@@ -84,7 +84,7 @@ func TestArgFn(t *testing.T) {
 	// too few args
 	str = "xyz[1kib]"
 	_, _, err = argFn.Parse(str)
-	assert.Equal(t, argparse.ErrTooFewArgs, err)
+	assert.Equal(t, argparse.ErrTooFewArgs, err.(argparse.ErrDetails).Err)
 
 	// inexistent function
 	str = "xxx[]"

@@ -30,11 +30,11 @@ func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
 			return
 		}
 		val, n, e := arg.Parse(str[nparsed:])
+		nparsed += n
 		if e != nil {
-			err = errDetails(e, arg, str, nparsed)
+			err = errDetails(e, str, nparsed)
 			return
 		}
-		nparsed += n
 		values[i] = val
 	}
 	nparsed += countLeftSpaces(str[nparsed:])

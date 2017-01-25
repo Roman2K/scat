@@ -49,5 +49,5 @@ func TestArgVariadic(t *testing.T) {
 	someErr := errors.New("some err")
 	arg = argparse.ArgVariadic{argErr{someErr}}
 	_, _, err = arg.Parse("x")
-	assert.Equal(t, someErr, err)
+	assert.Equal(t, someErr, err.(argparse.ErrDetails).Err)
 }

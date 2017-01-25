@@ -17,10 +17,11 @@ func (arg ArgVariadic) Parse(str string) (interface{}, int, error) {
 			break
 		}
 		val, n, err := arg.Arg.Parse(str[nparsed:])
+		nparsed += n
 		if err != nil {
+			err = errDetails(err, str, nparsed)
 			return nil, nparsed, err
 		}
-		nparsed += n
 		values = append(values, val)
 	}
 	return values, nparsed, nil
