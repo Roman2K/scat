@@ -46,8 +46,21 @@ func (b builder) argProc() ap.Parser {
 	)
 
 	update(argProc, b.newArgProc(argProc, argDynProc, argCpp))
+	for k, v := range argProc {
+		argProc[k] = b.newArgStatsProc(v, k)
+	}
 
 	return argProc
+}
+
+func (b builder) newArgStatsProc(argProc ap.Parser, id interface{}) ap.Parser {
+	return ap.ArgFilter{
+		Parser: argProc,
+		Filter: func(val interface{}) (interface{}, error) {
+			proc := val.(procs.Proc)
+			return stats.NewProc(proc, b.stats, id), nil
+		},
+	}
 }
 
 func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
@@ -188,7 +201,7 @@ func (b builder) newArgDynProc(argCpp ap.Parser) ap.ArgFn {
 		"mincopies": ap.ArgLambda{
 			Args: ap.Args{
 				ap.ArgInt,
-				ap.ArgVariadic{newArgQuota(b.newArgCopier(argCpp, getProc))},
+				ap.ArgVariadic{b.newArgQuota(b.newArgCopier(argCpp, getProc))},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
@@ -196,6 +209,11 @@ func (b builder) newArgDynProc(argCpp ap.Parser) ap.ArgFn {
 					iress = args[1].([]interface{})
 				)
 				qman := quota.NewMan()
+				qman.OnUse = func(res quota.Res, use, max uint64) {
+					cnt := b.stats.Counter(res.Id())
+					cnt.Quota.Use = use
+					cnt.Quota.Max = max
+				}
 				for _, ires := range iress {
 					res := ires.(quotaRes)
 					qman.AddResQuota(res.copier, res.max)
@@ -237,9 +255,60 @@ func (b builder) newArgCopier(argCpp ap.Parser, getProc getProcFn) ap.Parser {
 				id  = args[0].(string)
 				lsp = args[1].(cpprocs.LsProcUnprocer)
 			)
-			return cpprocs.NewCopier(id, lsp, getProc(lsp)), nil
+			lser := quotaInitReport{lsp, b.stats, id}
+			proc := stats.NewProc(getProc(lsp), b.stats, id)
+			return cpprocs.NewCopier(id, lser, proc), nil
 		},
 	}
+}
+
+func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
+	argQuotaMax := ap.ArgLambda{
+		Args: ap.Args{argCopier, ap.ArgBytes},
+		Run: func(args []interface{}) (interface{}, error) {
+			qr := quotaRes{
+				copier: args[0].(cpprocs.Copier),
+				max:    args[1].(uint64),
+			}
+			return qr, nil
+		},
+	}
+	argRes := ap.ArgFilter{
+		Parser: ap.ArgOr{argQuotaMax, argCopier},
+		Filter: func(val interface{}) (interface{}, error) {
+			if cp, ok := val.(cpprocs.Copier); ok {
+				val = quotaRes{
+					copier: cp,
+					max:    quota.Unlimited,
+				}
+			}
+			return val, nil
+		},
+	}
+	return ap.ArgFilter{
+		Parser: argRes,
+		Filter: func(val interface{}) (interface{}, error) {
+			res := val.(quotaRes)
+			cnt := b.stats.Counter(res.copier.Id())
+			cnt.Quota.Max = res.max
+			return val, nil
+		},
+	}
+}
+
+type quotaInitReport struct {
+	lser  cpprocs.Lister
+	stats *stats.Statsd
+	id    interface{}
+}
+
+func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
+	cnt := r.stats.Counter(r.id)
+	cnt.Quota.Init = true
+	defer func() {
+		cnt.Quota.Init = false
+	}()
+	return r.lser.Ls()
 }
 
 func newChain(args []interface{}) (chain procs.Chain) {
@@ -271,31 +340,6 @@ func newArgGzip(getProc getProcFn) ap.Parser {
 	return ap.ArgLambda{
 		Run: func([]interface{}) (interface{}, error) {
 			return getProc(procs.NewGzip()), nil
-		},
-	}
-}
-
-func newArgQuota(argCopier ap.Parser) ap.Parser {
-	argQuotaMax := ap.ArgLambda{
-		Args: ap.Args{argCopier, ap.ArgBytes},
-		Run: func(args []interface{}) (interface{}, error) {
-			qr := quotaRes{
-				copier: args[0].(cpprocs.Copier),
-				max:    args[1].(uint64),
-			}
-			return qr, nil
-		},
-	}
-	return ap.ArgFilter{
-		Parser: ap.ArgOr{argQuotaMax, argCopier},
-		Filter: func(val interface{}) (interface{}, error) {
-			if cp, ok := val.(cpprocs.Copier); ok {
-				val = quotaRes{
-					copier: cp,
-					max:    quota.Unlimited,
-				}
-			}
-			return val, nil
 		},
 	}
 }

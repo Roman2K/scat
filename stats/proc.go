@@ -11,7 +11,7 @@ type counterProc struct {
 	proc   procs.Proc
 }
 
-func NewProc(d *Statsd, id Id, proc procs.Proc) procs.WrapperProc {
+func NewProc(proc procs.Proc, d *Statsd, id Id) procs.WrapperProc {
 	return &counterProc{
 		statsd: d,
 		id:     id,

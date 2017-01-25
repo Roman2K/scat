@@ -8,9 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"scat"
 	"time"
 
+	"scat"
 	"scat/ansirefresh"
 	"scat/argparse"
 	"scat/argproc"
