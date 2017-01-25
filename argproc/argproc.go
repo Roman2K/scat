@@ -255,7 +255,12 @@ func (b builder) newArgCopier(argCpp ap.Parser, getProc getProcFn) ap.Parser {
 				id  = args[0].(string)
 				lsp = args[1].(cpprocs.LsProcUnprocer)
 			)
-			lser := quotaInitReport{lsp, b.stats, id}
+			lser := quotaInitReport{
+				lser: lsp,
+				getCounter: func() *stats.Counter {
+					return b.stats.Counter(id)
+				},
+			}
 			proc := stats.NewProc(getProc(lsp), b.stats, id)
 			return cpprocs.NewCopier(id, lser, proc), nil
 		},
@@ -297,13 +302,12 @@ func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
 }
 
 type quotaInitReport struct {
-	lser  cpprocs.Lister
-	stats *stats.Statsd
-	id    interface{}
+	lser       cpprocs.Lister
+	getCounter func() *stats.Counter
 }
 
 func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
-	cnt := r.stats.Counter(r.id)
+	cnt := r.getCounter()
 	cnt.Quota.Init = true
 	defer func() {
 		cnt.Quota.Init = false
