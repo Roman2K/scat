@@ -37,7 +37,7 @@ func TestMinCopies(t *testing.T) {
 		})
 	}
 
-	newQman := func() (qman quota.Man) {
+	newQman := func() (qman *quota.Man) {
 		qman = quota.NewMan()
 		qman.AddRes(cpprocs.NewCopier("a",
 			testutil.SliceLister{{Hash: hash1}},

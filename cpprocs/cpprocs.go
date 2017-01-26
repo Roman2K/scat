@@ -2,14 +2,13 @@ package cpprocs
 
 import (
 	"math/rand"
-	"sync"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
 	"scat/concur"
 	"scat/cpprocs/copies"
 	"scat/cpprocs/quota"
+	"scat/procs"
 )
 
 type Lister interface {
@@ -98,13 +97,10 @@ func (a CopiesEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
 }
 
 type QuotaEntryAdder struct {
-	Qman quota.Man
-	mu   sync.Mutex
+	Qman *quota.Man
 }
 
-func (a *QuotaEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (a QuotaEntryAdder) AddLsEntry(lser Lister, e LsEntry) {
 	a.Qman.AddUse(lser.(quota.Res), uint64(e.Size))
 }
 

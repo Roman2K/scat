@@ -8,7 +8,7 @@ import (
 
 type Man struct {
 	created   created
-	createdMu sync.Mutex
+	createdMu sync.RWMutex
 	wg        sync.WaitGroup
 }
 
@@ -66,8 +66,8 @@ func (man *Man) remove(path string) (err error) {
 }
 
 func (man *Man) Len() int {
-	man.createdMu.Lock()
-	defer man.createdMu.Unlock()
+	man.createdMu.RLock()
+	defer man.createdMu.RUnlock()
 	return len(man.created)
 }
 

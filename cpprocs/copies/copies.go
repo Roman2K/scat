@@ -8,7 +8,7 @@ import (
 
 type Reg struct {
 	m  map[checksum.Hash]*List
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 func NewReg() *Reg {
@@ -29,8 +29,8 @@ func (r *Reg) List(h checksum.Hash) *List {
 }
 
 func (r *Reg) RemoveOwner(o Owner) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	for _, list := range r.m {
 		list.Remove(o)
 	}
@@ -38,7 +38,7 @@ func (r *Reg) RemoveOwner(o Owner) {
 
 type List struct {
 	m     map[interface{}]Owner
-	mapMu sync.Mutex
+	mapMu sync.RWMutex
 	Mu    sync.Mutex
 }
 
@@ -59,15 +59,15 @@ func (list *List) Remove(o Owner) {
 }
 
 func (list *List) Contains(o Owner) (ok bool) {
-	list.mapMu.Lock()
-	defer list.mapMu.Unlock()
+	list.mapMu.RLock()
+	defer list.mapMu.RUnlock()
 	_, ok = list.m[o.Id()]
 	return
 }
 
 func (list *List) Owners() (owners []Owner) {
-	list.mapMu.Lock()
-	defer list.mapMu.Unlock()
+	list.mapMu.RLock()
+	defer list.mapMu.RUnlock()
 	owners = make([]Owner, 0, len(list.m))
 	for _, o := range list.m {
 		owners = append(owners, o)
@@ -76,7 +76,7 @@ func (list *List) Owners() (owners []Owner) {
 }
 
 func (list *List) Len() int {
-	list.mapMu.Lock()
-	defer list.mapMu.Unlock()
+	list.mapMu.RLock()
+	defer list.mapMu.RUnlock()
 	return len(list.m)
 }

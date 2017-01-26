@@ -15,18 +15,17 @@ import (
 
 type minCopies struct {
 	min    int
-	qman   quota.Man
-	qmanMu sync.Mutex
+	qman   *quota.Man
 	reg    *copies.Reg
 	finish func() error
 }
 
-func New(min int, qman quota.Man) (dynp procs.DynProcer, err error) {
+func New(min int, qman *quota.Man) (dynp procs.DynProcer, err error) {
 	reg := copies.NewReg()
 	ress := qman.Resources(0)
 	ml := cpprocs.MultiLister(listers(ress))
 	err = ml.AddEntriesTo([]cpprocs.LsEntryAdder{
-		&cpprocs.QuotaEntryAdder{Qman: qman},
+		cpprocs.QuotaEntryAdder{Qman: qman},
 		cpprocs.CopiesEntryAdder{Reg: reg},
 	})
 	dynp = &minCopies{
@@ -94,11 +93,11 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 			cp := copiers[i]
 			casc[i] = procs.NewOnEnd(cp, func(err error) {
 				if err != nil {
-					mc.deleteCopier(cp)
+					mc.qman.Delete(cp)
 					return
 				}
 				copies.Add(cp)
-				mc.addUse(cp, dataUse)
+				mc.qman.AddUse(cp, dataUse)
 			})
 		}
 		proc := procs.NewDiscardChunks(casc)
@@ -111,26 +110,12 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 }
 
 func (mc *minCopies) getCopiers(use uint64) (cps []cpprocs.Copier) {
-	mc.qmanMu.Lock()
-	defer mc.qmanMu.Unlock()
 	ress := mc.qman.Resources(use)
 	cps = make([]cpprocs.Copier, len(ress))
 	for i, res := range ress {
 		cps[i] = res.(cpprocs.Copier)
 	}
 	return
-}
-
-func (mc *minCopies) deleteCopier(cp cpprocs.Copier) {
-	mc.qmanMu.Lock()
-	defer mc.qmanMu.Unlock()
-	mc.qman.Delete(cp)
-}
-
-func (mc *minCopies) addUse(cp cpprocs.Copier, use uint64) {
-	mc.qmanMu.Lock()
-	defer mc.qmanMu.Unlock()
-	mc.qman.AddUse(cp, use)
 }
 
 var shuffle = cpprocs.ShuffleCopiers

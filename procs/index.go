@@ -22,13 +22,14 @@ type indexProc struct {
 	order    seriessort.Series
 	orderMu  sync.Mutex
 	finals   map[checksum.Hash]*finals
-	finalsMu sync.Mutex
+	finalsMu sync.RWMutex
 }
 
 type finals struct {
 	num      int
 	entries  []indexEntry
 	complete bool
+	mu       sync.Mutex
 }
 
 type indexEntry struct {
@@ -73,21 +74,18 @@ func (idx *indexProc) ProcessFinal(c, final scat.Chunk) error {
 		hash:       final.Hash(),
 		targetSize: c.TargetSize(),
 	}
-
-	idx.finalsMu.Lock()
-	defer idx.finalsMu.Unlock()
-
-	finals, ok := idx.finals[c.Hash()]
+	finals, ok := idx.getFinals(c.Hash())
 	if !ok {
 		return ErrIndexUnprocessedChunk
 	}
+	finals.mu.Lock()
+	defer finals.mu.Unlock()
 	if finals.complete {
 		return ErrIndexProcessEnded
 	}
 	if finals.num != c.Num() {
 		return ErrIndexDup
 	}
-
 	finals.entries = append(finals.entries, entry)
 	return nil
 }
@@ -100,18 +98,23 @@ func (idx *indexProc) ProcessEnd(c scat.Chunk) (err error) {
 	return idx.flush()
 }
 
-func (idx *indexProc) setFinalsComplete(c scat.Chunk) error {
-	idx.finalsMu.Lock()
-	defer idx.finalsMu.Unlock()
+func (idx *indexProc) getFinals(hash checksum.Hash) (f *finals, ok bool) {
+	idx.finalsMu.RLock()
+	defer idx.finalsMu.RUnlock()
+	f, ok = idx.finals[hash]
+	return
+}
 
-	finals, ok := idx.finals[c.Hash()]
+func (idx *indexProc) setFinalsComplete(c scat.Chunk) error {
+	finals, ok := idx.getFinals(c.Hash())
 	if !ok {
 		return ErrIndexUnprocessedChunk
 	}
+	finals.mu.Lock()
+	defer finals.mu.Unlock()
 	if finals.num != c.Num() {
 		return nil
 	}
-
 	finals.complete = true
 	return nil
 }
@@ -155,15 +158,14 @@ func (idx *indexProc) flush() (err error) {
 	return
 }
 
-func (idx *indexProc) completeFinals(hash checksum.Hash) (
-	finals *finals, ok bool,
-) {
-	idx.finalsMu.Lock()
-	defer idx.finalsMu.Unlock()
-	finals, ok = idx.finals[hash]
-	if ok && !finals.complete {
-		ok = false
+func (idx *indexProc) completeFinals(hash checksum.Hash) (f *finals, ok bool) {
+	f, ok = idx.getFinals(hash)
+	if !ok {
+		return
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ok = f.complete
 	return
 }
 

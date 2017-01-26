@@ -21,42 +21,11 @@ const (
 
 type Statsd struct {
 	counters   map[Id]*Counter
-	countersMu sync.Mutex
+	countersMu sync.RWMutex
 	nextPos    uint32
 }
 
 type Id interface{}
-
-type Counter struct {
-	pos   uint32
-	last  time.Time
-	inst  int32
-	out   slidecnt.Counter
-	outMu sync.Mutex
-	Quota struct {
-		Init     bool
-		Use, Max uint64
-	}
-}
-
-const unlimited = ^uint64(0)
-
-func (cnt *Counter) addInst(delta int32) {
-	atomic.AddInt32(&cnt.inst, delta)
-	cnt.last = time.Now()
-}
-
-func (cnt *Counter) addOut(delta uint64) {
-	cnt.outMu.Lock()
-	defer cnt.outMu.Unlock()
-	cnt.out.Add(delta)
-}
-
-func (cnt *Counter) outAvgRate(unit time.Duration) uint64 {
-	cnt.outMu.Lock()
-	defer cnt.outMu.Unlock()
-	return cnt.out.AvgRate(unit)
-}
 
 func New() *Statsd {
 	return &Statsd{
@@ -83,8 +52,8 @@ type sortedCounter struct {
 }
 
 func (st *Statsd) sortedCounters() (scnts []sortedCounter) {
-	st.countersMu.Lock()
-	defer st.countersMu.Unlock()
+	st.countersMu.RLock()
+	defer st.countersMu.RUnlock()
 	ids := make([]Id, 0, len(st.counters))
 	for id := range st.counters {
 		ids = append(ids, id)
@@ -157,6 +126,8 @@ func (st *Statsd) WriteTo(w io.Writer) (written int64, err error) {
 	return
 }
 
+const unlimited = ^uint64(0)
+
 func formatQuota(n uint64, blankZero bool) string {
 	switch {
 	case n == unlimited:
@@ -176,4 +147,33 @@ func formatQuotaFill(used, max uint64) string {
 	}
 	pct := float64(used) / float64(max) * 100
 	return fmt.Sprintf("%.2f%%", pct)
+}
+
+type Counter struct {
+	pos   uint32
+	last  time.Time
+	inst  int32
+	out   slidecnt.Counter
+	outMu sync.Mutex
+	Quota struct {
+		Init     bool
+		Use, Max uint64
+	}
+}
+
+func (cnt *Counter) addInst(delta int32) {
+	atomic.AddInt32(&cnt.inst, delta)
+	cnt.last = time.Now()
+}
+
+func (cnt *Counter) addOut(delta uint64) {
+	cnt.outMu.Lock()
+	defer cnt.outMu.Unlock()
+	cnt.out.Add(delta)
+}
+
+func (cnt *Counter) outAvgRate(unit time.Duration) uint64 {
+	cnt.outMu.Lock()
+	defer cnt.outMu.Unlock()
+	return cnt.out.AvgRate(unit)
 }
