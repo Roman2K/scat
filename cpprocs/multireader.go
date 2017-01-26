@@ -1,10 +1,12 @@
 package cpprocs
 
 import (
+	"fmt"
+	"os"
 	"scat"
-	"scat/procs"
 	"scat/concur"
 	"scat/cpprocs/copies"
+	"scat/procs"
 )
 
 type multireader struct {
@@ -37,6 +39,7 @@ func (mrd multireader) Process(c scat.Chunk) <-chan procs.Res {
 	for i, cp := range copiers {
 		casc[i] = procs.NewOnEnd(cp, func(err error) {
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "multireader: copier error: %v\n", err)
 				mrd.reg.RemoveOwner(cp)
 			}
 		})

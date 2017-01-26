@@ -12,7 +12,7 @@ func NewWriteTicker(w WriteFlusher, wt io.WriterTo, d time.Duration) Ticker {
 	write := func() {
 		err := writeFlush(w, wt)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "writeTicker error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "ansirefresh ticker: write error: %v\n", err)
 		}
 	}
 	return NewTicker(write, d)

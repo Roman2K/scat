@@ -3,6 +3,7 @@ package mincopies
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"scat"
@@ -93,6 +94,7 @@ func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
 			cp := copiers[i]
 			casc[i] = procs.NewOnEnd(cp, func(err error) {
 				if err != nil {
+					fmt.Fprintf(os.Stderr, "mincopies: copier error: %v\n", err)
 					mc.qman.Delete(cp)
 					return
 				}
