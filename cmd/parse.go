@@ -9,7 +9,9 @@ import (
 )
 
 type cmdArgs struct {
-	seedPath, procStr string
+	seedPath string
+	procStr  string
+	stats    bool
 }
 
 func (a *cmdArgs) Parse(args []string) {
@@ -18,6 +20,7 @@ func (a *cmdArgs) Parse(args []string) {
 		name, args = args[0], args[1:]
 	}
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
+	fl.BoolVar(&a.stats, "stats", true, "proc stats: data rate, quota, etc.")
 	fl.SetOutput(ioutil.Discard)
 	usage := func(w io.Writer) {
 		fmt.Fprintf(w, "usage: %s [options] <seed> <proc>\n", name)

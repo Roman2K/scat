@@ -46,8 +46,10 @@ func (b builder) argProc() ap.Parser {
 	)
 
 	update(argProc, b.newArgProc(argProc, argDynProc, argCpp))
-	for k, v := range argProc {
-		argProc[k] = b.newArgStatsProc(v, k)
+	if b.stats != nil {
+		for k, v := range argProc {
+			argProc[k] = b.newArgStatsProc(v, k)
+		}
 	}
 
 	return argProc
@@ -209,10 +211,12 @@ func (b builder) newArgDynProc(argCpp ap.Parser) ap.ArgFn {
 					iress = args[1].([]interface{})
 				)
 				qman := quota.NewMan()
-				qman.OnUse = func(res quota.Res, use, max uint64) {
-					cnt := b.stats.Counter(res.Id())
-					cnt.Quota.Use = use
-					cnt.Quota.Max = max
+				if b.stats != nil {
+					qman.OnUse = func(res quota.Res, use, max uint64) {
+						cnt := b.stats.Counter(res.Id())
+						cnt.Quota.Use = use
+						cnt.Quota.Max = max
+					}
 				}
 				for _, ires := range iress {
 					res := ires.(quotaRes)
@@ -255,13 +259,17 @@ func (b builder) newArgCopier(argCpp ap.Parser, getProc getProcFn) ap.Parser {
 				id  = args[0].(string)
 				lsp = args[1].(cpprocs.LsProcUnprocer)
 			)
-			lser := quotaInitReport{
-				lser: lsp,
-				getCounter: func() *stats.Counter {
-					return b.stats.Counter(id)
-				},
+			var (
+				lser cpprocs.Lister = lsp
+				proc procs.Proc     = getProc(lsp)
+			)
+			if b.stats != nil {
+				lser = quotaInitReport{
+					lser:       lser,
+					getCounter: func() *stats.Counter { return b.stats.Counter(id) },
+				}
+				proc = stats.NewProc(proc, b.stats, id)
 			}
-			proc := stats.NewProc(getProc(lsp), b.stats, id)
 			return cpprocs.NewCopier(id, lser, proc), nil
 		},
 	}
@@ -289,6 +297,9 @@ func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
 			}
 			return val, nil
 		},
+	}
+	if b.stats == nil {
+		return argRes
 	}
 	return ap.ArgFilter{
 		Parser: argRes,

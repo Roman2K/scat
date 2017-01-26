@@ -40,12 +40,15 @@ func start() (err error) {
 	}
 	defer tmp.Finish()
 
-	statsd := stats.New()
-	{
-		w := ansirefresh.NewWriter(os.Stderr)
-		// w := ansirefresh.NewWriter(ioutil.Discard)
-		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
-		defer t.Stop()
+	var statsd *stats.Statsd
+	if args.stats {
+		statsd = stats.New()
+		{
+			w := ansirefresh.NewWriter(os.Stderr)
+			// w := ansirefresh.NewWriter(ioutil.Discard)
+			t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
+			defer t.Stop()
+		}
 	}
 
 	argProc := argproc.NewArgChain(argproc.New(tmp, statsd))
