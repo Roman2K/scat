@@ -23,10 +23,10 @@ func (s *sortProc) Process(c scat.Chunk) <-chan Res {
 	s.series.Drop(len(sorted))
 	s.seriesMu.Unlock()
 	ch := make(chan Res, len(sorted))
+	defer close(ch)
 	for _, val := range sorted {
 		ch <- Res{Chunk: val.(scat.Chunk)}
 	}
-	close(ch)
 	return ch
 }
 

@@ -16,9 +16,9 @@ func TestCascade(t *testing.T) {
 	someErr := errors.New("some err")
 	errp := procs.ProcFunc(func(c scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 2)
+		defer close(ch)
 		ch <- procs.Res{Err: someErr, Chunk: c}
 		ch <- procs.Res{Chunk: c}
-		close(ch)
 		return ch
 	})
 	c := scat.NewChunk(0, nil)

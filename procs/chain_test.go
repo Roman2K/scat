@@ -44,8 +44,8 @@ func TestChainEndProc(t *testing.T) {
 	a := enderProc{
 		proc: procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
 			ch := make(chan procs.Res, 1)
+			defer close(ch)
 			ch <- procs.Res{Chunk: scat.NewChunk(11, nil)}
-			close(ch)
 			return ch
 		}),
 		onFinal: func(c, final scat.Chunk) error {
@@ -63,9 +63,9 @@ func TestChainEndProc(t *testing.T) {
 	}
 	b := procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 2)
+		defer close(ch)
 		ch <- procs.Res{Chunk: scat.NewChunk(22, nil)}
 		ch <- procs.Res{Chunk: scat.NewChunk(33, nil)}
-		close(ch)
 		return ch
 	})
 	chain := procs.Chain{a, b}
@@ -95,25 +95,23 @@ func TestChainErrRecovery(t *testing.T) {
 	})
 	errpNoChunk := procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 1)
+		defer close(ch)
 		ch <- procs.Res{Err: someErr}
-		close(ch)
 		return ch
 	})
 	recover := errProcFunc(func(c scat.Chunk, err error) <-chan procs.Res {
 		ch := make(chan procs.Res, 1)
+		defer close(ch)
 		ch <- procs.Res{Chunk: c}
-		close(ch)
 		recovered = append(recovered, err)
 		return ch
 	})
-	recoverFail := errProcFunc(
-		func(c scat.Chunk, err error) <-chan procs.Res {
-			ch := make(chan procs.Res, 1)
-			ch <- procs.Res{Chunk: c, Err: err}
-			close(ch)
-			return ch
-		},
-	)
+	recoverFail := errProcFunc(func(c scat.Chunk, err error) <-chan procs.Res {
+		ch := make(chan procs.Res, 1)
+		defer close(ch)
+		ch <- procs.Res{Chunk: c, Err: err}
+		return ch
+	})
 
 	// no recovery
 	reset()
