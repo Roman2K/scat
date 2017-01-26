@@ -7,6 +7,7 @@ import (
 
 	"scat"
 	"scat/procs"
+	"scat/testutil"
 )
 
 func TestSortFinish(t *testing.T) {
@@ -14,7 +15,7 @@ func TestSortFinish(t *testing.T) {
 
 	// 0 missing
 	// 1 ok
-	_, err := readChunks(sortp.Process(scat.NewChunk(1, nil)))
+	_, err := testutil.ReadChunks(sortp.Process(scat.NewChunk(1, nil)))
 	assert.NoError(t, err)
 	err = sortp.Finish()
 	assert.Equal(t, procs.ErrShort, err)
@@ -25,7 +26,7 @@ func TestSortFinish(t *testing.T) {
 
 	// 0 ok
 	// 1 ok
-	_, err = readChunks(sortp.Process(scat.NewChunk(0, nil)))
+	_, err = testutil.ReadChunks(sortp.Process(scat.NewChunk(0, nil)))
 	assert.NoError(t, err)
 	err = sortp.Finish()
 	assert.NoError(t, err)

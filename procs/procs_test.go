@@ -10,7 +10,6 @@ import (
 	"scat"
 	"scat/checksum"
 	"scat/procs"
-	"scat/testutil"
 )
 
 func testChunkNums(t *testing.T, proc procs.Proc, inChunks int) {
@@ -48,8 +47,4 @@ func getErr(t *testing.T, ch <-chan procs.Res) error {
 	_, ok := <-ch
 	assert.False(t, ok)
 	return res.Err
-}
-
-func readChunks(ch <-chan procs.Res) ([]scat.Chunk, error) {
-	return testutil.ReadChunks(ch)
 }

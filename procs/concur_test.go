@@ -9,6 +9,7 @@ import (
 
 	"scat"
 	"scat/procs"
+	"scat/testutil"
 )
 
 func TestConcur(t *testing.T) {
@@ -25,7 +26,7 @@ func TestConcur(t *testing.T) {
 	someErr := errors.New("some err")
 	dynp := testDynProcer{[]procs.Proc{a, a, b}, someErr}
 	conc := procs.NewConcur(2, dynp)
-	_, err := readChunks(conc.Process(scat.NewChunk(0, nil)))
+	_, err := testutil.ReadChunks(conc.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 
 	// no error
@@ -33,7 +34,7 @@ func TestConcur(t *testing.T) {
 	c := scat.NewChunk(0, nil)
 	conc = procs.NewConcur(2, dynp)
 	start := time.Now()
-	chunks, err := readChunks(conc.Process(c))
+	chunks, err := testutil.ReadChunks(conc.Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, []scat.Chunk{c, c, c}, chunks)
 	elapsed := time.Now().Sub(start)

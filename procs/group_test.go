@@ -7,20 +7,21 @@ import (
 
 	"scat"
 	"scat/procs"
+	"scat/testutil"
 )
 
 func TestGroup(t *testing.T) {
 	g := procs.NewGroup(2)
 
-	chunks, err := readChunks(g.Process(scat.NewChunk(1, nil)))
+	chunks, err := testutil.ReadChunks(g.Process(scat.NewChunk(1, nil)))
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(chunks))
 
-	chunks, err = readChunks(g.Process(scat.NewChunk(2, nil)))
+	chunks, err = testutil.ReadChunks(g.Process(scat.NewChunk(2, nil)))
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(chunks))
 
-	chunks, err = readChunks(g.Process(scat.NewChunk(0, nil)))
+	chunks, err = testutil.ReadChunks(g.Process(scat.NewChunk(0, nil)))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
 
@@ -31,7 +32,7 @@ func TestGroup(t *testing.T) {
 	assert.Equal(t, 0, grp[0].Num())
 	assert.Equal(t, 1, grp[1].Num())
 
-	chunks, err = readChunks(g.Process(scat.NewChunk(3, nil)))
+	chunks, err = testutil.ReadChunks(g.Process(scat.NewChunk(3, nil)))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
 
@@ -57,7 +58,7 @@ func TestGroupFinish(t *testing.T) {
 
 	// 0 ok
 	// 1 missing
-	_, err := readChunks(g.Process(scat.NewChunk(0, nil)))
+	_, err := testutil.ReadChunks(g.Process(scat.NewChunk(0, nil)))
 	assert.NoError(t, err)
 	err = g.Finish()
 	assert.Equal(t, procs.ErrShort, err)
@@ -68,7 +69,7 @@ func TestGroupFinish(t *testing.T) {
 
 	// 0 ok
 	// 1 ok
-	_, err = readChunks(g.Process(scat.NewChunk(1, nil)))
+	_, err = testutil.ReadChunks(g.Process(scat.NewChunk(1, nil)))
 	assert.NoError(t, err)
 	err = g.Finish()
 	assert.NoError(t, err)
