@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"sync"
 
 	"scat/checksum"
 )
@@ -24,7 +25,7 @@ type chunk struct {
 	data       Data
 	hash       checksum.Hash
 	targetSize int
-	meta       meta
+	meta       *meta
 }
 
 func NewChunk(num int, data Data) Chunk {
@@ -48,7 +49,9 @@ func (c *chunk) Data() Data {
 func (c *chunk) WithData(d Data) Chunk {
 	dup := *c
 	dup.data = d
-	dup.meta = c.dupMeta()
+	if dup.meta != nil {
+		dup.meta = c.meta.dup()
+	}
 	return &dup
 }
 
@@ -70,17 +73,9 @@ func (c *chunk) SetTargetSize(s int) {
 
 func (c *chunk) Meta() Meta {
 	if c.meta == nil {
-		c.meta = make(meta)
+		c.meta = newMeta()
 	}
 	return c.meta
-}
-
-func (c *chunk) dupMeta() (dup meta) {
-	dup = make(meta)
-	for k, v := range c.meta {
-		dup[k] = v
-	}
-	return
 }
 
 type Meta interface {
@@ -88,14 +83,37 @@ type Meta interface {
 	Set(_, _ interface{})
 }
 
-type meta map[interface{}]interface{}
-
-func (m meta) Get(k interface{}) interface{} {
-	return m[k]
+type meta struct {
+	m  metaMap
+	mu sync.RWMutex
 }
 
-func (m meta) Set(k, v interface{}) {
-	m[k] = v
+type metaMap map[interface{}]interface{}
+
+func newMeta() *meta {
+	return &meta{m: make(metaMap)}
+}
+
+func (m *meta) Get(k interface{}) interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.m[k]
+}
+
+func (m *meta) Set(k, v interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.m[k] = v
+}
+
+func (m *meta) dup() (dup *meta) {
+	dup = newMeta()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for k, v := range m.m {
+		dup.m[k] = v
+	}
+	return
 }
 
 type Data interface {

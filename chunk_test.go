@@ -20,15 +20,17 @@ func TestChunk(t *testing.T) {
 	assert.Equal(t, checksum.Hash{}, c.Hash())
 	assert.Equal(t, 0, c.TargetSize())
 	assert.Equal(t, nil, c.Meta().Get("xx"))
+}
 
-	c = scat.NewChunk(1, scat.BytesData("yy"))
+func TestChunkWithData(t *testing.T) {
+	c := scat.NewChunk(1, scat.BytesData("yy"))
 	c.SetHash(checksum.SumBytes([]byte("some hash")))
 	c.Meta().Set("x", "y")
 	cHash := c.Hash()
 
 	dup := c.WithData(scat.BytesData("zzz"))
 	dup.SetTargetSize(3)
-	b, err = dup.Data().Bytes()
+	b, err := dup.Data().Bytes()
 	assert.NoError(t, err)
 	assert.Equal(t, "zzz", string(b))
 	assert.Equal(t, cHash, dup.Hash())
@@ -40,6 +42,12 @@ func TestChunk(t *testing.T) {
 	assert.Equal(t, "y", dup.Meta().Get("x"))
 	dup.Meta().Set("x", "y2")
 	assert.Equal(t, "y", c.Meta().Get("x"))
+}
+
+func TestChunkWithDataNoMeta(t *testing.T) {
+	c := scat.NewChunk(9, nil)
+	// Doesn't panic, trying to access nil meta map mutex or something:
+	c.WithData(scat.BytesData("a"))
 }
 
 func TestBytesData(t *testing.T) {
