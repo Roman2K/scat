@@ -168,7 +168,7 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 				return procs.NewSort(), nil
 			},
 		},
-		"writerTo": ap.ArgLambda{
+		"write": ap.ArgLambda{
 			Args: ap.Args{ap.ArgStr},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
