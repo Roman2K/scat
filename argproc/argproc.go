@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"scat"
 
 	ap "scat/argparse"
 	"scat/cpprocs"
@@ -195,6 +197,15 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 				return procs.NewGroup(size), nil
 			},
 		},
+		"cmd": newArgCmdProc(func(fn procs.CmdFunc) procs.Proc {
+			return fn
+		}),
+		"cmdin": newArgCmdProc(func(fn procs.CmdFunc) procs.Proc {
+			return procs.CmdInFunc(fn)
+		}),
+		"cmdout": newArgCmdProc(func(fn procs.CmdFunc) procs.Proc {
+			return procs.CmdOutFunc(fn)
+		}),
 	}
 }
 
@@ -355,6 +366,27 @@ func newArgGzip(getProc getProcFn) ap.Parser {
 	return ap.ArgLambda{
 		Run: func([]interface{}) (interface{}, error) {
 			return getProc(procs.NewGzip()), nil
+		},
+	}
+}
+
+func newArgCmdProc(getProc func(procs.CmdFunc) procs.Proc) ap.Parser {
+	return ap.ArgLambda{
+		Args: ap.Args{ap.ArgStr, ap.ArgVariadic{ap.ArgStr}},
+		Run: func(args []interface{}) (interface{}, error) {
+			var (
+				name     = args[0].(string)
+				icmdArgs = args[1].([]interface{})
+			)
+			cmdArgs := make([]string, len(icmdArgs))
+			for i, a := range icmdArgs {
+				cmdArgs[i] = a.(string)
+			}
+			newCmd := func(scat.Chunk) (*exec.Cmd, error) {
+				return exec.Command(name, cmdArgs...), nil
+			}
+			fn := procs.CmdFunc(newCmd)
+			return getProc(fn), nil
 		},
 	}
 }
