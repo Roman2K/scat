@@ -26,15 +26,18 @@ func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
 		return
 	}
 	nparsed = len(name)
+	nparsedAdjust := 0
 	if argsStr == "" {
 		argsStr = "[]"
-		nparsed -= len(argsStr)
+		nparsedAdjust -= len(argsStr)
 	}
 	var n int
 	res, n, err = parser.Parse(argsStr)
 	nparsed += n
 	if err != nil {
 		err = errDetails(err, str, nparsed)
+		return
 	}
+	nparsed += nparsedAdjust
 	return
 }

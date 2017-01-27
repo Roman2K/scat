@@ -37,16 +37,16 @@ func errDetails(err error, str string, nparsed int) error {
 
 type ErrDetails struct {
 	Err     error
-	str     string
-	nparsed int
+	Str     string
+	NParsed int
 }
 
 func (e ErrDetails) Error() string {
 	msg := e.Err.Error()
 	if ed, ok := e.Err.(ErrDetails); ok {
-		if ed.str == e.str && ed.nparsed == e.nparsed {
+		if ed.Str == e.Str && ed.NParsed == e.NParsed {
 			return msg
 		}
 	}
-	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.str, e.nparsed+6, " ")
+	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.Str, e.NParsed+6, " ")
 }

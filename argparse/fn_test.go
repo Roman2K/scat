@@ -63,6 +63,18 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, "some str", res.(string))
 	assert.Equal(t, len(str), n)
 
+	// optional brackets error
+	str = "xyz"
+	_, _, err = argFn.Parse(str)
+	errDet := err.(argparse.ErrDetails)
+	assert.Equal(t, argparse.ErrTooFewArgs, errDet.Err)
+	assert.Equal(t, len(str), errDet.NParsed)
+	str = "abc xyz"
+	_, _, err = argparse.ArgVariadic{argFn}.Parse(str)
+	errDet = err.(argparse.ErrDetails)
+	assert.Equal(t, argparse.ErrTooFewArgs, errDet.Err.(argparse.ErrDetails).Err)
+	assert.Equal(t, len(str), errDet.NParsed)
+
 	// with args
 	str = "xyz[1kib 2kib]"
 	res, n, err = argFn.Parse(str)
