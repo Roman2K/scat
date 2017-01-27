@@ -12,31 +12,48 @@ import (
 	"scat/testutil"
 )
 
+func TestCmdFunc(t *testing.T) {
+	const data = "xxx"
+	cmdp := procs.CmdFunc(func(scat.Chunk) (*exec.Cmd, error) {
+		return exec.Command("cat"), nil
+	})
+	c := scat.NewChunk(0, scat.BytesData(data))
+	chunks, err := testutil.ReadChunks(cmdp.Process(c))
+	assert.NoError(t, err)
+	assert.Equal(t, []scat.Chunk{c}, chunks)
+	b, err := c.Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(b))
+}
+
+func TestCmdFuncError(t *testing.T) {
+	testCmdFuncError(t, func(fn procs.CmdFunc) procs.Proc {
+		return fn
+	})
+}
+
 func TestCmdInFunc(t *testing.T) {
 	const data = "xxx"
 	buf := &bytes.Buffer{}
 	cmdp := procs.CmdInFunc(func(scat.Chunk) (*exec.Cmd, error) {
-		cmd := exec.Command("cat")
+		cmd := exec.Command("sh", "-c", "echo ok && cat")
 		cmd.Stdout = buf
 		return cmd, nil
 	})
 	c := scat.NewChunk(0, scat.BytesData(data))
-	ch := cmdp.Process(c)
-	chunks, err := testutil.ReadChunks(ch)
+	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, []scat.Chunk{c}, chunks)
-	assert.Equal(t, data, buf.String())
+	assert.Equal(t, "ok\n"+data, buf.String())
+	b, err := c.Data().Bytes()
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(b))
 }
 
 func TestCmdInFuncError(t *testing.T) {
-	cmdp := procs.CmdInFunc(func(scat.Chunk) (*exec.Cmd, error) {
-		return exec.Command("/dev/null"), nil
+	testCmdFuncError(t, func(fn procs.CmdFunc) procs.Proc {
+		return procs.CmdInFunc(fn)
 	})
-	c := scat.NewChunk(0, nil)
-	ch := cmdp.Process(c)
-	chunks, err := testutil.ReadChunks(ch)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
-	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
 }
 
 func TestCmdOutFunc(t *testing.T) {
@@ -45,8 +62,7 @@ func TestCmdOutFunc(t *testing.T) {
 		return exec.Command("echo", "-n", output), nil
 	})
 	c := scat.NewChunk(0, nil)
-	ch := cmdp.Process(c)
-	chunks, err := testutil.ReadChunks(ch)
+	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))
 	b, err := chunks[0].Data().Bytes()
@@ -55,13 +71,18 @@ func TestCmdOutFunc(t *testing.T) {
 }
 
 func TestCmdOutFuncError(t *testing.T) {
-	cmdp := procs.CmdOutFunc(func(scat.Chunk) (*exec.Cmd, error) {
+	testCmdFuncError(t, func(fn procs.CmdFunc) procs.Proc {
+		return procs.CmdOutFunc(fn)
+	})
+}
+
+func testCmdFuncError(t *testing.T, getProc func(procs.CmdFunc) procs.Proc) {
+	fn := procs.CmdFunc(func(scat.Chunk) (*exec.Cmd, error) {
 		return exec.Command("/dev/null"), nil
 	})
+	cmdp := getProc(fn)
 	c := scat.NewChunk(0, nil)
-	ch := cmdp.Process(c)
-	chunks, err := testutil.ReadChunks(ch)
+	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.Equal(t, []scat.Chunk{c}, chunks)
 	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
-	assert.Nil(t, c.Data())
 }

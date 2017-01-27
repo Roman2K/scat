@@ -2,6 +2,13 @@ package procs
 
 import "scat"
 
+var (
+	_ Proc = ProcFunc(nil)
+	_ Proc = InplaceFunc(nil)
+	_ Proc = ChunkFunc(nil)
+	_ Proc = ChunkIterFunc(nil)
+)
+
 type ProcFunc func(scat.Chunk) <-chan Res
 
 func (fn ProcFunc) Process(c scat.Chunk) <-chan Res {
@@ -63,10 +70,3 @@ func (fn ChunkIterFunc) Process(c scat.Chunk) <-chan Res {
 func (ChunkIterFunc) Finish() error {
 	return nil
 }
-
-var (
-	_ Proc = ProcFunc(nil)
-	_ Proc = InplaceFunc(nil)
-	_ Proc = ChunkFunc(nil)
-	_ Proc = ChunkIterFunc(nil)
-)
