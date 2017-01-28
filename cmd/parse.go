@@ -20,7 +20,7 @@ func (a *cmdArgs) Parse(args []string) {
 		name, args = args[0], args[1:]
 	}
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
-	fl.BoolVar(&a.stats, "stats", false, "proc stats: data rate, quota, etc.")
+	fl.BoolVar(&a.stats, "stats", false, "print stats: data rates, quotas, etc.")
 	fl.SetOutput(ioutil.Discard)
 	usage := func(w io.Writer) {
 		fmt.Fprintf(w, "usage: %s [options] <seed> <proc>\n", name)
@@ -32,8 +32,8 @@ func (a *cmdArgs) Parse(args []string) {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\t<proc>\tproc string\n")
 		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\t\tex: split chain[checksum index[-] cat[mydir]]")
-		fmt.Fprintf(w, "\t\tex: uindex ucat[mydir] uchecksum join[-]")
+		fmt.Fprintf(w, "\t\tex: split chain[checksum index[-] cat[my_dir]]\n")
+		fmt.Fprintf(w, "\t\tex: uindex ucat[my_dir] uchecksum join[-]\n")
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "options:\n")
 		fl.SetOutput(w)
