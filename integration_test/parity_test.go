@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"testing"
 
@@ -41,13 +40,24 @@ func testParity(t *testing.T, cor corruption) {
 		inputStr = "hello"
 	)
 
+	parity, err := procs.NewParity(ndata, nparity)
+	assert.NoError(t, err)
+
 	indexBuf := &bytes.Buffer{}
-	outputBuf := &bytes.Buffer{}
 	store := memStore{}
+
+	// split
 	seed := scat.NewChunk(0, scat.BytesData(inputStr))
 	seed.SetTargetSize(len(inputStr))
-
-	err := doSplit(indexBuf, seed, ndata, nparity, store.Proc())
+	chain := procs.Chain{
+		procs.ChecksumProc,
+		procs.NewIndexProc(indexBuf),
+		parity.Proc(),
+		procs.NewGzip().Proc(),
+		procs.ChecksumProc,
+		store.Proc(),
+	}
+	err = procs.Process(chain, seed)
 	assert.NoError(t, err)
 
 	corrupt := func(n int) {
@@ -71,65 +81,25 @@ func testParity(t *testing.T, cor corruption) {
 		panic("unhandled corruption type")
 	}
 
-	err = doJoin(outputBuf, indexBuf, ndata, nparity, store.Unproc())
+	seed = scat.NewChunk(0, scat.NewReaderData(indexBuf))
+	outBuf := &bytes.Buffer{}
+	chain = procs.Chain{
+		procs.IndexUnproc,
+		store.Unproc(),
+		procs.ChecksumUnproc,
+		procs.NewGzip().Unproc(),
+		procs.NewGroup(ndata + nparity),
+		parity.Unproc(),
+		procs.NewWriterTo(outBuf),
+	}
+	err = procs.Process(chain, seed)
+
 	if cor == corruptNonRecoverable {
 		assert.Equal(t, reedsolomon.ErrTooFewShards, err)
 		return
 	}
 	assert.NoError(t, err)
-	assert.Equal(t, inputStr, outputBuf.String())
-}
-
-func doSplit(
-	indexw io.Writer, seed scat.Chunk, ndata, nparity int, store procs.Proc,
-) (
-	err error,
-) {
-	parity, err := procs.NewParity(ndata, nparity)
-	if err != nil {
-		return
-	}
-	chain := procs.Chain{
-		procs.ChecksumProc,
-		procs.NewIndexProc(indexw),
-		parity.Proc(),
-		procs.NewGzip().Proc(),
-		procs.ChecksumProc,
-		store,
-	}
-	defer chain.Finish()
-	return processFinish(chain, seed)
-}
-
-func doJoin(
-	w io.Writer, indexr io.Reader, ndata, nparity int, store procs.Proc,
-) (
-	err error,
-) {
-	seed := scat.NewChunk(0, scat.NewReaderData(indexr))
-	parity, err := procs.NewParity(ndata, nparity)
-	if err != nil {
-		return
-	}
-	chain := procs.Chain{
-		procs.IndexUnproc,
-		store,
-		procs.ChecksumUnproc,
-		procs.NewGzip().Unproc(),
-		procs.NewGroup(ndata + nparity),
-		parity.Unproc(),
-		procs.NewWriterTo(w),
-	}
-	defer chain.Finish()
-	return processFinish(chain, seed)
-}
-
-func processFinish(proc procs.Proc, seed scat.Chunk) (err error) {
-	err = procs.Process(proc, seed)
-	if err != nil {
-		return
-	}
-	return proc.Finish()
+	assert.Equal(t, inputStr, outBuf.String())
 }
 
 type memStore map[checksum.Hash]scat.BytesData
