@@ -5,14 +5,16 @@ import (
 	"scat/split"
 )
 
-type splitProc struct {
-	min, max uint
+var Split Proc
+
+func init() {
+	Split = ChunkIterFunc(func(c scat.Chunk) scat.ChunkIter {
+		return split.NewSplitter(c.Num(), c.Data().Reader())
+	})
 }
 
-func NewSplit(min, max uint) Proc {
-	return ChunkIterFunc(splitProc{min, max}.process)
-}
-
-func (s splitProc) process(c scat.Chunk) scat.ChunkIter {
-	return split.NewSplitter(c.Num(), c.Data().Reader(), s.min, s.max)
+func NewSplitSize(min, max uint) Proc {
+	return ChunkIterFunc(func(c scat.Chunk) scat.ChunkIter {
+		return split.NewSplitterSize(c.Num(), c.Data().Reader(), min, max)
+	})
 }

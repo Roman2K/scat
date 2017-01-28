@@ -48,6 +48,12 @@ func (b builder) argProc() ap.Parser {
 	)
 
 	update(argProc, b.newArgProc(argProc, argDynProc, argCpp))
+
+	for k, v := range argCpp {
+		argProc[k] = newArgCpProc(v)
+		argProc["u"+k] = newArgCpUnproc(v)
+	}
+
 	if b.stats != nil {
 		for k, v := range argProc {
 			argProc[k] = b.newArgStatsProc(v, k)
@@ -55,6 +61,24 @@ func (b builder) argProc() ap.Parser {
 	}
 
 	return argProc
+}
+
+func newArgCpProc(argCpp ap.Parser) ap.Parser {
+	return ap.ArgFilter{
+		Parser: argCpp,
+		Filter: func(val interface{}) (interface{}, error) {
+			return val.(cpprocs.LsProcUnprocer).Proc(), nil
+		},
+	}
+}
+
+func newArgCpUnproc(argCpp ap.Parser) ap.Parser {
+	return ap.ArgFilter{
+		Parser: argCpp,
+		Filter: func(val interface{}) (interface{}, error) {
+			return val.(cpprocs.LsProcUnprocer).Unproc(), nil
+		},
+	}
 }
 
 func (b builder) newArgStatsProc(argProc ap.Parser, id interface{}) ap.Parser {
@@ -95,13 +119,18 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 			},
 		},
 		"split": ap.ArgLambda{
+			Run: func([]interface{}) (interface{}, error) {
+				return procs.Split, nil
+			},
+		},
+		"split2": ap.ArgLambda{
 			Args: ap.Args{ap.ArgBytes, ap.ArgBytes},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
 					min = uintBytes(args[0])
 					max = uintBytes(args[1])
 				)
-				return procs.NewSplit(min, max), nil
+				return procs.NewSplitSize(min, max), nil
 			},
 		},
 		"backlog": ap.ArgLambda{

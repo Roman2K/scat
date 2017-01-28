@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	minMinSize = 512 * 1024 // chunker.chunkerBufSize
 	pol        = chunker.Pol(0x3DA3358B4DC173)
+	minMin     = 512 * 1024 // chunker.chunkerBufSize
+	defaultMin = chunker.MinSize
+	defaultMax = chunker.MaxSize
 )
 
 type splitter struct {
@@ -22,9 +24,13 @@ type splitter struct {
 	err     error
 }
 
-func NewSplitter(num int, r io.Reader, min, max uint) scat.ChunkIter {
-	if min < minMinSize {
-		panic(fmt.Errorf("min size must be >= %d bytes", minMinSize))
+func NewSplitter(num int, r io.Reader) scat.ChunkIter {
+	return NewSplitterSize(num, r, defaultMin, defaultMax)
+}
+
+func NewSplitterSize(num int, r io.Reader, min, max uint) scat.ChunkIter {
+	if min < minMin {
+		panic(fmt.Errorf("min size must be >= %d bytes", minMin))
 	}
 	chunker := chunker.NewWithBoundaries(r, pol, min, max)
 	return &splitter{
