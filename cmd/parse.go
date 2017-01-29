@@ -14,6 +14,7 @@ type cmdArgs struct {
 	seedPath string
 	procStr  string
 	stats    bool
+	version  bool
 }
 
 func (a *cmdArgs) Parse(args []string) {
@@ -23,6 +24,7 @@ func (a *cmdArgs) Parse(args []string) {
 	}
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
 	fl.BoolVar(&a.stats, "stats", false, "print stats: data rates, quotas, etc.")
+	fl.BoolVar(&a.version, "version", false, "print version and exit")
 	fl.SetOutput(ioutil.Discard)
 	usage := func(w io.Writer) {
 		fmt.Fprintf(w, "usage: %s [options] <seed> <proc>\n", name)
@@ -45,7 +47,7 @@ func (a *cmdArgs) Parse(args []string) {
 		fmt.Fprintf(w, "see %s\n", url)
 	}
 	err := fl.Parse(args)
-	if err != nil || fl.NArg() != 2 {
+	if err != nil || (fl.NArg() != 2 && !a.version) {
 		w, code := os.Stderr, 2
 		if err == flag.ErrHelp {
 			w, code = os.Stdout, 0

@@ -34,6 +34,11 @@ func start() (err error) {
 	args := cmdArgs{}
 	args.Parse(os.Args)
 
+	if args.version {
+		fmt.Println(version)
+		return
+	}
+
 	tmp, err := tmpdedup.TempDir("")
 	if err != nil {
 		return
