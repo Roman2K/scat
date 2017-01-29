@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+const url = "https://github.com/Roman2K/scat#usage"
+
 type cmdArgs struct {
 	seedPath string
 	procStr  string
@@ -39,6 +41,8 @@ func (a *cmdArgs) Parse(args []string) {
 		fl.SetOutput(w)
 		defer fl.SetOutput(ioutil.Discard)
 		fl.PrintDefaults()
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "see %s\n", url)
 	}
 	err := fl.Parse(args)
 	if err != nil || fl.NArg() != 2 {
