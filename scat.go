@@ -2,6 +2,6 @@ package scat
 
 type ChunkIter interface {
 	Next() bool
-	Chunk() Chunk
+	Chunk() *Chunk
 	Err() error
 }

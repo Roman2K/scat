@@ -112,7 +112,7 @@ func (ms memStore) Unproc() procs.Proc {
 	return procs.ChunkFunc(ms.unprocess)
 }
 
-func (ms memStore) process(c scat.Chunk) (err error) {
+func (ms memStore) process(c *scat.Chunk) (err error) {
 	buf, err := ioutil.ReadAll(c.Data().Reader())
 	if err != nil {
 		return
@@ -121,6 +121,6 @@ func (ms memStore) process(c scat.Chunk) (err error) {
 	return
 }
 
-func (ms memStore) unprocess(c scat.Chunk) (scat.Chunk, error) {
+func (ms memStore) unprocess(c *scat.Chunk) (*scat.Chunk, error) {
 	return c.WithData(ms[c.Hash()]), nil
 }

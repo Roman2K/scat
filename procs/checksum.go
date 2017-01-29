@@ -14,7 +14,7 @@ var (
 	ChecksumUnproc Proc = InplaceFunc(checksumUnprocess)
 )
 
-func checksumProcess(c scat.Chunk) (err error) {
+func checksumProcess(c *scat.Chunk) (err error) {
 	h, err := checksum.Sum(c.Data().Reader())
 	if err != nil {
 		return
@@ -23,7 +23,7 @@ func checksumProcess(c scat.Chunk) (err error) {
 	return
 }
 
-func checksumUnprocess(c scat.Chunk) (err error) {
+func checksumUnprocess(c *scat.Chunk) (err error) {
 	h, err := checksum.Sum(c.Data().Reader())
 	if err != nil {
 		return

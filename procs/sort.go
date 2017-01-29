@@ -16,7 +16,7 @@ func NewSort() Proc {
 	return &sortProc{}
 }
 
-func (s *sortProc) Process(c scat.Chunk) <-chan Res {
+func (s *sortProc) Process(c *scat.Chunk) <-chan Res {
 	s.seriesMu.Lock()
 	s.series.Add(c.Num(), c)
 	sorted := s.series.Sorted()
@@ -25,7 +25,7 @@ func (s *sortProc) Process(c scat.Chunk) <-chan Res {
 	ch := make(chan Res, len(sorted))
 	defer close(ch)
 	for _, val := range sorted {
-		ch <- Res{Chunk: val.(scat.Chunk)}
+		ch <- Res{Chunk: val.(*scat.Chunk)}
 	}
 	return ch
 }

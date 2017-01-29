@@ -13,7 +13,7 @@ import (
 
 func TestOnEnd(t *testing.T) {
 	received := []error{}
-	proc := procs.InplaceFunc(func(scat.Chunk) error {
+	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return nil
 	})
 	oe := procs.NewOnEnd(proc, func(err error) {
@@ -22,14 +22,14 @@ func TestOnEnd(t *testing.T) {
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(oe.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 	assert.Equal(t, []error{nil}, received)
 }
 
 func TestOnEndError(t *testing.T) {
 	received := []error{}
 	someErr := errors.New("some err")
-	proc := procs.InplaceFunc(func(scat.Chunk) error {
+	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return someErr
 	})
 	oe := procs.NewOnEnd(proc, func(err error) {
@@ -38,7 +38,7 @@ func TestOnEndError(t *testing.T) {
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(oe.Process(c))
 	assert.Equal(t, someErr, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 	assert.Equal(t, []error{someErr}, received)
 }
 

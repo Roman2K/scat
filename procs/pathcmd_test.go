@@ -24,7 +24,7 @@ func TestPathCmdIn(t *testing.T) {
 	)
 	fdata := &bytes.Buffer{}
 	paths := []string{}
-	newCmd := func(_ scat.Chunk, path string) (*exec.Cmd, error) {
+	newCmd := func(_ *scat.Chunk, path string) (*exec.Cmd, error) {
 		paths = append(paths, path)
 		cmd := exec.Command("cat", path)
 		cmd.Stdout = fdata
@@ -38,7 +38,7 @@ func TestPathCmdIn(t *testing.T) {
 	c.SetHash(checksum.SumBytes([]byte(hashData)))
 	chunks, err := testutil.ReadChunks(cmdp.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 	b, err := chunks[0].Data().Bytes()
 	assert.NoError(t, err)
 	assert.Equal(t, data, string(b))

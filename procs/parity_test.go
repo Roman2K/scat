@@ -14,7 +14,7 @@ func TestParityNonIntegrityError(t *testing.T) {
 	parity, err := procs.NewParity(1, 1)
 	assert.NoError(t, err)
 	chunk := scat.NewChunk(0, nil)
-	shardChunks := []scat.Chunk{
+	shardChunks := []*scat.Chunk{
 		scat.NewChunk(0, nil),
 		scat.NewChunk(0, nil),
 	}

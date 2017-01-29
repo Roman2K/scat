@@ -20,7 +20,7 @@ type splitter struct {
 	chunker *chunker.Chunker
 	buf     []byte
 	num     int // int for use as slice index
-	chunk   scat.Chunk
+	chunk   *scat.Chunk
 	err     error
 }
 
@@ -61,7 +61,7 @@ func (s *splitter) Next() bool {
 	return true
 }
 
-func (s *splitter) Chunk() scat.Chunk {
+func (s *splitter) Chunk() *scat.Chunk {
 	return s.chunk
 }
 

@@ -52,7 +52,7 @@ func NewIndexProc(w io.Writer) IndexProc {
 	}
 }
 
-func (idx *indexProc) Process(c scat.Chunk) <-chan Res {
+func (idx *indexProc) Process(c *scat.Chunk) <-chan Res {
 	idx.setOrder(c)
 	ch := make(chan Res, 1)
 	defer close(ch)
@@ -68,7 +68,7 @@ func (idx *indexProc) Process(c scat.Chunk) <-chan Res {
 	return ch
 }
 
-func (idx *indexProc) ProcessFinal(c, final scat.Chunk) error {
+func (idx *indexProc) ProcessFinal(c, final *scat.Chunk) error {
 	entry := indexEntry{
 		num:        final.Num(),
 		hash:       final.Hash(),
@@ -90,7 +90,7 @@ func (idx *indexProc) ProcessFinal(c, final scat.Chunk) error {
 	return nil
 }
 
-func (idx *indexProc) ProcessEnd(c scat.Chunk) (err error) {
+func (idx *indexProc) ProcessEnd(c *scat.Chunk) (err error) {
 	err = idx.setFinalsComplete(c)
 	if err != nil {
 		return
@@ -105,7 +105,7 @@ func (idx *indexProc) getFinals(hash checksum.Hash) (f *finals, ok bool) {
 	return
 }
 
-func (idx *indexProc) setFinalsComplete(c scat.Chunk) error {
+func (idx *indexProc) setFinalsComplete(c *scat.Chunk) error {
 	finals, ok := idx.getFinals(c.Hash())
 	if !ok {
 		return ErrIndexUnprocessedChunk
@@ -169,7 +169,7 @@ func (idx *indexProc) completeFinals(hash checksum.Hash) (f *finals, ok bool) {
 	return
 }
 
-func (idx *indexProc) setOrder(c scat.Chunk) {
+func (idx *indexProc) setOrder(c *scat.Chunk) {
 	idx.orderMu.Lock()
 	defer idx.orderMu.Unlock()
 	idx.order.Add(c.Num(), c.Hash())
@@ -187,6 +187,6 @@ func writeEntries(w io.Writer, entries []indexEntry) (err error) {
 
 var IndexUnproc Proc = ChunkIterFunc(indexUnprocess)
 
-func indexUnprocess(c scat.Chunk) scat.ChunkIter {
+func indexUnprocess(c *scat.Chunk) scat.ChunkIter {
 	return index.NewScanner(c.Num(), c.Data().Reader())
 }

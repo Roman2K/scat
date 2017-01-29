@@ -14,7 +14,7 @@ import (
 func TestCascade(t *testing.T) {
 	nop := procs.Nop
 	someErr := errors.New("some err")
-	errp := procs.ProcFunc(func(c scat.Chunk) <-chan procs.Res {
+	errp := procs.ProcFunc(func(c *scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 2)
 		defer close(ch)
 		ch <- procs.Res{Err: someErr, Chunk: c}
@@ -31,27 +31,27 @@ func TestCascade(t *testing.T) {
 	casc = procs.Cascade{nop}
 	chunks, err = testutil.ReadChunks(casc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 
 	casc = procs.Cascade{nop, nop}
 	chunks, err = testutil.ReadChunks(casc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 
 	casc = procs.Cascade{nop, errp}
 	chunks, err = testutil.ReadChunks(casc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 
 	casc = procs.Cascade{errp}
 	chunks, err = testutil.ReadChunks(casc.Process(c))
 	assert.Equal(t, someErr, err)
-	assert.Equal(t, []scat.Chunk{c, c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c, c}, chunks)
 
 	casc = procs.Cascade{errp, nop}
 	chunks, err = testutil.ReadChunks(casc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 }
 
 func TestCascadeFinish(t *testing.T) {

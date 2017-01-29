@@ -13,11 +13,11 @@ import (
 )
 
 func TestConcur(t *testing.T) {
-	a := procs.InplaceFunc(func(c scat.Chunk) error {
+	a := procs.InplaceFunc(func(c *scat.Chunk) error {
 		time.Sleep(20 * time.Millisecond)
 		return nil
 	})
-	b := procs.InplaceFunc(func(c scat.Chunk) error {
+	b := procs.InplaceFunc(func(c *scat.Chunk) error {
 		time.Sleep(30 * time.Millisecond)
 		return nil
 	})
@@ -36,7 +36,7 @@ func TestConcur(t *testing.T) {
 	start := time.Now()
 	chunks, err := testutil.ReadChunks(conc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []scat.Chunk{c, c, c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c, c, c}, chunks)
 	elapsed := time.Now().Sub(start)
 	assert.True(t, elapsed > 20*time.Millisecond)
 	assert.True(t, elapsed < 65*time.Millisecond)
@@ -47,7 +47,7 @@ type testDynProcer struct {
 	err   error
 }
 
-func (dynp testDynProcer) Procs(scat.Chunk) ([]procs.Proc, error) {
+func (dynp testDynProcer) Procs(*scat.Chunk) ([]procs.Proc, error) {
 	return dynp.procs, dynp.err
 }
 

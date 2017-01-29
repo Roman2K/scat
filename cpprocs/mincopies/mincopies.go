@@ -46,7 +46,7 @@ func calcDataUse(d scat.Data) (uint64, error) {
 	return uint64(sz.Size()), nil
 }
 
-func (mc *minCopies) Procs(c scat.Chunk) ([]procs.Proc, error) {
+func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 	copies := mc.reg.List(c.Hash())
 	copies.Mu.Lock()
 	dataUse, err := calcDataUse(c.Data())

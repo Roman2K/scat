@@ -10,7 +10,7 @@ type Chain []Proc
 
 var _ Proc = Chain{}
 
-func (chain Chain) Process(c scat.Chunk) <-chan Res {
+func (chain Chain) Process(c *scat.Chunk) <-chan Res {
 	procs := chain
 	enders := chain.endProcs()
 	if len(enders) > 0 {
@@ -78,15 +78,15 @@ func process(out chan<- Res, in <-chan Res, proc Proc) {
 }
 
 type endCallProc struct {
-	chunk  scat.Chunk
+	chunk  *scat.Chunk
 	enders []EndProc
 }
 
-func (ecp endCallProc) Process(c scat.Chunk) <-chan Res {
+func (ecp endCallProc) Process(c *scat.Chunk) <-chan Res {
 	return InplaceFunc(ecp.process).Process(c)
 }
 
-func (ecp endCallProc) process(final scat.Chunk) (err error) {
+func (ecp endCallProc) process(final *scat.Chunk) (err error) {
 	for _, ender := range ecp.enders {
 		err = ender.ProcessFinal(ecp.chunk, final)
 		if err != nil {

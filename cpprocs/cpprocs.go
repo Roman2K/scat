@@ -48,7 +48,7 @@ func (cp *copier) Ls() ([]LsEntry, error) {
 	return cp.lser.Ls()
 }
 
-func (cp *copier) Process(c scat.Chunk) <-chan procs.Res {
+func (cp *copier) Process(c *scat.Chunk) <-chan procs.Res {
 	return cp.proc.Process(c)
 }
 

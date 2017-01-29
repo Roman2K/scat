@@ -11,7 +11,7 @@ import (
 	"scat/procs"
 )
 
-func appendData(c scat.Chunk, b byte) (scat.Chunk, error) {
+func appendData(c *scat.Chunk, b byte) (*scat.Chunk, error) {
 	bytes, err := c.Data().Bytes()
 	if err != nil {
 		return nil, err
@@ -20,10 +20,10 @@ func appendData(c scat.Chunk, b byte) (scat.Chunk, error) {
 }
 
 func TestChain(t *testing.T) {
-	a := procs.ChunkFunc(func(c scat.Chunk) (scat.Chunk, error) {
+	a := procs.ChunkFunc(func(c *scat.Chunk) (*scat.Chunk, error) {
 		return appendData(c, 'a')
 	})
-	b := procs.ChunkFunc(func(c scat.Chunk) (scat.Chunk, error) {
+	b := procs.ChunkFunc(func(c *scat.Chunk) (*scat.Chunk, error) {
 		return appendData(c, 'b')
 	})
 	chain := procs.Chain{a, b}
@@ -38,30 +38,30 @@ func TestChain(t *testing.T) {
 }
 
 func TestChainEndProc(t *testing.T) {
-	finals := make(map[scat.Chunk][]int)
-	ends := make(map[scat.Chunk][]int)
+	finals := make(map[*scat.Chunk][]int)
+	ends := make(map[*scat.Chunk][]int)
 	mu := sync.Mutex{}
 	a := enderProc{
-		proc: procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
+		proc: procs.ProcFunc(func(*scat.Chunk) <-chan procs.Res {
 			ch := make(chan procs.Res, 1)
 			defer close(ch)
 			ch <- procs.Res{Chunk: scat.NewChunk(11, nil)}
 			return ch
 		}),
-		onFinal: func(c, final scat.Chunk) error {
+		onFinal: func(c, final *scat.Chunk) error {
 			mu.Lock()
 			defer mu.Unlock()
 			finals[c] = append(finals[c], final.Num())
 			return nil
 		},
-		onEnd: func(c scat.Chunk) error {
+		onEnd: func(c *scat.Chunk) error {
 			mu.Lock()
 			defer mu.Unlock()
 			ends[c] = append(ends[c], finals[c]...)
 			return nil
 		},
 	}
-	b := procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
+	b := procs.ProcFunc(func(*scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 2)
 		defer close(ch)
 		ch <- procs.Res{Chunk: scat.NewChunk(22, nil)}
@@ -86,27 +86,27 @@ func TestChainErrRecovery(t *testing.T) {
 		okCount = 0
 		recovered = recovered[:0]
 	}
-	okp := procs.InplaceFunc(func(scat.Chunk) error {
+	okp := procs.InplaceFunc(func(*scat.Chunk) error {
 		okCount++
 		return nil
 	})
-	errp := procs.InplaceFunc(func(scat.Chunk) error {
+	errp := procs.InplaceFunc(func(*scat.Chunk) error {
 		return someErr
 	})
-	errpNoChunk := procs.ProcFunc(func(scat.Chunk) <-chan procs.Res {
+	errpNoChunk := procs.ProcFunc(func(*scat.Chunk) <-chan procs.Res {
 		ch := make(chan procs.Res, 1)
 		defer close(ch)
 		ch <- procs.Res{Err: someErr}
 		return ch
 	})
-	recover := errProcFunc(func(c scat.Chunk, err error) <-chan procs.Res {
+	recover := errProcFunc(func(c *scat.Chunk, err error) <-chan procs.Res {
 		ch := make(chan procs.Res, 1)
 		defer close(ch)
 		ch <- procs.Res{Chunk: c}
 		recovered = append(recovered, err)
 		return ch
 	})
-	recoverFail := errProcFunc(func(c scat.Chunk, err error) <-chan procs.Res {
+	recoverFail := errProcFunc(func(c *scat.Chunk, err error) <-chan procs.Res {
 		ch := make(chan procs.Res, 1)
 		defer close(ch)
 		ch <- procs.Res{Chunk: c, Err: err}
@@ -148,8 +148,8 @@ func TestChainErrRecovery(t *testing.T) {
 
 type enderProc struct {
 	proc    procs.Proc
-	onFinal func(scat.Chunk, scat.Chunk) error
-	onEnd   func(scat.Chunk) error
+	onFinal func(*scat.Chunk, *scat.Chunk) error
+	onEnd   func(*scat.Chunk) error
 }
 
 type ender interface {
@@ -159,7 +159,7 @@ type ender interface {
 
 var _ ender = enderProc{}
 
-func (e enderProc) Process(c scat.Chunk) <-chan procs.Res {
+func (e enderProc) Process(c *scat.Chunk) <-chan procs.Res {
 	return e.proc.Process(c)
 }
 
@@ -167,11 +167,11 @@ func (e enderProc) Finish() error {
 	return e.proc.Finish()
 }
 
-func (e enderProc) ProcessFinal(c, final scat.Chunk) error {
+func (e enderProc) ProcessFinal(c, final *scat.Chunk) error {
 	return e.onFinal(c, final)
 }
 
-func (e enderProc) ProcessEnd(c scat.Chunk) error {
+func (e enderProc) ProcessEnd(c *scat.Chunk) error {
 	return e.onEnd(c)
 }
 
@@ -180,17 +180,17 @@ type recoverProc interface {
 	procs.ErrProc
 }
 
-type errProcFunc func(scat.Chunk, error) <-chan procs.Res
+type errProcFunc func(*scat.Chunk, error) <-chan procs.Res
 
-var _ recoverProc = errProcFunc(func(scat.Chunk, error) <-chan procs.Res {
+var _ recoverProc = errProcFunc(func(*scat.Chunk, error) <-chan procs.Res {
 	return nil
 })
 
-func (fn errProcFunc) Process(c scat.Chunk) <-chan procs.Res {
+func (fn errProcFunc) Process(c *scat.Chunk) <-chan procs.Res {
 	return procs.Nop.Process(c)
 }
 
-func (fn errProcFunc) ProcessErr(c scat.Chunk, err error) <-chan procs.Res {
+func (fn errProcFunc) ProcessErr(c *scat.Chunk, err error) <-chan procs.Res {
 	return fn(c, err)
 }
 

@@ -10,7 +10,7 @@ func NewDiscardChunks(proc Proc) Proc {
 	return discardChunks{proc: proc}
 }
 
-func (dc discardChunks) Process(c scat.Chunk) <-chan Res {
+func (dc discardChunks) Process(c *scat.Chunk) <-chan Res {
 	out := make(chan Res)
 	ch := dc.proc.Process(c)
 	go func() {

@@ -31,7 +31,7 @@ func TestMinCopies(t *testing.T) {
 	called := []string{}
 	errs := map[string]error{}
 	testProc := func(id string) procs.Proc {
-		return procs.InplaceFunc(func(scat.Chunk) error {
+		return procs.InplaceFunc(func(*scat.Chunk) error {
 			called = append(called, id)
 			return errs[id]
 		})
@@ -80,7 +80,7 @@ func TestMinCopies(t *testing.T) {
 		assert.NoError(t, err)
 		chunks, err := processByAll(c, procs)
 		assert.Equal(t, 1, len(chunks))
-		assert.Equal(t, []scat.Chunk{c}, chunks)
+		assert.Equal(t, []*scat.Chunk{c}, chunks)
 		assert.Equal(t, expectedCalls, called)
 		return err
 	}
@@ -147,7 +147,7 @@ func TestMinCopies(t *testing.T) {
 func TestMinCopiesNegativeMissing(t *testing.T) {
 	called := []string{}
 	testProc := func(id string) procs.Proc {
-		return procs.InplaceFunc(func(scat.Chunk) error {
+		return procs.InplaceFunc(func(*scat.Chunk) error {
 			called = append(called, id)
 			return nil
 		})
@@ -198,8 +198,8 @@ func TestFinishError(t *testing.T) {
 	assert.Equal(t, someErr, err)
 }
 
-func processByAll(c scat.Chunk, procs []procs.Proc) (
-	all []scat.Chunk, err error,
+func processByAll(c *scat.Chunk, procs []procs.Proc) (
+	all []*scat.Chunk, err error,
 ) {
 	for _, proc := range procs {
 		chunks, e := testutil.ReadChunks(proc.Process(c))
@@ -263,7 +263,7 @@ func ids(s []cpprocs.Copier) (ids []string) {
 	return
 }
 
-func chunkWithHash(h checksum.Hash) (c scat.Chunk) {
+func chunkWithHash(h checksum.Hash) (c *scat.Chunk) {
 	c = scat.NewChunk(0, nil)
 	c.SetHash(h)
 	return

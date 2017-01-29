@@ -12,7 +12,7 @@ type scanner struct {
 	r       io.Reader
 	hashBuf []byte
 	num     int
-	chunk   scat.Chunk
+	chunk   *scat.Chunk
 	err     error
 }
 
@@ -58,7 +58,7 @@ func (s *scanner) scan() (err error) {
 	return
 }
 
-func (s *scanner) Chunk() scat.Chunk {
+func (s *scanner) Chunk() *scat.Chunk {
 	return s.chunk
 }
 

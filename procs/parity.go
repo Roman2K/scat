@@ -32,7 +32,7 @@ func (p *parity) Unproc() Proc {
 	return ChunkFunc(p.unprocess)
 }
 
-func (p *parity) process(c scat.Chunk) <-chan Res {
+func (p *parity) process(c *scat.Chunk) <-chan Res {
 	ch := make(chan Res)
 	shards, err := p.split(c)
 	go func() {
@@ -49,7 +49,7 @@ func (p *parity) process(c scat.Chunk) <-chan Res {
 	return ch
 }
 
-func (p *parity) split(c scat.Chunk) (shards [][]byte, err error) {
+func (p *parity) split(c *scat.Chunk) (shards [][]byte, err error) {
 	bytes, err := c.Data().Bytes()
 	if err != nil {
 		return
@@ -62,13 +62,13 @@ func (p *parity) split(c scat.Chunk) (shards [][]byte, err error) {
 	return
 }
 
-func (p *parity) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
+func (p *parity) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 	data, err := p.join(c)
 	new = c.WithData(scat.BytesData(data))
 	return
 }
 
-func (p *parity) join(c scat.Chunk) (joined []byte, err error) {
+func (p *parity) join(c *scat.Chunk) (joined []byte, err error) {
 	// Shard chunks
 	chunks, err := getGroup(c, p.nshards)
 	if err != nil {
@@ -118,8 +118,8 @@ func (p *parity) join(c scat.Chunk) (joined []byte, err error) {
 	return
 }
 
-func getGroup(c scat.Chunk, size int) (chunks []scat.Chunk, err error) {
-	chunks, ok := c.Meta().Get("group").([]scat.Chunk)
+func getGroup(c *scat.Chunk, size int) (chunks []*scat.Chunk, err error) {
+	chunks, ok := c.Meta().Get("group").([]*scat.Chunk)
 	if !ok {
 		err = errors.New("missing group")
 		return
@@ -131,7 +131,7 @@ func getGroup(c scat.Chunk, size int) (chunks []scat.Chunk, err error) {
 	return
 }
 
-func getIntegrityCheck(c scat.Chunk) (bool, error) {
+func getIntegrityCheck(c *scat.Chunk) (bool, error) {
 	err, ok := c.Meta().Get("err").(error)
 	if !ok {
 		return true, nil

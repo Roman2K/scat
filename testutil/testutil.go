@@ -6,7 +6,7 @@ import (
 	"scat/procs"
 )
 
-func ReadChunks(ch <-chan procs.Res) (chunks []scat.Chunk, err error) {
+func ReadChunks(ch <-chan procs.Res) (chunks []*scat.Chunk, err error) {
 	for res := range ch {
 		if e := res.Err; e != nil && err == nil {
 			err = e
@@ -17,9 +17,9 @@ func ReadChunks(ch <-chan procs.Res) (chunks []scat.Chunk, err error) {
 }
 
 type SliceIter struct {
-	S     []scat.Chunk
+	S     []*scat.Chunk
 	i     int
-	chunk scat.Chunk
+	chunk *scat.Chunk
 }
 
 var _ scat.ChunkIter = &SliceIter{}
@@ -33,7 +33,7 @@ func (it *SliceIter) Next() bool {
 	return false
 }
 
-func (it *SliceIter) Chunk() scat.Chunk {
+func (it *SliceIter) Chunk() *scat.Chunk {
 	return it.chunk
 }
 
@@ -55,7 +55,7 @@ type FinishErrProc struct {
 
 var _ procs.Proc = FinishErrProc{}
 
-func (p FinishErrProc) Process(scat.Chunk) <-chan procs.Res {
+func (p FinishErrProc) Process(*scat.Chunk) <-chan procs.Res {
 	panic("Process() not implemented")
 }
 

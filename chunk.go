@@ -9,18 +9,7 @@ import (
 	"scat/checksum"
 )
 
-type Chunk interface {
-	Num() int
-	Data() Data
-	WithData(Data) Chunk
-	Hash() checksum.Hash
-	SetHash(checksum.Hash)
-	TargetSize() int
-	SetTargetSize(int)
-	Meta() Meta
-}
-
-type chunk struct {
+type Chunk struct {
 	num        int
 	data       Data
 	hash       checksum.Hash
@@ -28,25 +17,25 @@ type chunk struct {
 	meta       *meta
 }
 
-func NewChunk(num int, data Data) Chunk {
+func NewChunk(num int, data Data) *Chunk {
 	if data == nil {
 		data = BytesData(nil)
 	}
-	return &chunk{
+	return &Chunk{
 		num:  num,
 		data: data,
 	}
 }
 
-func (c *chunk) Num() int {
+func (c *Chunk) Num() int {
 	return c.num
 }
 
-func (c *chunk) Data() Data {
+func (c *Chunk) Data() Data {
 	return c.data
 }
 
-func (c *chunk) WithData(d Data) Chunk {
+func (c *Chunk) WithData(d Data) *Chunk {
 	dup := *c
 	dup.data = d
 	if dup.meta != nil {
@@ -55,23 +44,23 @@ func (c *chunk) WithData(d Data) Chunk {
 	return &dup
 }
 
-func (c *chunk) Hash() checksum.Hash {
+func (c *Chunk) Hash() checksum.Hash {
 	return c.hash
 }
 
-func (c *chunk) SetHash(h checksum.Hash) {
+func (c *Chunk) SetHash(h checksum.Hash) {
 	c.hash = h
 }
 
-func (c *chunk) TargetSize() int {
+func (c *Chunk) TargetSize() int {
 	return c.targetSize
 }
 
-func (c *chunk) SetTargetSize(s int) {
+func (c *Chunk) SetTargetSize(s int) {
 	c.targetSize = s
 }
 
-func (c *chunk) Meta() Meta {
+func (c *Chunk) Meta() Meta {
 	if c.meta == nil {
 		c.meta = newMeta()
 	}

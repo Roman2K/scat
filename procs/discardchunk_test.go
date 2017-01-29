@@ -12,7 +12,7 @@ import (
 )
 
 func TestDiscardChunks(t *testing.T) {
-	proc := procs.InplaceFunc(func(scat.Chunk) error {
+	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return nil
 	})
 	dc := procs.NewDiscardChunks(proc)
@@ -24,13 +24,13 @@ func TestDiscardChunks(t *testing.T) {
 
 func TestDiscardChunksError(t *testing.T) {
 	someErr := errors.New("some err")
-	proc := procs.InplaceFunc(func(scat.Chunk) error {
+	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return someErr
 	})
 	dc := procs.NewDiscardChunks(proc)
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(dc.Process(c))
-	assert.Equal(t, []scat.Chunk{c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 	assert.Equal(t, someErr, err)
 }
 

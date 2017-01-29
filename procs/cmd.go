@@ -13,10 +13,10 @@ var (
 	_ Proc = CmdOutFunc(nil)
 )
 
-type CmdFunc func(scat.Chunk) (*exec.Cmd, error)
+type CmdFunc func(*scat.Chunk) (*exec.Cmd, error)
 
-func (fn CmdFunc) Process(c scat.Chunk) <-chan Res {
-	outFn := CmdOutFunc(func(scat.Chunk) (cmd *exec.Cmd, err error) {
+func (fn CmdFunc) Process(c *scat.Chunk) <-chan Res {
+	outFn := CmdOutFunc(func(*scat.Chunk) (cmd *exec.Cmd, err error) {
 		cmd, err = fn(c)
 		if err != nil {
 			return
@@ -33,11 +33,11 @@ func (CmdFunc) Finish() error {
 
 type CmdInFunc CmdFunc
 
-func (fn CmdInFunc) Process(c scat.Chunk) <-chan Res {
+func (fn CmdInFunc) Process(c *scat.Chunk) <-chan Res {
 	return InplaceFunc(fn.process).Process(c)
 }
 
-func (fn CmdInFunc) process(c scat.Chunk) (err error) {
+func (fn CmdInFunc) process(c *scat.Chunk) (err error) {
 	cmd, err := fn(c)
 	if err != nil {
 		return
@@ -52,11 +52,11 @@ func (CmdInFunc) Finish() error {
 
 type CmdOutFunc CmdFunc
 
-func (fn CmdOutFunc) Process(c scat.Chunk) <-chan Res {
+func (fn CmdOutFunc) Process(c *scat.Chunk) <-chan Res {
 	return ChunkFunc(fn.process).Process(c)
 }
 
-func (fn CmdOutFunc) process(c scat.Chunk) (new scat.Chunk, err error) {
+func (fn CmdOutFunc) process(c *scat.Chunk) (new *scat.Chunk, err error) {
 	cmd, err := fn(c)
 	if err != nil {
 		return

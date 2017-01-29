@@ -400,7 +400,7 @@ func newArgCmdProc(getProc func(procs.CmdFunc) procs.Proc) ap.Parser {
 			for i, a := range icmdArgs {
 				cmdArgs[i] = a.(string)
 			}
-			newCmd := func(scat.Chunk) (*exec.Cmd, error) {
+			newCmd := func(*scat.Chunk) (*exec.Cmd, error) {
 				return exec.Command(name, cmdArgs...), nil
 			}
 			fn := procs.CmdFunc(newCmd)

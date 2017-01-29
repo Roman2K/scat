@@ -13,7 +13,7 @@ import (
 )
 
 func testChunkNums(t *testing.T, proc procs.Proc, inChunks int) {
-	newChunk := func(num int) (c scat.Chunk) {
+	newChunk := func(num int) (c *scat.Chunk) {
 		data := scat.BytesData{'a'}
 		c = scat.NewChunk(num, data)
 		c.SetHash(checksum.SumBytes(data))

@@ -14,7 +14,7 @@ func NewWriterTo(w io.Writer) Proc {
 	return InplaceFunc(writerTo{w: w}.process)
 }
 
-func (wt writerTo) process(c scat.Chunk) (err error) {
+func (wt writerTo) process(c *scat.Chunk) (err error) {
 	_, err = io.Copy(wt.w, c.Data().Reader())
 	return
 }

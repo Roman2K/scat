@@ -14,7 +14,7 @@ type pool struct {
 }
 
 type task struct {
-	chunk scat.Chunk
+	chunk *scat.Chunk
 	ch    chan<- Res
 }
 
@@ -44,7 +44,7 @@ func NewPool(size int, proc Proc) Proc {
 	}
 }
 
-func (p *pool) Process(c scat.Chunk) <-chan Res {
+func (p *pool) Process(c *scat.Chunk) <-chan Res {
 	ch := make(chan Res)
 	p.tasks <- task{chunk: c, ch: ch}
 	return ch

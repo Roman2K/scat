@@ -25,7 +25,7 @@ func (gp gzipProc) Unproc() Proc {
 	return ChunkFunc(gp.unprocess)
 }
 
-func (gzipProc) process(c scat.Chunk) (new scat.Chunk, err error) {
+func (gzipProc) process(c *scat.Chunk) (new *scat.Chunk, err error) {
 	buf := &bytes.Buffer{}
 	w := gzip.NewWriter(buf)
 	_, err = io.Copy(w, c.Data().Reader())
@@ -37,7 +37,7 @@ func (gzipProc) process(c scat.Chunk) (new scat.Chunk, err error) {
 	return
 }
 
-func (gzipProc) unprocess(c scat.Chunk) (new scat.Chunk, err error) {
+func (gzipProc) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 	r, err := gzip.NewReader(c.Data().Reader())
 	if err != nil {
 		return

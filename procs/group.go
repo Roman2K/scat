@@ -11,7 +11,7 @@ import (
 
 type group struct {
 	size      int
-	growing   map[int][]scat.Chunk
+	growing   map[int][]*scat.Chunk
 	growingMu sync.Mutex
 }
 
@@ -27,16 +27,16 @@ func NewGroup(size int) Group {
 	}
 	return &group{
 		size:    size,
-		growing: make(map[int][]scat.Chunk),
+		growing: make(map[int][]*scat.Chunk),
 	}
 }
 
-func (g *group) ProcessErr(c scat.Chunk, err error) <-chan Res {
+func (g *group) ProcessErr(c *scat.Chunk, err error) <-chan Res {
 	c.Meta().Set("err", err)
 	return g.Process(c)
 }
 
-func (g *group) Process(c scat.Chunk) <-chan Res {
+func (g *group) Process(c *scat.Chunk) <-chan Res {
 	head, grouped, ok, err := g.build(c)
 	ch := make(chan Res, 1)
 	defer close(ch)
@@ -51,14 +51,14 @@ func (g *group) Process(c scat.Chunk) <-chan Res {
 	return ch
 }
 
-func (g *group) build(c scat.Chunk) (
-	head int, chunks []scat.Chunk, ok bool, err error,
+func (g *group) build(c *scat.Chunk) (
+	head int, chunks []*scat.Chunk, ok bool, err error,
 ) {
 	g.growingMu.Lock()
 	defer g.growingMu.Unlock()
 	head = c.Num() / g.size
 	if _, ok := g.growing[head]; !ok {
-		g.growing[head] = make([]scat.Chunk, 0, g.size)
+		g.growing[head] = make([]*scat.Chunk, 0, g.size)
 	}
 	chunks = append(g.growing[head], c)
 	have := len(chunks)
@@ -84,7 +84,7 @@ func (g *group) build(c scat.Chunk) (
 	return
 }
 
-func contiguous(chunks []scat.Chunk) bool {
+func contiguous(chunks []*scat.Chunk) bool {
 	for i := 1; i < len(chunks); i++ {
 		if chunks[i].Num() != chunks[i-1].Num()+1 {
 			return false

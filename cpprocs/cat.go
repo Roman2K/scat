@@ -24,7 +24,7 @@ func (cat cat) Proc() procs.Proc {
 	return procs.CmdInFunc(cat.procCmd)
 }
 
-func (cat cat) procCmd(c scat.Chunk) (cmd *exec.Cmd, err error) {
+func (cat cat) procCmd(c *scat.Chunk) (cmd *exec.Cmd, err error) {
 	path := cat.filePath(c.Hash())
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -39,7 +39,7 @@ func (cat cat) Unproc() procs.Proc {
 	return procs.CmdOutFunc(cat.unprocCmd)
 }
 
-func (cat cat) unprocCmd(c scat.Chunk) (*exec.Cmd, error) {
+func (cat cat) unprocCmd(c *scat.Chunk) (*exec.Cmd, error) {
 	path := cat.filePath(c.Hash())
 	return exec.Command("cat", path), nil
 }

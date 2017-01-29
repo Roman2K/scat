@@ -28,7 +28,7 @@ func NewMultiReader(copiers []Copier) (proc procs.Proc, err error) {
 	return
 }
 
-func (mrd multireader) Process(c scat.Chunk) <-chan procs.Res {
+func (mrd multireader) Process(c *scat.Chunk) <-chan procs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
 	copiers := make([]Copier, len(owners))
 	for i, o := range owners {

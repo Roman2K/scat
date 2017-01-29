@@ -193,7 +193,7 @@ func sum(data string) checksum.Hash {
 	return checksum.SumBytes([]byte(data))
 }
 
-func testIndexChunk(num, targetSize int, hash checksum.Hash) (c scat.Chunk) {
+func testIndexChunk(num, targetSize int, hash checksum.Hash) (c *scat.Chunk) {
 	c = scat.NewChunk(num, nil)
 	c.SetTargetSize(targetSize)
 	c.SetHash(hash)

@@ -25,7 +25,7 @@ func (rc rclone) Proc() procs.Proc {
 	return procs.NewPathCmdIn(rc.procCmd, rc.tmp)
 }
 
-func (rc rclone) procCmd(_ scat.Chunk, path string) (*exec.Cmd, error) {
+func (rc rclone) procCmd(_ *scat.Chunk, path string) (*exec.Cmd, error) {
 	cmd := exec.Command("rclone", "copy", path, rc.remote, "-q")
 	return cmd, nil
 }
@@ -34,7 +34,7 @@ func (rc rclone) Unproc() procs.Proc {
 	return procs.CmdOutFunc(rc.unprocess)
 }
 
-func (rc rclone) unprocess(c scat.Chunk) (*exec.Cmd, error) {
+func (rc rclone) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
 	remote := fmt.Sprintf("%s/%x", rc.remote, c.Hash())
 	cmd := exec.Command("rclone", "cat", remote)
 	return cmd, nil

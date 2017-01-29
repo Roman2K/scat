@@ -15,21 +15,21 @@ var (
 var Nop Proc
 
 func init() {
-	Nop = InplaceFunc(func(scat.Chunk) error { return nil })
+	Nop = InplaceFunc(func(*scat.Chunk) error { return nil })
 }
 
 type Proc interface {
-	Process(scat.Chunk) <-chan Res
+	Process(*scat.Chunk) <-chan Res
 	Finish() error
 }
 
 type EndProc interface {
-	ProcessFinal(scat.Chunk, scat.Chunk) error
-	ProcessEnd(scat.Chunk) error
+	ProcessFinal(*scat.Chunk, *scat.Chunk) error
+	ProcessEnd(*scat.Chunk) error
 }
 
 type ErrProc interface {
-	ProcessErr(scat.Chunk, error) <-chan Res
+	ProcessErr(*scat.Chunk, error) <-chan Res
 }
 
 type WrapperProc interface {
@@ -49,7 +49,7 @@ func underlying(p Proc) Proc {
 }
 
 type Res struct {
-	Chunk scat.Chunk
+	Chunk *scat.Chunk
 	Err   error
 }
 
@@ -67,11 +67,11 @@ type ProcUnprocer interface {
 }
 
 type DynProcer interface {
-	Procs(scat.Chunk) ([]Proc, error)
+	Procs(*scat.Chunk) ([]Proc, error)
 	Finish() error
 }
 
-func Process(proc Proc, chunk scat.Chunk) error {
+func Process(proc Proc, chunk *scat.Chunk) error {
 	defer proc.Finish()
 	for res := range proc.Process(chunk) {
 		if res.Err != nil {

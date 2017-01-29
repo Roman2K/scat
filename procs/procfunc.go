@@ -9,9 +9,9 @@ var (
 	_ Proc = ChunkIterFunc(nil)
 )
 
-type ProcFunc func(scat.Chunk) <-chan Res
+type ProcFunc func(*scat.Chunk) <-chan Res
 
-func (fn ProcFunc) Process(c scat.Chunk) <-chan Res {
+func (fn ProcFunc) Process(c *scat.Chunk) <-chan Res {
 	return fn(c)
 }
 
@@ -19,9 +19,9 @@ func (ProcFunc) Finish() error {
 	return nil
 }
 
-type InplaceFunc func(scat.Chunk) error
+type InplaceFunc func(*scat.Chunk) error
 
-func (fn InplaceFunc) Process(c scat.Chunk) <-chan Res {
+func (fn InplaceFunc) Process(c *scat.Chunk) <-chan Res {
 	ch := make(chan Res, 1)
 	defer close(ch)
 	err := fn(c)
@@ -33,9 +33,9 @@ func (InplaceFunc) Finish() error {
 	return nil
 }
 
-type ChunkFunc func(scat.Chunk) (scat.Chunk, error)
+type ChunkFunc func(*scat.Chunk) (*scat.Chunk, error)
 
-func (fn ChunkFunc) Process(c scat.Chunk) <-chan Res {
+func (fn ChunkFunc) Process(c *scat.Chunk) <-chan Res {
 	ch := make(chan Res, 1)
 	defer close(ch)
 	if new, err := fn(c); err != nil {
@@ -50,9 +50,9 @@ func (ChunkFunc) Finish() error {
 	return nil
 }
 
-type ChunkIterFunc func(scat.Chunk) scat.ChunkIter
+type ChunkIterFunc func(*scat.Chunk) scat.ChunkIter
 
-func (fn ChunkIterFunc) Process(c scat.Chunk) <-chan Res {
+func (fn ChunkIterFunc) Process(c *scat.Chunk) <-chan Res {
 	iter := fn(c)
 	ch := make(chan Res)
 	go func() {

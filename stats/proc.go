@@ -23,7 +23,7 @@ func (p *counterProc) Underlying() procs.Proc {
 	return p.proc
 }
 
-func (p *counterProc) Process(c scat.Chunk) <-chan procs.Res {
+func (p *counterProc) Process(c *scat.Chunk) <-chan procs.Res {
 	out := make(chan procs.Res)
 	cnt := p.statsd.Counter(p.id)
 	cnt.addInst(1)
