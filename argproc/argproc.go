@@ -189,15 +189,6 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 		"uparity": newArgParity(getUnproc),
 		"gzip":    newArgGzip(getProc),
 		"ugzip":   newArgGzip(getUnproc),
-		"mutex": ap.ArgLambda{
-			Args: ap.Args{argProc},
-			Run: func(args []interface{}) (interface{}, error) {
-				var (
-					proc = args[0].(procs.Proc)
-				)
-				return procs.NewMutex(proc), nil
-			},
-		},
 		"sort": ap.ArgLambda{
 			Run: func([]interface{}) (interface{}, error) {
 				return procs.NewSort(), nil

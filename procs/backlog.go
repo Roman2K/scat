@@ -41,7 +41,3 @@ func (bl backlog) Finish() (err error) {
 	}
 	return
 }
-
-func NewMutex(proc Proc) Proc {
-	return NewBacklog(1, proc)
-}

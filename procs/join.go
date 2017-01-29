@@ -5,5 +5,5 @@ import (
 )
 
 func NewJoin(w io.Writer) Proc {
-	return NewMutex(Chain{NewSort(), NewWriterTo(w)})
+	return NewBacklog(1, Chain{NewSort(), NewWriterTo(w)})
 }
