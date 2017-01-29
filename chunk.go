@@ -14,7 +14,7 @@ type Chunk struct {
 	data       Data
 	hash       checksum.Hash
 	targetSize int
-	meta       *meta
+	meta       *Meta
 }
 
 func NewChunk(num int, data Data) *Chunk {
@@ -60,42 +60,37 @@ func (c *Chunk) SetTargetSize(s int) {
 	c.targetSize = s
 }
 
-func (c *Chunk) Meta() Meta {
+func (c *Chunk) Meta() *Meta {
 	if c.meta == nil {
 		c.meta = newMeta()
 	}
 	return c.meta
 }
 
-type Meta interface {
-	Get(interface{}) interface{}
-	Set(_, _ interface{})
-}
-
-type meta struct {
+type Meta struct {
 	m  metaMap
 	mu sync.RWMutex
 }
 
 type metaMap map[interface{}]interface{}
 
-func newMeta() *meta {
-	return &meta{m: make(metaMap)}
+func newMeta() *Meta {
+	return &Meta{m: make(metaMap)}
 }
 
-func (m *meta) Get(k interface{}) interface{} {
+func (m *Meta) Get(k interface{}) interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.m[k]
 }
 
-func (m *meta) Set(k, v interface{}) {
+func (m *Meta) Set(k, v interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.m[k] = v
 }
 
-func (m *meta) dup() (dup *meta) {
+func (m *Meta) dup() (dup *Meta) {
 	dup = newMeta()
 	m.mu.RLock()
 	defer m.mu.RUnlock()
