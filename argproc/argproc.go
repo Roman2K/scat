@@ -24,15 +24,21 @@ func NewArgChain(argProc ap.Parser) ap.Parser {
 	return ap.ArgFilter{
 		Parser: ap.ArgVariadic{argProc},
 		Filter: func(val interface{}) (interface{}, error) {
-			chain := newChain(val.([]interface{}))
-			if len(chain) == 1 {
-				if c, ok := chain[0].(procs.Chain); ok {
-					return c, nil
-				}
+			slice := procSlice(val.([]interface{}))
+			if len(slice) == 1 {
+				return slice[0], nil
 			}
-			return chain, nil
+			return procs.Chain(slice), nil
 		},
 	}
+}
+
+func procSlice(args []interface{}) (slice []procs.Proc) {
+	slice = make([]procs.Proc, len(args))
+	for i, p := range args {
+		slice[i] = p.(procs.Proc)
+	}
+	return
 }
 
 type builder struct {
@@ -156,7 +162,7 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 		"chain": ap.ArgLambda{
 			Args: ap.ArgVariadic{argProc},
 			Run: func(args []interface{}) (interface{}, error) {
-				return newChain(args), nil
+				return procs.Chain(procSlice(args)), nil
 			},
 		},
 		"concur": ap.ArgLambda{
@@ -364,14 +370,6 @@ func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
 		cnt.Quota.Init = false
 	}()
 	return r.lser.Ls()
-}
-
-func newChain(args []interface{}) (chain procs.Chain) {
-	chain = make(procs.Chain, len(args))
-	for i, p := range args {
-		chain[i] = p.(procs.Proc)
-	}
-	return
 }
 
 func newArgParity(getProc getProcFn) ap.Parser {
