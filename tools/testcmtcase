@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+find . -type f -name '*_test.go' -not -path './vendor/*' \
+  | exec xargs ag '// [A-Z]'
