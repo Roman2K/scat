@@ -4,8 +4,7 @@ type StrPart []int
 
 func (part StrPart) Split(str string) (parts []string) {
 	parts = make([]string, len(part))
-	offset := 0
-	nchars := len(str)
+	nchars, offset := len(str), 0
 	for i, n := range part {
 		if left := nchars - offset; n > left {
 			n = left
