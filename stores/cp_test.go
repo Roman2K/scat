@@ -26,8 +26,8 @@ func TestCp(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	testNest := func(nest stores.StrPart, expectedPath string) {
-		cp := stores.Cp{Dir: dir, Nest: nest}
+	testPart := func(part stores.StrPart, expectedPath string) {
+		cp := stores.Cp{Dir: dir, Part: part}
 
 		// write
 		c := scat.NewChunk(0, scat.BytesData(data))
@@ -50,9 +50,9 @@ func TestCp(t *testing.T) {
 		assert.Equal(t, data, string(b))
 	}
 
-	testNest(nil, filepath.Join(dir, hex))
-	testNest(stores.StrPart{2}, filepath.Join(dir, hex[:2], hex))
-	testNest(stores.StrPart{2, 3}, filepath.Join(dir, hex[:2], hex[2:5], hex))
+	testPart(nil, filepath.Join(dir, hex))
+	testPart(stores.StrPart{2}, filepath.Join(dir, hex[:2], hex))
+	testPart(stores.StrPart{2, 3}, filepath.Join(dir, hex[:2], hex[2:5], hex))
 }
 
 func TestCpProcInvalidDir(t *testing.T) {
@@ -112,7 +112,7 @@ func TestCpLs(t *testing.T) {
 	dir, err = ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	cp = stores.Cp{Dir: dir, Nest: stores.StrPart{1}}
+	cp = stores.Cp{Dir: dir, Part: stores.StrPart{1}}
 
 	// depth=1 files=0 chunkFiles=0
 	ls, err = cp.Ls()

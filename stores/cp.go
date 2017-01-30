@@ -14,7 +14,7 @@ import (
 
 type Cp struct {
 	Dir  string
-	Nest StrPart
+	Part StrPart
 }
 
 var _ Store = Cp{}
@@ -47,7 +47,7 @@ func (cp Cp) process(c *scat.Chunk) (err error) {
 func (cp Cp) path(c *scat.Chunk) string {
 	filename := fmt.Sprintf("%x", c.Hash())
 	parts := append(
-		append([]string{cp.Dir}, cp.Nest.Split(filename)...),
+		append([]string{cp.Dir}, cp.Part.Split(filename)...),
 		filename,
 	)
 	return filepath.Join(parts...)
@@ -64,7 +64,7 @@ func (cp Cp) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 }
 
 func (cp Cp) Ls() (entries []LsEntry, err error) {
-	parts := make([]string, len(cp.Nest))
+	parts := make([]string, len(cp.Part))
 	for i, n := 0, len(parts); i < n; i++ {
 		parts[i] = "*"
 	}
