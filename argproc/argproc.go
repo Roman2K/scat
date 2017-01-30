@@ -268,13 +268,18 @@ func (b builder) newArgStore() ap.ArgFn {
 				return stores.NewRclone(remote, b.tmp), nil
 			},
 		},
-		"cat": ap.ArgLambda{
-			Args: ap.Args{ap.ArgStr},
+		"cp": ap.ArgLambda{
+			Args: ap.Args{ap.ArgStr, ap.ArgVariadic{ap.ArgInt}},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
-					dir = args[0].(string)
+					dir     = args[0].(string)
+					nesting = args[1].([]interface{})
 				)
-				return stores.NewCat(dir), nil
+				part := make(stores.StrPart, len(nesting))
+				for i, n := range nesting {
+					part[i] = n.(int)
+				}
+				return stores.Cp{Dir: dir, Part: part}, nil
 			},
 		},
 	}

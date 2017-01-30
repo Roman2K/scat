@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	ErrMissingData     = errors.New("missing data")
 	ErrShort           = errors.New("missing final chunks")
 	ErrUnreturnedSlots = errors.New("unreturned slots left")
 )
