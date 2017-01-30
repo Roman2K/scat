@@ -46,8 +46,10 @@ func TestChunkWithData(t *testing.T) {
 
 func TestChunkWithDataNoMeta(t *testing.T) {
 	c := scat.NewChunk(9, nil)
-	// Doesn't panic, trying to access nil meta map mutex or something:
-	c.WithData(scat.BytesData("a"))
+	assert.NotPanics(t, func() {
+		// ...trying to access nil meta map mutex or something
+		c.WithData(scat.BytesData("a"))
+	})
 }
 
 func TestBytesData(t *testing.T) {
