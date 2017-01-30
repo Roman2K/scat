@@ -1,13 +1,17 @@
 package stores
 
 import (
+	"errors"
 	"fmt"
 	"os"
+
 	"scat"
 	"scat/concur"
-	"scat/stores/copies"
 	"scat/procs"
+	"scat/stores/copies"
 )
+
+var ErrMultiReaderNoneAvail = errors.New("no reader available")
 
 type multireader struct {
 	reg     *copies.Reg
@@ -43,6 +47,12 @@ func (mrd multireader) Process(c *scat.Chunk) <-chan procs.Res {
 				mrd.reg.RemoveOwner(cp)
 			}
 		})
+	}
+	if len(casc) == 0 {
+		ch := make(chan procs.Res, 1)
+		defer close(ch)
+		ch <- procs.Res{Err: ErrMultiReaderNoneAvail}
+		return ch
 	}
 	return casc.Process(c)
 }
