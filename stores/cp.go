@@ -1,20 +1,17 @@
 package stores
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"scat"
-	"scat/checksum"
 	"scat/procs"
 )
 
 type Cp struct {
-	Dir  string
-	Part StrPart
+	Dir Dir
 }
 
 var _ Store = Cp{}
@@ -24,7 +21,7 @@ func (cp Cp) Proc() procs.Proc {
 }
 
 func (cp Cp) process(c *scat.Chunk) (err error) {
-	path := cp.path(c)
+	path := cp.Dir.FullPath(c.Hash())
 	open := func() (io.WriteCloser, error) {
 		return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	}
@@ -44,59 +41,52 @@ func (cp Cp) process(c *scat.Chunk) (err error) {
 	return
 }
 
-func (cp Cp) path(c *scat.Chunk) string {
-	filename := fmt.Sprintf("%x", c.Hash())
-	parts := append(
-		append([]string{cp.Dir}, cp.Part.Split(filename)...),
-		filename,
-	)
-	return filepath.Join(parts...)
-}
-
 func (cp Cp) Unproc() procs.Proc {
 	return procs.ChunkFunc(cp.unprocess)
 }
 
 func (cp Cp) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
-	b, err := ioutil.ReadFile(cp.path(c))
+	path := cp.Dir.FullPath(c.Hash())
+	b, err := ioutil.ReadFile(path)
 	new = c.WithData(scat.BytesData(b))
 	return
 }
 
-func (cp Cp) Ls() (entries []LsEntry, err error) {
-	parts := make([]string, len(cp.Part))
-	for i, n := 0, len(parts); i < n; i++ {
-		parts[i] = "*"
-	}
-	pattern := filepath.Join(append([]string{cp.Dir}, parts...)...)
-	dirs, err := filepath.Glob(pattern)
-	if err != nil {
-		return
-	}
-	var (
-		buf   = make([]byte, checksum.Size)
-		entry LsEntry
-	)
-	for _, dir := range dirs {
-		files, err := ioutil.ReadDir(dir)
+func (cp Cp) Ls() ([]LsEntry, error) {
+	return cp.Dir.Ls(localLister{})
+}
+
+type localLister struct{}
+
+func (localLister) Ls(dir string, depth int) <-chan DirLsRes {
+	pattern := depthPattern(dir, depth)
+	ch := make(chan DirLsRes)
+	go func() {
+		defer close(ch)
+		files, err := filepath.Glob(pattern)
 		if err != nil {
-			continue
+			ch <- DirLsRes{Err: err}
+			return
 		}
-		old := entries
-		entries = make([]LsEntry, len(old), len(old)+len(files))
-		copy(entries, old)
-		for _, fi := range files {
-			n, err := fmt.Sscanf(fi.Name(), "%x", &buf)
-			if err != nil || n != 1 {
-				continue
-			}
-			err = entry.Hash.LoadSlice(buf)
+		for _, path := range files {
+			fi, err := os.Stat(path)
 			if err != nil {
+				ch <- DirLsRes{Err: err}
+				return
+			}
+			if fi.IsDir() {
 				continue
 			}
-			entry.Size = fi.Size()
-			entries = append(entries, entry)
+			ch <- DirLsRes{Name: fi.Name(), Size: fi.Size()}
 		}
+	}()
+	return ch
+}
+
+func depthPattern(path string, depth int) string {
+	wildcards := make([]string, depth)
+	for i := range wildcards {
+		wildcards[i] = "*"
 	}
-	return
+	return filepath.Join(append([]string{path}, wildcards...)...)
 }

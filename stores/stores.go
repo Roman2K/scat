@@ -24,6 +24,14 @@ type LsEntry struct {
 	Size int64
 }
 
+type SliceLister []LsEntry
+
+var _ Lister = SliceLister{}
+
+func (sl SliceLister) Ls() ([]LsEntry, error) {
+	return []LsEntry(sl), nil
+}
+
 type Copier struct {
 	id interface{}
 	Lister

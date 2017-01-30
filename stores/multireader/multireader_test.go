@@ -1,4 +1,4 @@
-package stores_test
+package multireader
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
+	"scat/procs"
 	"scat/stores"
 	"scat/testutil"
 )
@@ -14,6 +15,12 @@ func TestMultiReader(t *testing.T) {
 	var (
 		hash = testutil.Hash1.Hash
 	)
+
+	shuffleOrig := shuffle
+	defer func() {
+		shuffle = shuffleOrig
+	}()
+	shuffle = testutil.SortCopiersByIdString
 
 	mem1 := stores.NewMem()
 	mem2 := stores.NewMem()
@@ -26,10 +33,10 @@ func TestMultiReader(t *testing.T) {
 	c.SetHash(hash)
 
 	// none available
-	mrd, err := stores.NewMultiReader(copiers)
+	mrd, err := New(copiers)
 	assert.NoError(t, err)
 	_, err = testutil.ReadChunks(mrd.Process(c))
-	assert.Equal(t, stores.ErrMultiReaderNoneAvail, err)
+	assert.Equal(t, procs.ErrMissingData, err)
 
 	readData := func() string {
 		chunks, err := testutil.ReadChunks(mrd.Process(c))
@@ -42,13 +49,13 @@ func TestMultiReader(t *testing.T) {
 
 	// on mem2
 	mem2.SetData(hash, []byte("data2"))
-	mrd, err = stores.NewMultiReader(copiers)
+	mrd, err = New(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data2", readData())
 
 	// on mem2 and mem1
 	mem1.SetData(hash, []byte("data1"))
-	mrd, err = stores.NewMultiReader(copiers)
+	mrd, err = New(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data1", readData())
 }

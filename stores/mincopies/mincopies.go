@@ -8,10 +8,10 @@ import (
 
 	"scat"
 	"scat/concur"
+	"scat/procs"
 	"scat/stores"
 	"scat/stores/copies"
 	"scat/stores/quota"
-	"scat/procs"
 )
 
 type minCopies struct {
@@ -45,6 +45,8 @@ func calcDataUse(d scat.Data) (uint64, error) {
 	}
 	return uint64(sz.Size()), nil
 }
+
+var shuffle = stores.ShuffleCopiers
 
 func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 	copies := mc.reg.List(c.Hash())
@@ -119,8 +121,6 @@ func (mc *minCopies) getCopiers(use uint64) (cps []stores.Copier) {
 	}
 	return
 }
-
-var shuffle = stores.ShuffleCopiers
 
 func (mc *minCopies) Finish() error {
 	return mc.finish()

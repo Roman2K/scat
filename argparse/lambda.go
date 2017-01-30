@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-var (
-	ErrUnclosedBracket = errors.New("unclosed bracket")
+const (
+	lambdaOpen  = '['
+	lambdaClose = ']'
 )
 
 var (
-	lambdaOpen  = '['
-	lambdaClose = ']'
+	ErrUnclosedBracket = errors.New("unclosed bracket")
 )
 
 type ArgLambda struct {

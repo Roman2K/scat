@@ -1,11 +1,10 @@
 package stores_test
 
 import (
+	"scat/stores"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-
-	"scat/stores"
 )
 
 func TestStrPart(t *testing.T) {

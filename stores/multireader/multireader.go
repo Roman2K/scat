@@ -1,44 +1,46 @@
-package stores
+package multireader
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"scat"
 	"scat/concur"
 	"scat/procs"
+	"scat/stores"
 	"scat/stores/copies"
 )
 
-var ErrMultiReaderNoneAvail = errors.New("no reader available")
-
-type multireader struct {
+type mrd struct {
 	reg     *copies.Reg
-	copiers []Copier
+	copiers []stores.Copier
 }
 
-func NewMultiReader(copiers []Copier) (proc procs.Proc, err error) {
-	ml := make(MultiLister, len(copiers))
+func New(copiers []stores.Copier) (proc procs.Proc, err error) {
+	ml := make(stores.MultiLister, len(copiers))
 	for i, cp := range copiers {
 		ml[i] = cp
 	}
 	reg := copies.NewReg()
-	proc = multireader{
+	proc = mrd{
 		reg:     reg,
 		copiers: copiers,
 	}
-	err = ml.AddEntriesTo([]LsEntryAdder{CopiesEntryAdder{Reg: reg}})
+	err = ml.AddEntriesTo([]stores.LsEntryAdder{
+		stores.CopiesEntryAdder{Reg: reg},
+	})
 	return
 }
 
-func (mrd multireader) Process(c *scat.Chunk) <-chan procs.Res {
+var shuffle = stores.ShuffleCopiers
+
+func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
-	copiers := make([]Copier, len(owners))
+	copiers := make([]stores.Copier, len(owners))
 	for i, o := range owners {
-		copiers[i] = o.(Copier)
+		copiers[i] = o.(stores.Copier)
 	}
-	ShuffleCopiers(copiers)
+	copiers = shuffle(copiers)
 	casc := make(procs.Cascade, len(copiers))
 	for i, cp := range copiers {
 		casc[i] = procs.NewOnEnd(cp, func(err error) {
@@ -51,17 +53,17 @@ func (mrd multireader) Process(c *scat.Chunk) <-chan procs.Res {
 	if len(casc) == 0 {
 		ch := make(chan procs.Res, 1)
 		defer close(ch)
-		ch <- procs.Res{Err: ErrMultiReaderNoneAvail}
+		ch <- procs.Res{Err: procs.ErrMissingData}
 		return ch
 	}
 	return casc.Process(c)
 }
 
-func (mrd multireader) Finish() error {
+func (mrd mrd) Finish() error {
 	return finishFuncs(mrd.copiers).FirstErr()
 }
 
-func finishFuncs(copiers []Copier) (fns concur.Funcs) {
+func finishFuncs(copiers []stores.Copier) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(copiers))
 	for i, cp := range copiers {
 		fns[i] = cp.Finish

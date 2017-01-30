@@ -9,11 +9,13 @@ import (
 
 	"scat"
 	"scat/checksum"
+	"scat/procs"
 	"scat/stores"
 	"scat/stores/quota"
-	"scat/procs"
 	"scat/testutil"
 )
+
+var byId = testutil.SortCopiersByIdString
 
 func TestMinCopies(t *testing.T) {
 	const min = 2
@@ -40,15 +42,15 @@ func TestMinCopies(t *testing.T) {
 	newQman := func() (qman *quota.Man) {
 		qman = quota.NewMan()
 		qman.AddRes(stores.NewCopier("a",
-			testutil.SliceLister{{Hash: hash1}},
+			stores.SliceLister{{Hash: hash1}},
 			testProc("a"),
 		))
 		qman.AddRes(stores.NewCopier("b",
-			testutil.SliceLister{{Hash: hash1}, {Hash: hash2}},
+			stores.SliceLister{{Hash: hash1}, {Hash: hash2}},
 			testProc("b"),
 		))
 		qman.AddRes(stores.NewCopier("c",
-			testutil.SliceLister{},
+			stores.SliceLister{},
 			testProc("c"),
 		))
 		return
@@ -156,11 +158,11 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 	hash1 := checksum.SumBytes([]byte("hash1"))
 	qman := quota.NewMan()
 	qman.AddRes(stores.NewCopier("a",
-		testutil.SliceLister{{Hash: hash1}},
+		stores.SliceLister{{Hash: hash1}},
 		testProc("a"),
 	))
 	qman.AddRes(stores.NewCopier("b",
-		testutil.SliceLister{{Hash: hash1}},
+		stores.SliceLister{{Hash: hash1}},
 		testProc("b"),
 	))
 	mc, err := New(1, qman)
@@ -176,7 +178,7 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 func TestFinish(t *testing.T) {
 	qman := quota.NewMan()
 	qman.AddRes(stores.NewCopier(nil,
-		testutil.SliceLister{},
+		stores.SliceLister{},
 		testutil.FinishErrProc{Err: nil},
 	))
 	mc, err := New(2, qman)
@@ -189,7 +191,7 @@ func TestFinishError(t *testing.T) {
 	someErr := errors.New("some err")
 	qman := quota.NewMan()
 	qman.AddRes(stores.NewCopier(nil,
-		testutil.SliceLister{},
+		stores.SliceLister{},
 		testutil.FinishErrProc{Err: someErr},
 	))
 	mc, err := New(2, qman)
@@ -223,18 +225,6 @@ func TestShuffle(t *testing.T) {
 	ids := ids(shuffle(s))
 	sort.Strings(ids)
 	assert.Equal(t, []string{"a", "b", "c"}, ids)
-}
-
-func byId(s []stores.Copier) (res []stores.Copier) {
-	res = make([]stores.Copier, len(s))
-	copy(res, s)
-	idStr := func(i int) string {
-		return res[i].Id().(string)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return idStr(i) < idStr(j)
-	})
-	return
 }
 
 func reverse(s []stores.Copier) (res []stores.Copier) {

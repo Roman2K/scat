@@ -42,8 +42,14 @@ func (fn CmdInFunc) process(c *scat.Chunk) (err error) {
 	if err != nil {
 		return
 	}
+	errBuf := &bytes.Buffer{}
+	cmd.Stderr = errBuf
 	cmd.Stdin = c.Data().Reader()
-	return cmd.Run()
+	err = cmd.Run()
+	if exit, ok := err.(*exec.ExitError); ok {
+		exit.Stderr = errBuf.Bytes()
+	}
+	return
 }
 
 func (CmdInFunc) Finish() error {
@@ -61,10 +67,8 @@ func (fn CmdOutFunc) process(c *scat.Chunk) (new *scat.Chunk, err error) {
 	if err != nil {
 		return
 	}
-	buf := &bytes.Buffer{}
-	cmd.Stdout = buf
-	err = cmd.Run()
-	new = c.WithData(scat.BytesData(buf.Bytes()))
+	out, err := cmd.Output()
+	new = c.WithData(scat.BytesData(out))
 	return
 }
 

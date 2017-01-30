@@ -3,6 +3,7 @@ package stores_test
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -14,6 +15,22 @@ import (
 )
 
 func TestCp(t *testing.T) {
+	dirStoreTest(func(dir stores.Dir) stores.Store {
+		return stores.Cp{Dir: dir}
+	}).test(t)
+}
+
+type dirStoreTest func(stores.Dir) stores.Store
+
+func (test dirStoreTest) test(t *testing.T) {
+	test.testReadWrite(t)
+	test.testInvalidDir(t)
+	test.testUnprocMissingFile(t)
+	test.testLs(t)
+	test.testLsMissingDir(t)
+}
+
+func (test dirStoreTest) testReadWrite(t *testing.T) {
 	const (
 		data = "abc"
 	)
@@ -27,12 +44,12 @@ func TestCp(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	testPart := func(part stores.StrPart, expectedPath string) {
-		cp := stores.Cp{Dir: dir, Part: part}
+		store := test(stores.Dir{dir, part})
 
 		// write
 		c := scat.NewChunk(0, scat.BytesData(data))
 		c.SetHash(hash)
-		chunks, err := testutil.ReadChunks(cp.Proc().Process(c))
+		chunks, err := testutil.ReadChunks(store.Proc().Process(c))
 		assert.NoError(t, err)
 		assert.Equal(t, []*scat.Chunk{c}, chunks)
 		b, err := ioutil.ReadFile(expectedPath)
@@ -42,7 +59,7 @@ func TestCp(t *testing.T) {
 		// read
 		c = scat.NewChunk(0, nil)
 		c.SetHash(hash)
-		chunks, err = testutil.ReadChunks(cp.Unproc().Process(c))
+		chunks, err = testutil.ReadChunks(store.Unproc().Process(c))
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(chunks))
 		b, err = chunks[0].Data().Bytes()
@@ -55,27 +72,35 @@ func TestCp(t *testing.T) {
 	testPart(stores.StrPart{2, 3}, filepath.Join(dir, hex[:2], hex[2:5], hex))
 }
 
-func TestCpProcInvalidDir(t *testing.T) {
-	cp := stores.Cp{Dir: "/dev/null"}
+func (test dirStoreTest) testInvalidDir(t *testing.T) {
+	store := test(stores.Dir{Path: "/dev/null"})
 	c := scat.NewChunk(0, nil)
-	_, err := testutil.ReadChunks(cp.Proc().Process(c))
+	_, err := testutil.ReadChunks(store.Proc().Process(c))
 	assert.Error(t, err)
-	assert.Regexp(t, "not a directory", err.Error())
+	if exit, ok := err.(*exec.ExitError); ok {
+		assert.Regexp(t, "Not a directory", string(exit.Stderr))
+	} else {
+		assert.Regexp(t, "not a directory", err.Error())
+	}
 }
 
-func TestCpUnprocMissingFile(t *testing.T) {
+func (test dirStoreTest) testUnprocMissingFile(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	cp := stores.Cp{Dir: dir + "/missing"}
+	store := test(stores.Dir{Path: dir + "/missing"})
 	c := scat.NewChunk(0, nil)
-	_, err = testutil.ReadChunks(cp.Unproc().Process(c))
+	_, err = testutil.ReadChunks(store.Unproc().Process(c))
 	assert.Error(t, err)
-	assert.True(t, os.IsNotExist(err))
+	if exit, ok := err.(*exec.ExitError); ok {
+		assert.Regexp(t, "No such file", string(exit.Stderr))
+	} else {
+		assert.True(t, os.IsNotExist(err))
+	}
 }
 
-func TestCpLs(t *testing.T) {
+func (test dirStoreTest) testLs(t *testing.T) {
 	var (
 		hash = testutil.Hash1.Hash
 		hex  = testutil.Hash1.Hex
@@ -85,24 +110,24 @@ func TestCpLs(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	cp := stores.Cp{Dir: dir}
+	store := test(stores.Dir{Path: dir})
 
 	// depth=0 files=0 chunkFiles=0
-	ls, err := cp.Ls()
+	ls, err := store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ls))
 
 	// depth=0 files=1 chunkFiles=0
-	err = ioutil.WriteFile(filepath.Join(cp.Dir, "xxx"), nil, 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, "xxx"), nil, 0644)
 	assert.NoError(t, err)
-	ls, err = cp.Ls()
+	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ls))
 
 	// depth=0 files=2 chunkFiles=1
-	err = ioutil.WriteFile(filepath.Join(cp.Dir, hex), []byte("x"), 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, hex), []byte("x"), 0644)
 	assert.NoError(t, err)
-	ls, err = cp.Ls()
+	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ls))
 	assert.Equal(t, hash, ls[0].Hash)
@@ -112,29 +137,33 @@ func TestCpLs(t *testing.T) {
 	dir, err = ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	cp = stores.Cp{Dir: dir, Part: stores.StrPart{1}}
+	store = test(stores.Dir{dir, stores.StrPart{1}})
 
 	// depth=1 files=0 chunkFiles=0
-	ls, err = cp.Ls()
+	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ls))
 
 	// depth=1 files=1 chunkFiles=0
-	err = ioutil.WriteFile(filepath.Join(cp.Dir, hex), nil, 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, hex), nil, 0644)
 	assert.NoError(t, err)
-	ls, err = cp.Ls()
+	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ls))
 
 	// depth=1 files=1 chunkFiles=1
-	path := filepath.Join(cp.Dir, hex[:1], hex)
+	path := filepath.Join(dir, hex[:1], hex)
 	err = os.Mkdir(filepath.Dir(path), 0755)
 	assert.NoError(t, err)
 	err = ioutil.WriteFile(path, []byte("a"), 0644)
 	assert.NoError(t, err)
-	ls, err = cp.Ls()
+	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(ls))
 	assert.Equal(t, hash, ls[0].Hash)
 	assert.Equal(t, int64(1), ls[0].Size)
+}
+
+func (test dirStoreTest) testLsMissingDir(t *testing.T) {
+	t.FailNow()
 }
