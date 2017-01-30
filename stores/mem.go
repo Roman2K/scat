@@ -8,15 +8,17 @@ import (
 )
 
 type Mem struct {
-	data   map[checksum.Hash][]byte
+	data   memMap
 	dataMu sync.RWMutex
 }
+
+type memMap map[checksum.Hash][]byte
 
 var _ Store = (*Mem)(nil)
 
 func NewMem() *Mem {
 	return &Mem{
-		data: make(map[checksum.Hash][]byte),
+		data: make(memMap),
 	}
 }
 
