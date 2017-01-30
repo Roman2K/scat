@@ -5,8 +5,7 @@ with_test() {
   shopt -s nullglob
   while read d; do
     files=("$d"/*_test.go)
-    [ "${#files[@]}" -gt 0 ] || continue
-    echo "$d"
+    [ "${#files[@]}" -gt 0 ] && echo "$d"
   done
 }
 
