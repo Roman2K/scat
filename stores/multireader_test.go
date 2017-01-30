@@ -1,9 +1,6 @@
 package stores_test
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
@@ -16,21 +13,13 @@ import (
 func TestMultiReader(t *testing.T) {
 	var (
 		hash = testutil.Hash1.Hash
-		hex  = testutil.Hash1.Hex
 	)
 
-	dir1, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
-	dir2, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir1)
-	defer os.RemoveAll(dir2)
-
-	cp1 := stores.Cp{Dir: dir1}
-	cp2 := stores.Cp{Dir: dir2}
+	mem1 := stores.NewMem()
+	mem2 := stores.NewMem()
 	copiers := []stores.Copier{
-		stores.NewCopier("cp1", cp1, cp1.Unproc()),
-		stores.NewCopier("cp2", cp2, cp2.Unproc()),
+		stores.NewCopier("mem1", mem1, mem1.Unproc()),
+		stores.NewCopier("mem2", mem2, mem2.Unproc()),
 	}
 
 	c := scat.NewChunk(0, nil)
@@ -51,16 +40,14 @@ func TestMultiReader(t *testing.T) {
 		return string(b)
 	}
 
-	// on cp2
-	err = ioutil.WriteFile(filepath.Join(dir2, hex), []byte("data2"), 0644)
-	assert.NoError(t, err)
+	// on mem2
+	mem2.SetData(hash, []byte("data2"))
 	mrd, err = stores.NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data2", readData())
 
-	// on cp2 and cp1
-	err = ioutil.WriteFile(filepath.Join(dir1, hex), []byte("data1"), 0644)
-	assert.NoError(t, err)
+	// on mem2 and mem1
+	mem1.SetData(hash, []byte("data1"))
 	mrd, err = stores.NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data1", readData())
