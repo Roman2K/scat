@@ -33,7 +33,7 @@ func TestMan(t *testing.T) {
 	created := 0
 	create := func() (err error) {
 		created++
-		f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 		if err != nil {
 			return
 		}

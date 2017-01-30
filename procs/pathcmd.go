@@ -28,7 +28,7 @@ func NewPathCmdIn(newCmd PathCmdInFn, tmp *tmpdedup.Dir) Proc {
 func (cmdp *pathCmdIn) process(c *scat.Chunk) error {
 	filename := fmt.Sprintf("%x", c.Hash())
 	path, wg, err := cmdp.tmp.Get(filename, func(path string) (err error) {
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 		if err != nil {
 			return
 		}

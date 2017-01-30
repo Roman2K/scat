@@ -26,7 +26,7 @@ func (cat cat) Proc() procs.Proc {
 
 func (cat cat) procCmd(c *scat.Chunk) (cmd *exec.Cmd, err error) {
 	path := cat.filePath(c.Hash())
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		return
 	}

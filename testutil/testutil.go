@@ -2,8 +2,9 @@ package testutil
 
 import (
 	"scat"
-	"scat/stores"
+	"scat/checksum"
 	"scat/procs"
+	"scat/stores"
 )
 
 func ReadChunks(ch <-chan procs.Res) (chunks []*scat.Chunk, err error) {
@@ -61,4 +62,15 @@ func (p FinishErrProc) Process(*scat.Chunk) <-chan procs.Res {
 
 func (p FinishErrProc) Finish() error {
 	return p.Err
+}
+
+var Hash1 = struct {
+	Hash checksum.Hash
+	Hex  string
+}{
+	Hash: checksum.Hash{
+		44, 242, 77, 186, 95, 176, 163, 14, 38, 232, 59, 42, 197, 185, 226, 158,
+		27, 22, 30, 92, 31, 167, 66, 94, 115, 4, 51, 98, 147, 139, 152, 36,
+	},
+	Hex: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
 }
