@@ -8,11 +8,11 @@ import (
 	"scat"
 
 	ap "scat/argparse"
-	"scat/cpprocs"
-	"scat/cpprocs/mincopies"
-	"scat/cpprocs/quota"
 	"scat/procs"
 	"scat/stats"
+	"scat/stores"
+	"scat/stores/mincopies"
+	"scat/stores/quota"
 	"scat/tmpdedup"
 )
 
@@ -48,16 +48,16 @@ type builder struct {
 
 func (b builder) argProc() ap.Parser {
 	var (
-		argProc    = ap.ArgFn{}              // procs.Procs
-		argCpp     = b.newArgCpp()           // cpprocs.LsProcUnprocers
-		argDynProc = b.newArgDynProc(argCpp) // procs.DynProcers
+		argProc    = ap.ArgFn{}                // procs.Procs
+		argStore   = b.newArgStore()           // stores.Stores
+		argDynProc = b.newArgDynProc(argStore) // procs.DynProcers
 	)
 
-	update(argProc, b.newArgProc(argProc, argDynProc, argCpp))
+	update(argProc, b.newArgProc(argProc, argDynProc, argStore))
 
-	for k, v := range argCpp {
-		argProc[k] = newArgCpProc(v)
-		argProc["u"+k] = newArgCpUnproc(v)
+	for k, v := range argStore {
+		argProc[k] = newArgStoreProc(v, getProc)
+		argProc["u"+k] = newArgStoreProc(v, getUnproc)
 	}
 
 	if b.stats != nil {
@@ -69,20 +69,12 @@ func (b builder) argProc() ap.Parser {
 	return argProc
 }
 
-func newArgCpProc(argCpp ap.Parser) ap.Parser {
+func newArgStoreProc(argStore ap.Parser, getProc getProcFn) ap.Parser {
 	return ap.ArgFilter{
-		Parser: argCpp,
+		Parser: argStore,
 		Filter: func(val interface{}) (interface{}, error) {
-			return val.(cpprocs.LsProcUnprocer).Proc(), nil
-		},
-	}
-}
-
-func newArgCpUnproc(argCpp ap.Parser) ap.Parser {
-	return ap.ArgFilter{
-		Parser: argCpp,
-		Filter: func(val interface{}) (interface{}, error) {
-			return val.(cpprocs.LsProcUnprocer).Unproc(), nil
+			store := val.(stores.Store)
+			return getProc(store), nil
 		},
 	}
 }
@@ -97,7 +89,7 @@ func (b builder) newArgStatsProc(argProc ap.Parser, id interface{}) ap.Parser {
 	}
 }
 
-func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
+func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 	return ap.ArgFn{
 		"checksum": ap.ArgLambda{
 			Run: func([]interface{}) (interface{}, error) {
@@ -176,13 +168,13 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 			},
 		},
 		"multireader": ap.ArgLambda{
-			Args: ap.ArgVariadic{b.newArgCopier(argCpp, getUnproc)},
+			Args: ap.ArgVariadic{b.newArgCopier(argStore, getUnproc)},
 			Run: func(args []interface{}) (interface{}, error) {
-				copiers := make([]cpprocs.Copier, len(args))
+				copiers := make([]stores.Copier, len(args))
 				for i, icp := range args {
-					copiers[i] = icp.(cpprocs.Copier)
+					copiers[i] = icp.(stores.Copier)
 				}
-				return cpprocs.NewMultiReader(copiers)
+				return stores.NewMultiReader(copiers)
 			},
 		},
 		"parity":  newArgParity(getProc),
@@ -235,12 +227,12 @@ func (b builder) newArgProc(argProc, argDynp, argCpp ap.Parser) ap.ArgFn {
 	}
 }
 
-func (b builder) newArgDynProc(argCpp ap.Parser) ap.ArgFn {
+func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 	return ap.ArgFn{
 		"mincopies": ap.ArgLambda{
 			Args: ap.Args{
 				ap.ArgInt,
-				ap.ArgVariadic{b.newArgQuota(b.newArgCopier(argCpp, getProc))},
+				ap.ArgVariadic{b.newArgQuota(b.newArgCopier(argStore, getProc))},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
@@ -265,7 +257,7 @@ func (b builder) newArgDynProc(argCpp ap.Parser) ap.ArgFn {
 	}
 }
 
-func (b builder) newArgCpp() ap.ArgFn {
+func (b builder) newArgStore() ap.ArgFn {
 	return ap.ArgFn{
 		"rclone": ap.ArgLambda{
 			Args: ap.Args{ap.ArgStr},
@@ -273,7 +265,7 @@ func (b builder) newArgCpp() ap.ArgFn {
 				var (
 					remote = args[0].(string)
 				)
-				return cpprocs.NewRclone(remote, b.tmp), nil
+				return stores.NewRclone(remote, b.tmp), nil
 			},
 		},
 		"cat": ap.ArgLambda{
@@ -282,23 +274,23 @@ func (b builder) newArgCpp() ap.ArgFn {
 				var (
 					dir = args[0].(string)
 				)
-				return cpprocs.NewCat(dir), nil
+				return stores.NewCat(dir), nil
 			},
 		},
 	}
 }
 
-func (b builder) newArgCopier(argCpp ap.Parser, getProc getProcFn) ap.Parser {
+func (b builder) newArgCopier(argStore ap.Parser, getProc getProcFn) ap.Parser {
 	return ap.ArgLambda{
-		Args: ap.Args{ap.ArgStr, argCpp},
+		Args: ap.Args{ap.ArgStr, argStore},
 		Run: func(args []interface{}) (interface{}, error) {
 			var (
 				id  = args[0].(string)
-				lsp = args[1].(cpprocs.LsProcUnprocer)
+				lsp = args[1].(stores.Store)
 			)
 			var (
-				lser cpprocs.Lister = lsp
-				proc procs.Proc     = getProc(lsp)
+				lser stores.Lister = lsp
+				proc procs.Proc    = getProc(lsp)
 			)
 			if b.stats != nil {
 				lser = quotaInitReport{
@@ -307,7 +299,7 @@ func (b builder) newArgCopier(argCpp ap.Parser, getProc getProcFn) ap.Parser {
 				}
 				proc = stats.NewProc(proc, b.stats, id)
 			}
-			return cpprocs.NewCopier(id, lser, proc), nil
+			return stores.NewCopier(id, lser, proc), nil
 		},
 	}
 }
@@ -317,7 +309,7 @@ func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
 		Args: ap.Args{argCopier, ap.ArgBytes},
 		Run: func(args []interface{}) (interface{}, error) {
 			qr := quotaRes{
-				copier: args[0].(cpprocs.Copier),
+				copier: args[0].(stores.Copier),
 				max:    args[1].(uint64),
 			}
 			return qr, nil
@@ -326,7 +318,7 @@ func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
 	argRes := ap.ArgFilter{
 		Parser: ap.ArgOr{argQuotaMax, argCopier},
 		Filter: func(val interface{}) (interface{}, error) {
-			if cp, ok := val.(cpprocs.Copier); ok {
+			if cp, ok := val.(stores.Copier); ok {
 				val = quotaRes{
 					copier: cp,
 					max:    quota.Unlimited,
@@ -350,11 +342,11 @@ func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
 }
 
 type quotaInitReport struct {
-	lser       cpprocs.Lister
+	lser       stores.Lister
 	getCounter func() *stats.Counter
 }
 
-func (r quotaInitReport) Ls() ([]cpprocs.LsEntry, error) {
+func (r quotaInitReport) Ls() ([]stores.LsEntry, error) {
 	cnt := r.getCounter()
 	cnt.Quota.Init = true
 	defer func() {
@@ -427,7 +419,7 @@ func update(dst, src ap.ArgFn) {
 
 type quotaRes struct {
 	max    uint64
-	copier cpprocs.Copier
+	copier stores.Copier
 }
 
 func uintBytes(val interface{}) uint {

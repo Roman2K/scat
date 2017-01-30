@@ -1,4 +1,4 @@
-package cpprocs
+package stores
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type cat struct {
 	dir string
 }
 
-func NewCat(dir string) LsProcUnprocer {
+func NewCat(dir string) Store {
 	return cat{dir: dir}
 }
 

@@ -5,7 +5,7 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat/cpprocs/quota"
+	"scat/stores/quota"
 )
 
 func TestMan(t *testing.T) {

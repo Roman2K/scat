@@ -9,8 +9,8 @@ import (
 
 	"scat"
 	"scat/checksum"
-	"scat/cpprocs"
-	"scat/cpprocs/quota"
+	"scat/stores"
+	"scat/stores/quota"
 	"scat/procs"
 	"scat/testutil"
 )
@@ -39,15 +39,15 @@ func TestMinCopies(t *testing.T) {
 
 	newQman := func() (qman *quota.Man) {
 		qman = quota.NewMan()
-		qman.AddRes(cpprocs.NewCopier("a",
+		qman.AddRes(stores.NewCopier("a",
 			testutil.SliceLister{{Hash: hash1}},
 			testProc("a"),
 		))
-		qman.AddRes(cpprocs.NewCopier("b",
+		qman.AddRes(stores.NewCopier("b",
 			testutil.SliceLister{{Hash: hash1}, {Hash: hash2}},
 			testProc("b"),
 		))
-		qman.AddRes(cpprocs.NewCopier("c",
+		qman.AddRes(stores.NewCopier("c",
 			testutil.SliceLister{},
 			testProc("c"),
 		))
@@ -155,11 +155,11 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 
 	hash1 := checksum.SumBytes([]byte("hash1"))
 	qman := quota.NewMan()
-	qman.AddRes(cpprocs.NewCopier("a",
+	qman.AddRes(stores.NewCopier("a",
 		testutil.SliceLister{{Hash: hash1}},
 		testProc("a"),
 	))
-	qman.AddRes(cpprocs.NewCopier("b",
+	qman.AddRes(stores.NewCopier("b",
 		testutil.SliceLister{{Hash: hash1}},
 		testProc("b"),
 	))
@@ -175,7 +175,7 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 
 func TestFinish(t *testing.T) {
 	qman := quota.NewMan()
-	qman.AddRes(cpprocs.NewCopier(nil,
+	qman.AddRes(stores.NewCopier(nil,
 		testutil.SliceLister{},
 		testutil.FinishErrProc{Err: nil},
 	))
@@ -188,7 +188,7 @@ func TestFinish(t *testing.T) {
 func TestFinishError(t *testing.T) {
 	someErr := errors.New("some err")
 	qman := quota.NewMan()
-	qman.AddRes(cpprocs.NewCopier(nil,
+	qman.AddRes(stores.NewCopier(nil,
 		testutil.SliceLister{},
 		testutil.FinishErrProc{Err: someErr},
 	))
@@ -215,18 +215,18 @@ func processByAll(c *scat.Chunk, procs []procs.Proc) (
 }
 
 func TestShuffle(t *testing.T) {
-	s := []cpprocs.Copier{
-		cpprocs.NewCopier("a", nil, nil),
-		cpprocs.NewCopier("b", nil, nil),
-		cpprocs.NewCopier("c", nil, nil),
+	s := []stores.Copier{
+		stores.NewCopier("a", nil, nil),
+		stores.NewCopier("b", nil, nil),
+		stores.NewCopier("c", nil, nil),
 	}
 	ids := ids(shuffle(s))
 	sort.Strings(ids)
 	assert.Equal(t, []string{"a", "b", "c"}, ids)
 }
 
-func byId(s []cpprocs.Copier) (res []cpprocs.Copier) {
-	res = make([]cpprocs.Copier, len(s))
+func byId(s []stores.Copier) (res []stores.Copier) {
+	res = make([]stores.Copier, len(s))
 	copy(res, s)
 	idStr := func(i int) string {
 		return res[i].Id().(string)
@@ -237,10 +237,10 @@ func byId(s []cpprocs.Copier) (res []cpprocs.Copier) {
 	return
 }
 
-func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
+func reverse(s []stores.Copier) (res []stores.Copier) {
 	s = byId(s)
 	n := len(s)
-	res = make([]cpprocs.Copier, n)
+	res = make([]stores.Copier, n)
 	for i := 0; i < n; i++ {
 		res[i] = s[n-i-1]
 	}
@@ -248,15 +248,15 @@ func reverse(s []cpprocs.Copier) (res []cpprocs.Copier) {
 }
 
 func TestReverse(t *testing.T) {
-	s := []cpprocs.Copier{
-		cpprocs.NewCopier("a", nil, nil),
-		cpprocs.NewCopier("b", nil, nil),
-		cpprocs.NewCopier("c", nil, nil),
+	s := []stores.Copier{
+		stores.NewCopier("a", nil, nil),
+		stores.NewCopier("b", nil, nil),
+		stores.NewCopier("c", nil, nil),
 	}
 	assert.Equal(t, []string{"c", "b", "a"}, ids(reverse(s)))
 }
 
-func ids(s []cpprocs.Copier) (ids []string) {
+func ids(s []stores.Copier) (ids []string) {
 	for _, c := range s {
 		ids = append(ids, c.Id().(string))
 	}

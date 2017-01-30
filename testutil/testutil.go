@@ -2,7 +2,7 @@ package testutil
 
 import (
 	"scat"
-	"scat/cpprocs"
+	"scat/stores"
 	"scat/procs"
 )
 
@@ -41,12 +41,12 @@ func (it *SliceIter) Err() error {
 	return nil
 }
 
-type SliceLister []cpprocs.LsEntry
+type SliceLister []stores.LsEntry
 
-var _ cpprocs.Lister = SliceLister{}
+var _ stores.Lister = SliceLister{}
 
-func (sl SliceLister) Ls() ([]cpprocs.LsEntry, error) {
-	return []cpprocs.LsEntry(sl), nil
+func (sl SliceLister) Ls() ([]stores.LsEntry, error) {
+	return []stores.LsEntry(sl), nil
 }
 
 type FinishErrProc struct {

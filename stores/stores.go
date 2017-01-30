@@ -1,15 +1,19 @@
-package cpprocs
+package stores
 
 import (
 	"math/rand"
 
-	"scat"
 	"scat/checksum"
 	"scat/concur"
-	"scat/cpprocs/copies"
-	"scat/cpprocs/quota"
 	"scat/procs"
+	"scat/stores/copies"
+	"scat/stores/quota"
 )
+
+type Store interface {
+	Lister
+	procs.ProcUnprocer
+}
 
 type Lister interface {
 	Ls() ([]LsEntry, error)
@@ -20,45 +24,18 @@ type LsEntry struct {
 	Size int64
 }
 
-type Identified interface {
-	Id() interface{}
-}
-
-type Copier interface {
-	Identified
+type Copier struct {
+	id interface{}
 	Lister
 	procs.Proc
 }
 
-type copier struct {
-	id   interface{}
-	lser Lister
-	proc procs.Proc
-}
-
 func NewCopier(id interface{}, lser Lister, proc procs.Proc) Copier {
-	return &copier{id, lser, proc}
+	return Copier{id, lser, proc}
 }
 
-func (cp *copier) Id() interface{} {
+func (cp Copier) Id() interface{} {
 	return cp.id
-}
-
-func (cp *copier) Ls() ([]LsEntry, error) {
-	return cp.lser.Ls()
-}
-
-func (cp *copier) Process(c *scat.Chunk) <-chan procs.Res {
-	return cp.proc.Process(c)
-}
-
-func (cp *copier) Finish() error {
-	return cp.proc.Finish()
-}
-
-type LsProcUnprocer interface {
-	Lister
-	procs.ProcUnprocer
 }
 
 type LsEntryAdder interface {

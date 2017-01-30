@@ -1,4 +1,4 @@
-package cpprocs
+package stores
 
 import (
 	"bufio"
@@ -17,7 +17,7 @@ type rclone struct {
 	tmp    *tmpdedup.Dir
 }
 
-func NewRclone(remote string, tmp *tmpdedup.Dir) LsProcUnprocer {
+func NewRclone(remote string, tmp *tmpdedup.Dir) Store {
 	return rclone{remote, tmp}
 }
 

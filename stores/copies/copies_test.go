@@ -6,7 +6,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat/checksum"
-	"scat/cpprocs/copies"
+	"scat/stores/copies"
 )
 
 func TestCopies(t *testing.T) {

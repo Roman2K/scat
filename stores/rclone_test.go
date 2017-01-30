@@ -1,4 +1,4 @@
-package cpprocs
+package stores
 
 import (
 	"fmt"

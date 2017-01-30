@@ -1,11 +1,11 @@
-package cpprocs
+package stores
 
 import (
 	"fmt"
 	"os"
 	"scat"
 	"scat/concur"
-	"scat/cpprocs/copies"
+	"scat/stores/copies"
 	"scat/procs"
 )
 

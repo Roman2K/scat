@@ -8,9 +8,9 @@ import (
 
 	"scat"
 	"scat/concur"
-	"scat/cpprocs"
-	"scat/cpprocs/copies"
-	"scat/cpprocs/quota"
+	"scat/stores"
+	"scat/stores/copies"
+	"scat/stores/quota"
 	"scat/procs"
 )
 
@@ -24,10 +24,10 @@ type minCopies struct {
 func New(min int, qman *quota.Man) (dynp procs.DynProcer, err error) {
 	reg := copies.NewReg()
 	ress := qman.Resources(0)
-	ml := cpprocs.MultiLister(listers(ress))
-	err = ml.AddEntriesTo([]cpprocs.LsEntryAdder{
-		cpprocs.QuotaEntryAdder{Qman: qman},
-		cpprocs.CopiesEntryAdder{Reg: reg},
+	ml := stores.MultiLister(listers(ress))
+	err = ml.AddEntriesTo([]stores.LsEntryAdder{
+		stores.QuotaEntryAdder{Qman: qman},
+		stores.CopiesEntryAdder{Reg: reg},
 	})
 	dynp = &minCopies{
 		min:    min,
@@ -67,8 +67,8 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 			mc.min, ncopies, missing, navail,
 		))
 	}
-	elected := make([]cpprocs.Copier, 0, missing)
-	failover := make([]cpprocs.Copier, 0, navail-missing)
+	elected := make([]stores.Copier, 0, missing)
+	failover := make([]stores.Copier, 0, navail-missing)
 	for _, cp := range all {
 		if copies.Contains(cp) {
 			continue
@@ -87,8 +87,8 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 	}()
 	cpProcs := make([]procs.Proc, len(elected)+1)
 	cpProcs[0] = procs.Nop
-	copierProc := func(copier cpprocs.Copier) procs.Proc {
-		copiers := append([]cpprocs.Copier{copier}, failover...)
+	copierProc := func(copier stores.Copier) procs.Proc {
+		copiers := append([]stores.Copier{copier}, failover...)
 		casc := make(procs.Cascade, len(copiers))
 		for i := range copiers {
 			cp := copiers[i]
@@ -111,25 +111,25 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 	return cpProcs, nil
 }
 
-func (mc *minCopies) getCopiers(use uint64) (cps []cpprocs.Copier) {
+func (mc *minCopies) getCopiers(use uint64) (cps []stores.Copier) {
 	ress := mc.qman.Resources(use)
-	cps = make([]cpprocs.Copier, len(ress))
+	cps = make([]stores.Copier, len(ress))
 	for i, res := range ress {
-		cps[i] = res.(cpprocs.Copier)
+		cps[i] = res.(stores.Copier)
 	}
 	return
 }
 
-var shuffle = cpprocs.ShuffleCopiers
+var shuffle = stores.ShuffleCopiers
 
 func (mc *minCopies) Finish() error {
 	return mc.finish()
 }
 
-func listers(ress []quota.Res) (lsers []cpprocs.Lister) {
-	lsers = make([]cpprocs.Lister, len(ress))
+func listers(ress []quota.Res) (lsers []stores.Lister) {
+	lsers = make([]stores.Lister, len(ress))
 	for i, res := range ress {
-		lsers[i] = res.(cpprocs.Lister)
+		lsers[i] = res.(stores.Lister)
 	}
 	return
 }

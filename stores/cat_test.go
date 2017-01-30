@@ -1,4 +1,4 @@
-package cpprocs_test
+package stores_test
 
 import (
 	"io/ioutil"
@@ -10,7 +10,7 @@ import (
 
 	"scat"
 	"scat/checksum"
-	"scat/cpprocs"
+	"scat/stores"
 	"scat/testutil"
 )
 
@@ -23,7 +23,7 @@ func TestCatProc(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	cat := cpprocs.NewCat(dir)
+	cat := stores.NewCat(dir)
 
 	// Ls() empty
 	entries, err := cat.Ls()
@@ -58,7 +58,7 @@ func TestCatUnproc(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	cat := cpprocs.NewCat(dir)
+	cat := stores.NewCat(dir)
 
 	path := filepath.Join(dir, hashStr)
 	err = ioutil.WriteFile(path, []byte(data), 0644)
