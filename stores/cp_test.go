@@ -102,8 +102,10 @@ func (test dirStoreTest) testUnprocMissingFile(t *testing.T) {
 
 func (test dirStoreTest) testLs(t *testing.T) {
 	var (
-		hash = testutil.Hash1.Hash
-		hex  = testutil.Hash1.Hex
+		hash  = testutil.Hashes[0].Hash
+		hex   = testutil.Hashes[0].Hex
+		hash2 = testutil.Hashes[1].Hash
+		hex2  = testutil.Hashes[1].Hex
 	)
 
 	// depth=0
@@ -162,8 +164,37 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	assert.Equal(t, 1, len(ls))
 	assert.Equal(t, hash, ls[0].Hash)
 	assert.Equal(t, int64(1), ls[0].Size)
+
+	// depth=1 files=2 chunkFiles=1
+	path = filepath.Join(dir, hex2[:1], hex2)
+	err = os.MkdirAll(filepath.Dir(path), 0755)
+	assert.NoError(t, err)
+	err = ioutil.WriteFile(path, []byte("a"), 0644)
+	assert.NoError(t, err)
+	ls, err = store.Ls()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(ls))
+	assert.Equal(t, hash, ls[0].Hash)
+	assert.Equal(t, hash2, ls[1].Hash)
+
+	// depth=1 files=1 dirs=1 chunkFiles=1
+	err = os.Remove(path)
+	assert.NoError(t, err)
+	err = os.Mkdir(path, 0755)
+	assert.NoError(t, err)
+	ls, err = store.Ls()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ls))
+	assert.Equal(t, hash, ls[0].Hash)
 }
 
 func (test dirStoreTest) testLsMissingDir(t *testing.T) {
-	t.FailNow()
+	store := test(stores.Dir{Path: "/dev/nullxxx"})
+	_, err := store.Ls()
+	assert.Error(t, err)
+	if exit, ok := err.(*exec.ExitError); ok {
+		assert.Regexp(t, "No such file", string(exit.Stderr))
+	} else {
+		assert.True(t, os.IsNotExist(err))
+	}
 }

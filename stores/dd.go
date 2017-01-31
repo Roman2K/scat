@@ -3,6 +3,7 @@ package stores
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -92,40 +93,39 @@ func (fn findDirLister) Ls(dir string, depth int) <-chan DirLsRes {
 		return
 	}
 
-	sendResults := func(ch chan<- DirLsRes) {
-		defer close(ch)
-
+	sendResults := func(ch chan<- DirLsRes) error {
 		out, err := start()
 		if err != nil {
-			ch <- DirLsRes{Err: err}
-			return
+			return err
 		}
-
-		result := make(chan error)
-		go func() {
-			defer close(result)
-			scan := bufio.NewScanner(out)
-			scan.Split(byteSep('\000').scan)
-			var size int64 = -1
-			for scan.Scan() {
-				if size < 0 {
-					sz, err := strconv.ParseInt(scan.Text(), 10, 64)
-					if err != nil {
-						result <- err
-						return
-					}
-					size = sz
-				} else {
-					name := filepath.Base(scan.Text())
-					ch <- DirLsRes{Name: name, Size: size}
-					size = -1
+		scan := bufio.NewScanner(out)
+		scan.Split(byteSep('\000').scan)
+		var size int64 = -1
+		for scan.Scan() {
+			if size < 0 {
+				sz, err := strconv.ParseInt(scan.Text(), 10, 64)
+				if err != nil {
+					return err
 				}
+				if sz < 0 {
+					// The sign of size is important for the control flow of this loop
+					return errors.New("size can't be negative")
+				}
+				size = sz
+			} else {
+				name := filepath.Base(scan.Text())
+				ch <- DirLsRes{Name: name, Size: size}
+				size = -1
 			}
-			result <- scan.Err()
-		}()
+		}
+		return scan.Err()
+	}
 
+	ch := make(chan DirLsRes)
+	go func() {
+		defer close(ch)
+		err := sendResults(ch)
 		cmdErr := cmd.Wait()
-		err = <-result
 		if cmdErr != nil {
 			if exit, ok := cmdErr.(*exec.ExitError); ok {
 				exit.Stderr = errOut.Bytes()
@@ -135,10 +135,7 @@ func (fn findDirLister) Ls(dir string, depth int) <-chan DirLsRes {
 		if err != nil {
 			ch <- DirLsRes{Err: err}
 		}
-	}
-
-	ch := make(chan DirLsRes)
-	go sendResults(ch)
+	}()
 	return ch
 }
 

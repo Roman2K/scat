@@ -59,25 +59,36 @@ func (cp Cp) Ls() ([]LsEntry, error) {
 type localLister struct{}
 
 func (localLister) Ls(dir string, depth int) <-chan DirLsRes {
+	_, err := os.Stat(dir)
+	if err != nil {
+		ch := make(chan DirLsRes, 1)
+		defer close(ch)
+		ch <- DirLsRes{Err: err}
+		return ch
+	}
 	pattern := depthPattern(dir, depth)
 	ch := make(chan DirLsRes)
 	go func() {
 		defer close(ch)
-		files, err := filepath.Glob(pattern)
+		sendResults := func() error {
+			files, err := filepath.Glob(pattern)
+			if err != nil {
+				return err
+			}
+			for _, path := range files {
+				fi, err := os.Stat(path)
+				if err != nil {
+					return err
+				}
+				if !fi.IsDir() {
+					ch <- DirLsRes{Name: fi.Name(), Size: fi.Size()}
+				}
+			}
+			return nil
+		}
+		err := sendResults()
 		if err != nil {
 			ch <- DirLsRes{Err: err}
-			return
-		}
-		for _, path := range files {
-			fi, err := os.Stat(path)
-			if err != nil {
-				ch <- DirLsRes{Err: err}
-				return
-			}
-			if fi.IsDir() {
-				continue
-			}
-			ch <- DirLsRes{Name: fi.Name(), Size: fi.Size()}
 		}
 	}()
 	return ch
