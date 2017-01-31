@@ -12,28 +12,30 @@ Backup program featuring:
 * **Decentralization:** avoid trusting any one third-party with all your data
 
 	* data divided into chunks **distributed** anywhere there's space available
-	* combine several third-parties, taking advantage of their free tier
-	* ex: *randomly spread 15GiB of data over 5GiB of Google Drive, 2GiB of Dropbox and some VPS*
+	* mix and match **cloud** and local storage in a RAID-like fashion
+	* ex: *spread 15GiB of data over 2GiB in Google Drive, 5GiB on some VPS and the rest on an external drive*
 
 * Block-level **de-duplication**
 
 	* [CDC][cdc]-based detection of duplicate blocks, from [restic][restic]
 	* **incremental** backups
 	* reuse identical blocks of unrelated backups from common remotes
-	* immutable storage: blocks are never touched upon successive backups
-	* ex: *back up a 1GiB file, append 1 byte to it, next backup only takes ~1MiB (last block)*
+	* immutable storage: stored blocks are never touched upon successive backups
+	* ex: *back up 10GiB sparse disk image with 2GiB used, backup takes ~2GiB*
+	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~0 bytes*
+	* ex: *append 1 byte to foo in VM b, backup takes ~1MiB (block containing foo)*
+
+* RAID-like **error correction**
+
+	* SHA256-based integrity checks ensure data is retrieved unadulterated
+	* [Reed-Solomon][b2reedsolomon] erasure coding
+	* ex: *some chunk comes back corrupted from Dropbox, recover it from Drive and Backblaze*
+	* ex: *I'm locked out of my Google account, reconstruct all data from Dropbox and Backblaze*
 
 * **Redundancy:** N-copies duplication, auto-failover on restore
 
   * random spread across eligible remotes
   * ex: *ensure at least 2 copies exist on any 2 of Drive, Dropbox and some VPS*
-
-* Integrity checks & **error correction:**
-
-	* SHA256 checksums ensure data is retrieved unadulterated
-	* Reed-Solomon erasure coding
-	* ex: *some chunk comes back corrupted from Dropbox, recover it from Drive and Backblaze*
-	* ex: *I'm locked out of my Google account, reconstruct all data from Dropbox and Backblaze*
 
 * **Stream**-based: less is more
 
@@ -48,13 +50,14 @@ Backup program featuring:
 * Other features:
 
 	* compression
-	* multithreaded: configurable concurrency of data processing and transfers
-	* resumable both ways thanks to de-duplication
-	* easy to setup, easy to use, accessible code base, fun to hack on
+	* multithreaded: configurable concurrency
+	* resumable both ways
+	* easy: to setup, use, and hack on
+	* multiplatform: binaries for Linux, macOS, Windows, etc.
 
 ...pick some or all of the above, apply in any order.
 
-Indeed, scat decomposes backing up and restoring into basic stream processors ("procs") chained together, where the output of proc x is piped to the input of proc x+1. As such, though created for backing up data, its core doesn't actually know anything about backups but provides the necessary procs.
+Indeed, scat decomposes backing up and restoring into basic stream processors ("procs") arranged like filters in a pipeline. They're chained together, piping the output of proc x to the input of proc x+1. As such, though created for backing up data, its core doesn't actually know anything about backups but provides the necessary procs.
 
 Such modularity enables unlimited flexibility: stream data from anywhere (local/remote file, arbitrary command, etc.), process it in any way (encrypt, compress, filter through arbitrary command, etc.), to anywhere: upload/download is just another proc at the end/beginning of a chain.
 
@@ -297,6 +300,7 @@ Upcoming:
 [borg]:https://borgbackup.readthedocs.io
 [zbackup]:http://zbackup.org
 [reedsolomon]:https://github.com/klauspost/reedsolomon
+[b2reedsolomon]:https://www.backblaze.com/blog/reed-solomon
 [textik]:https://textik.com
 [simplicity]:https://www.youtube.com/watch?v=rFejpH_tAHM
 [pv]:http://www.ivarch.com/programs/pv.shtml
