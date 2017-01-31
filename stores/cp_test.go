@@ -16,7 +16,7 @@ import (
 
 func TestCp(t *testing.T) {
 	dirStoreTest(func(dir stores.Dir) stores.Store {
-		return stores.Cp{Dir: dir}
+		return stores.Cp(dir)
 	}).test(t)
 }
 

@@ -10,9 +10,7 @@ import (
 	"scat/procs"
 )
 
-type Cp struct {
-	Dir Dir
-}
+type Cp Dir
 
 var _ Store = Cp{}
 
@@ -21,7 +19,7 @@ func (cp Cp) Proc() procs.Proc {
 }
 
 func (cp Cp) process(c *scat.Chunk) (err error) {
-	path := cp.Dir.FullPath(c.Hash())
+	path := Dir(cp).FullPath(c.Hash())
 	open := func() (io.WriteCloser, error) {
 		return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	}
@@ -46,14 +44,14 @@ func (cp Cp) Unproc() procs.Proc {
 }
 
 func (cp Cp) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
-	path := cp.Dir.FullPath(c.Hash())
+	path := Dir(cp).FullPath(c.Hash())
 	b, err := ioutil.ReadFile(path)
 	new = c.WithData(scat.BytesData(b))
 	return
 }
 
 func (cp Cp) Ls() ([]LsEntry, error) {
-	return cp.Dir.Ls(localLister{})
+	return Dir(cp).Ls(localLister{})
 }
 
 type localLister struct{}
