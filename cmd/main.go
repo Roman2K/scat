@@ -64,30 +64,16 @@ func start() (err error) {
 	if err != nil {
 		return
 	}
-
 	proc := res.([]interface{})[0].(procs.Proc)
-	seedrd, err := openIn(args.seedPath)
-	if err != nil {
-		return
-	}
-	defer seedrd.Close()
+	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
 
-	seed := scat.NewChunk(0, scat.NewReaderData(seedrd))
 	return procs.Process(proc, seed)
 }
 
-func openIn(path string) (io.ReadCloser, error) {
-	if path == "-" {
-		return ioutil.NopCloser(os.Stdin), nil
-	}
-	return os.Open(path)
-}
-
 type cmdArgs struct {
-	seedPath string
-	procStr  string
-	stats    bool
-	version  bool
+	procStr string
+	stats   bool
+	version bool
 }
 
 func (a *cmdArgs) Parse(args []string) {
@@ -97,20 +83,13 @@ func (a *cmdArgs) Parse(args []string) {
 	}
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
 	fl.BoolVar(&a.stats, "stats", false, "print stats: data rates, quotas, etc.")
-	fl.BoolVar(&a.version, "version", false, "print version and exit")
+	fl.BoolVar(&a.version, "version", false, "show version")
 	fl.SetOutput(ioutil.Discard)
 	usage := func(w io.Writer) {
-		fmt.Fprintf(w, "usage: %s [options] <seed> <proc>\n", name)
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\t<seed>\tpath to data of seed chunk\n")
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\t\tex: -\n")
-		fmt.Fprintf(w, "\t\tex: path/to/file\n")
+		fmt.Fprintf(w, "usage: %s [options] <proc>\n", name)
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\t<proc>\tproc string\n")
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\t\tex: split chain[checksum index[-] cp[my_dir]]\n")
-		fmt.Fprintf(w, "\t\tex: uindex ucp[my_dir] uchecksum join[-]\n")
+		fmt.Fprintf(w, "\t\tsee %s\n", url)
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "options:\n")
 		fl.SetOutput(w)
@@ -120,7 +99,7 @@ func (a *cmdArgs) Parse(args []string) {
 		fmt.Fprintf(w, "see %s\n", url)
 	}
 	err := fl.Parse(args)
-	if err != nil || (fl.NArg() != 2 && !a.version) {
+	if err != nil || (fl.NArg() != 1 && !a.version) {
 		w, code := os.Stderr, 2
 		if err == flag.ErrHelp {
 			w, code = os.Stdout, 0
@@ -128,6 +107,5 @@ func (a *cmdArgs) Parse(args []string) {
 		usage(w)
 		os.Exit(code)
 	}
-	a.seedPath = fl.Arg(0)
-	a.procStr = fl.Arg(1)
+	a.procStr = fl.Arg(0)
 }
