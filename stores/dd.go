@@ -11,16 +11,21 @@ import (
 	"scat"
 	"scat/procs"
 	"strconv"
+	"strings"
 )
 
-const ddBsArg = "bs=1m"
+const ddBsArg = "bs=1048576" // most universal ("1M" on GNU, "1m" on macOS)
+
+var cmdGnuFind = "find"
 
 type Dd struct {
-	Dir     Dir
-	Command commandFunc
+	Dir        Dir
+	Command    commandFunc
+	StrCommand strCommandFunc
 }
 
 type commandFunc func(string, ...string) *exec.Cmd
+type strCommandFunc func(env, string) *exec.Cmd
 
 var _ Store = Dd{}
 
@@ -31,24 +36,28 @@ func (s Dd) Proc() procs.Proc {
 func (s Dd) process(c *scat.Chunk) (*exec.Cmd, error) {
 	path := s.Dir.FullPath(c.Hash())
 	ofArg := "of=" + path
-	name, args, env := "dd", []string{ofArg, ddBsArg}, []string{}
+	return s.outCommand(path, ofArg), nil
+}
+
+func (s Dd) outCommand(path, ofArg string) *exec.Cmd {
 	if len(s.Dir.Part) > 0 {
 		// Pass paths around making sure to avoid string concatenation at all cost
 		// so as to not go through shell escaping hell...
-		name = "sh"
-		args = []string{
-			"-c",
-			`mkdir -p "$ddproc_dir" && dd "$ddproc_of" "$ddproc_bs"`,
-		}
-		env = []string{
+		env := env{
 			"ddproc_dir=" + filepath.Dir(path),
 			"ddproc_of=" + ofArg,
 			"ddproc_bs=" + ddBsArg,
 		}
+		export := "true"
+		if exports := env.exports(); len(exports) > 0 {
+			export = "export " + strings.Join(exports, " ")
+		}
+		cmd := s.strCommand(env, export+
+			` && mkdir -p "$ddproc_dir"`+
+			` && dd "$ddproc_of" "$ddproc_bs"`)
+		return cmd
 	}
-	cmd := s.command(name, args...)
-	cmd.Env = env
-	return cmd, nil
+	return s.command("dd", ofArg, ddBsArg)
 }
 
 func (s Dd) command(name string, args ...string) *exec.Cmd {
@@ -57,6 +66,20 @@ func (s Dd) command(name string, args ...string) *exec.Cmd {
 		fn = s.Command
 	}
 	return fn(name, args...)
+}
+
+func (s Dd) strCommand(env env, str string) *exec.Cmd {
+	fn := defaultStrCommand
+	if s.StrCommand != nil {
+		fn = s.StrCommand
+	}
+	return fn(env, str)
+}
+
+func defaultStrCommand(env env, str string) (cmd *exec.Cmd) {
+	cmd = exec.Command("sh", "-c", str)
+	cmd.Env = env
+	return
 }
 
 func (s Dd) Unproc() procs.Proc {
@@ -92,7 +115,6 @@ func (fn findDirLister) Ls(dir string, depth int) <-chan DirLsRes {
 		err = cmd.Start()
 		return
 	}
-
 	sendResults := func(ch chan<- DirLsRes) error {
 		out, err := start()
 		if err != nil {
@@ -152,11 +174,30 @@ func (s byteSep) scan(data []byte, _ bool) (n int, tok []byte, _ error) {
 	return
 }
 
+type env []string
+
+func (env env) exports() (names []string) {
+	names = make([]string, 0, len(env))
+	for _, s := range env {
+		if idx := strings.IndexRune(s, '='); idx > -1 {
+			names = append(names, s[:idx])
+		}
+	}
+	return
+}
+
 func NewScp(host string, dir Dir) Store {
 	return Dd{
 		Dir: dir,
 		Command: func(name string, args ...string) *exec.Cmd {
 			args = append([]string{host, name}, args...)
+			return exec.Command("ssh", args...)
+		},
+		StrCommand: func(env env, str string) *exec.Cmd {
+			args := append(
+				append([]string{host}, env...),
+				str,
+			)
 			return exec.Command("ssh", args...)
 		},
 	}
