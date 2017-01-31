@@ -12,6 +12,7 @@ import (
 	"scat/stats"
 	"scat/stores"
 	"scat/stores/mincopies"
+	"scat/stores/multireader"
 	"scat/stores/quota"
 	"scat/tmpdedup"
 )
@@ -174,7 +175,7 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 				for i, icp := range args {
 					copiers[i] = icp.(stores.Copier)
 				}
-				return stores.NewMultiReader(copiers)
+				return multireader.New(copiers)
 			},
 		},
 		"parity":  newArgParity(getProc),
@@ -258,6 +259,17 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 }
 
 func (b builder) newArgStore() ap.ArgFn {
+	newDir := func(args []interface{}) stores.Dir {
+		var (
+			path    = args[0].(string)
+			nesting = args[1].([]interface{})
+		)
+		part := make(stores.StrPart, len(nesting))
+		for i, n := range nesting {
+			part[i] = n.(int)
+		}
+		return stores.Dir{Path: path, Part: part}
+	}
 	return ap.ArgFn{
 		"rclone": ap.ArgLambda{
 			Args: ap.Args{ap.ArgStr},
@@ -272,14 +284,19 @@ func (b builder) newArgStore() ap.ArgFn {
 			Args: ap.Args{ap.ArgStr, ap.ArgVariadic{ap.ArgInt}},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
-					dir     = args[0].(string)
-					nesting = args[1].([]interface{})
+					dir = newDir(args)
 				)
-				part := make(stores.StrPart, len(nesting))
-				for i, n := range nesting {
-					part[i] = n.(int)
-				}
-				return stores.Cp{Dir: dir, Part: part}, nil
+				return stores.Cp(dir), nil
+			},
+		},
+		"scp": ap.ArgLambda{
+			Args: ap.Args{ap.ArgStr, ap.ArgStr, ap.ArgVariadic{ap.ArgInt}},
+			Run: func(args []interface{}) (interface{}, error) {
+				var (
+					host = args[0].(string)
+					dir  = newDir(args[1:])
+				)
+				return stores.NewScp(host, dir), nil
 			},
 		},
 	}
