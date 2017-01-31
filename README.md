@@ -22,7 +22,7 @@ Backup program featuring:
 	* reuse identical blocks of unrelated backups from common remotes
 	* immutable storage: stored blocks are never touched upon successive backups
 	* ex: *back up 10GiB sparse disk image with 2GiB used, backup takes ~2GiB*
-	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~0 bytes*
+	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~MiBs*
 	* ex: *append 1 byte to foo in VM b, backup takes ~1MiB (block containing foo)*
 
 * RAID-like **error correction**
@@ -91,19 +91,19 @@ Stream processing, like performing a backup from a tar stream, is done via a pro
 Hello World:
 
 ```sh
-$ echo "Hello World" | scat - "write[-]"
+$ echo "Hello World" | scat "write[-]"
 Hello World
 
-$ scat /dev/null "cmdout[echo Hello World] write[-]"
+$ echo -n | scat "cmdout[echo Hello World] write[-]"
 Hello World
 
-$ echo -n "Hello " | scat - "cmd[cat] write[-] cmdout[echo World] write[-]"
+$ echo -n "Hello " | scat "cmd[cat] write[-] cmdout[echo World] write[-]"
 Hello World
 
-$ echo "Hello World" | scat - "cmd[gpg -e -r 00828C1D] cmd[gpg -d] write[-]"
+$ echo "Hello World" | scat "cmd[gpg -e -r 00828C1D] cmd[gpg -d] write[-]"
 Hello World
 
-$ echo "Hello World" | scat - "cmdin[tee out]" && cat out
+$ echo "Hello World" | scat "cmdin[tee out]" && cat out
 Hello World
 ```
 
@@ -111,17 +111,17 @@ Split `foo`, write chunks to dir `bar`:
 
 ```sh
 $ echo "hello" > foo
-$ scat foo "split chain[checksum index[foo_index] cat[bar]]"
+$ scat foo "split chain[checksum index[foo_index] cp[bar]]"
 $ ls bar
 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
 ```
 
-For restoring, we need a list of all the chunks produced during backup. Proc `index` does that: lists checksums of chunks output by its containing chain, preserving original order. Note it's part of a subchain following `split`, see [`index`][procindex] for why.
+For restoring, we need a list of all the chunks produced during backup. Proc `index` does that: it lists checksums of chunks output by its containing chain, preserving original order. Note it's part of a subchain following `split`, see [`index`][procindex] for why.
 
 Re-create `foo` from chunk files in `bar`:
 
 ```sh
-$ scat foo_index "uindex ucat[bar] uchecksum join[foo]"
+$ scat foo_index "uindex ucp[bar] uchecksum join[foo]"
 $ cat foo
 hello
 ```
@@ -139,7 +139,7 @@ Example of backing up dir `foo/` to 2 Google Drive accounts and 1 VPS (2 data sh
 Command:
 
 ```sh
-$ tar c foo | scat - " \
+$ tar c foo | scat " \
     split \
     backlog[8 chain[ \
         checksum \
@@ -176,7 +176,7 @@ Reverse chain:
 Command:
 
 ```sh
-$ scat - " \
+$ scat " \
     uindex \
     backlog[4 multireader[ \
         [drive rclone[drive:tmp]] \
@@ -212,21 +212,20 @@ $ # ...use foo_index, see Restore
 
 You could have a single repository for all your backups and commit index files after each backup.
 
-### API
-
-Command:
+### Command
 
 ```sh
-$ scat [options] <seed> <proc>
+$ scat [options] <proc>
 ```
 
 Options:
 
 * `-stats` print stats: data rates, quotas, etc.
+* `-version` show version
+* `-help` show usage
 
 Args:
 
-* `<seed>` path to data of seed chunk, or `-` for stdin
 * `<proc>` proc string, see [Proc string][procstr]
 
 ## Rationale
@@ -281,6 +280,9 @@ Upcoming:
 * purge
 	* free up space on remotes by garbage-collecting unindexed chunks
 	* equivalent of deleting a snapshot in restic or COW filesystems
+* streaming file listing
+	* lists of existing files are currently buffered due to bad initial decision
+		* shouldn't affect performance or mem usage below ~terabytes of data but still feels wrong
 
 ## Thanks
 
