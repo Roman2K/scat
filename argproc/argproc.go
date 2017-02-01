@@ -85,7 +85,7 @@ func (b builder) newArgStatsProc(argProc ap.Parser, id interface{}) ap.Parser {
 		Parser: argProc,
 		Filter: func(val interface{}) (interface{}, error) {
 			proc := val.(procs.Proc)
-			return stats.NewProc(proc, b.stats, id), nil
+			return stats.Proc{b.stats, id, proc}, nil
 		},
 	}
 }
@@ -319,7 +319,7 @@ func (b builder) newArgCopier(argStore ap.Parser, getProc getProcFn) ap.Parser {
 					lser:       lser,
 					getCounter: func() *stats.Counter { return b.stats.Counter(id) },
 				}
-				proc = stats.NewProc(proc, b.stats, id)
+				proc = stats.Proc{b.stats, id, proc}
 			}
 			return stores.NewCopier(id, lser, proc), nil
 		},

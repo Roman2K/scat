@@ -5,28 +5,22 @@ import (
 	"scat/procs"
 )
 
-type counterProc struct {
-	statsd *Statsd
-	id     Id
-	proc   procs.Proc
+type Proc struct {
+	D  *Statsd
+	Id Id
+	procs.Proc
 }
 
-func NewProc(proc procs.Proc, d *Statsd, id Id) procs.WrapperProc {
-	return &counterProc{
-		statsd: d,
-		id:     id,
-		proc:   proc,
-	}
+var _ procs.WrapperProc = Proc{}
+
+func (p Proc) Underlying() procs.Proc {
+	return p.Proc
 }
 
-func (p *counterProc) Underlying() procs.Proc {
-	return p.proc
-}
-
-func (p *counterProc) Process(c *scat.Chunk) <-chan procs.Res {
-	ch := p.proc.Process(c)
+func (p Proc) Process(c *scat.Chunk) <-chan procs.Res {
+	ch := p.Proc.Process(c)
 	out := make(chan procs.Res)
-	cnt := p.statsd.Counter(p.id)
+	cnt := p.D.Counter(p.Id)
 	cnt.addInst(1)
 	go func() {
 		defer cnt.addInst(-1)
@@ -43,8 +37,4 @@ func (p *counterProc) Process(c *scat.Chunk) <-chan procs.Res {
 		}
 	}()
 	return out
-}
-
-func (p *counterProc) Finish() error {
-	return p.proc.Finish()
 }
