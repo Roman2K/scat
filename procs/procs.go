@@ -2,6 +2,7 @@ package procs
 
 import (
 	"errors"
+	"fmt"
 	"scat/concur"
 
 	"scat"
@@ -17,6 +18,16 @@ var Nop Proc
 
 func init() {
 	Nop = InplaceFunc(func(*scat.Chunk) error { return nil })
+}
+
+type MissingDataError struct {
+	Err error
+}
+
+var _ error = MissingDataError{}
+
+func (err MissingDataError) Error() string {
+	return fmt.Sprintf("missing data: %v", err.Err)
 }
 
 type Proc interface {

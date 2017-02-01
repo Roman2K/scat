@@ -3,14 +3,22 @@ package stores
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 
 	"scat"
 	"scat/checksum"
 	"scat/procs"
 	"scat/tmpdedup"
 )
+
+var rcloneNotFoundRe *regexp.Regexp
+
+func init() {
+	rcloneNotFoundRe = regexp.MustCompile(`\b(?i:not found)\b`)
+}
 
 type Rclone struct {
 	Remote string
@@ -27,12 +35,62 @@ func (rc Rclone) procCmd(_ *scat.Chunk, path string) (*exec.Cmd, error) {
 }
 
 func (rc Rclone) Unproc() procs.Proc {
-	return procs.CmdOutFunc(rc.unprocess)
+	return procs.Filter{
+		Proc: procs.CmdOutFunc(rc.loadCmd),
+		Filter: func(res procs.Res) procs.Res {
+			if err := rcloneDownloadErr(res); err != nil {
+				res.Err = err
+			}
+			return res
+		},
+	}
 }
 
-func (rc Rclone) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
+//
+// A download error manifests itself in different manners for different cloud
+// providers. For instance, `rclone cat` for a missing file:
+//
+// * Drive: exit=1 stdout="" stderr="directory not found"
+// * Dropbox: exit=0 stdout="" stderr=""
+//
+// So the most universal way of detecting a failed download is seeing 0 bytes on
+// stdout.
+//
+func rcloneDownloadErr(res procs.Res) error {
+	if res.Err != nil {
+		return procs.MissingDataError{res.Err}
+	}
+	getSize := func() (sz int, err error) {
+		c := res.Chunk
+		if c == nil {
+			err = errors.New("no chunk")
+			return
+		}
+		data := c.Data()
+		if sizer, ok := data.(scat.Sizer); ok {
+			sz = sizer.Size()
+			return
+		}
+		b, err := data.Bytes()
+		if err != nil {
+			return
+		}
+		sz = len(b)
+		return
+	}
+	sz, err := getSize()
+	if err == nil && sz <= 0 {
+		err = errors.New("downloaded 0 bytes")
+	}
+	if err != nil {
+		return procs.MissingDataError{err}
+	}
+	return nil
+}
+
+func (rc Rclone) loadCmd(c *scat.Chunk) (*exec.Cmd, error) {
 	remote := fmt.Sprintf("%s/%x", rc.Remote, c.Hash())
-	cmd := exec.Command("rclone", "cat", remote)
+	cmd := rcloneCat(remote)
 	return cmd, nil
 }
 
@@ -62,7 +120,12 @@ func (rc Rclone) Ls() (entries []LsEntry, err error) {
 	return
 }
 
-// var for tests
-var rcloneLs = func(remote string) *exec.Cmd {
-	return exec.Command("rclone", "ls", remote, "-q")
-}
+// vars for tests
+var (
+	rcloneLs = func(remote string) *exec.Cmd {
+		return exec.Command("rclone", "ls", remote, "-q")
+	}
+	rcloneCat = func(remote string) *exec.Cmd {
+		return exec.Command("rclone", "cat", remote)
+	}
+)

@@ -92,7 +92,7 @@ func defaultStrCommand(env env, str string) (cmd *exec.Cmd) {
 
 func (s Dd) Unproc() procs.Proc {
 	return procs.Filter{
-		Proc: procs.CmdOutFunc(s.unprocess),
+		Proc: procs.CmdOutFunc(s.loadCmd),
 		Filter: func(res procs.Res) procs.Res {
 			if exit, ok := res.Err.(*exec.ExitError); ok {
 				if noSuchFileRe.Match(exit.Stderr) {
@@ -104,7 +104,7 @@ func (s Dd) Unproc() procs.Proc {
 	}
 }
 
-func (s Dd) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
+func (s Dd) loadCmd(c *scat.Chunk) (*exec.Cmd, error) {
 	path := s.Dir.FullPath(c.Hash())
 	return s.command("dd", "if="+path, ddBsArg), nil
 }
