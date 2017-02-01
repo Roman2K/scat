@@ -8,14 +8,14 @@ import (
 )
 
 type concurProc struct {
-	slots slots.Slots
 	dynp  DynProcer
+	slots slots.Slots
 }
 
 func NewConcur(max int, dynp DynProcer) Proc {
 	return concurProc{
-		slots: slots.New(max),
 		dynp:  dynp,
+		slots: slots.New(max),
 	}
 }
 
