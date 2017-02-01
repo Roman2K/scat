@@ -12,8 +12,8 @@ func NewOnEnd(proc Proc, cb func(error)) Proc {
 }
 
 func (oe onEnd) Process(c *scat.Chunk) <-chan Res {
-	out := make(chan Res)
 	ch := oe.proc.Process(c)
+	out := make(chan Res)
 	go func() {
 		defer close(out)
 		var err error

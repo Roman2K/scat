@@ -24,17 +24,19 @@ func (p *counterProc) Underlying() procs.Proc {
 }
 
 func (p *counterProc) Process(c *scat.Chunk) <-chan procs.Res {
+	ch := p.proc.Process(c)
 	out := make(chan procs.Res)
 	cnt := p.statsd.Counter(p.id)
 	cnt.addInst(1)
-	ch := p.proc.Process(c)
 	go func() {
 		defer cnt.addInst(-1)
 		defer close(out)
 		for res := range ch {
 			if c := res.Chunk; c != nil {
-				if sz, ok := c.Data().(scat.Sizer); ok {
-					cnt.addOut(uint64(sz.Size()))
+				if sizer, ok := c.Data().(scat.Sizer); ok {
+					if sz := sizer.Size(); sz >= 0 {
+						cnt.addOut(uint64(sz))
+					}
 				}
 			}
 			out <- res

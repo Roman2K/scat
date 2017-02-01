@@ -11,8 +11,8 @@ func NewDiscardChunks(proc Proc) Proc {
 }
 
 func (dc discardChunks) Process(c *scat.Chunk) <-chan Res {
-	out := make(chan Res)
 	ch := dc.proc.Process(c)
+	out := make(chan Res)
 	go func() {
 		defer close(out)
 		for res := range ch {

@@ -19,8 +19,8 @@ func NewBacklog(nslots int, proc Proc) Proc {
 
 func (bl backlog) Process(c *scat.Chunk) <-chan Res {
 	bl.slots.Take()
-	out := make(chan Res)
 	ch := bl.proc.Process(c)
+	out := make(chan Res)
 	go func() {
 		defer bl.slots.Release()
 		defer close(out)
