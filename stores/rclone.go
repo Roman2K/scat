@@ -14,7 +14,10 @@ import (
 	"scat/tmpdedup"
 )
 
-var rcloneNotFoundRe *regexp.Regexp
+var (
+	rcloneNotFoundRe   *regexp.Regexp
+	errRcloneZeroBytes = errors.New("downloaded 0 bytes")
+)
 
 func init() {
 	rcloneNotFoundRe = regexp.MustCompile(`\b(?i:not found)\b`)
@@ -80,7 +83,7 @@ func rcloneDownloadErr(res procs.Res) error {
 	}
 	sz, err := getSize()
 	if err == nil && sz <= 0 {
-		err = errors.New("downloaded 0 bytes")
+		err = errRcloneZeroBytes
 	}
 	if err != nil {
 		return procs.MissingDataError{err}

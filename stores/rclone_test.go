@@ -51,14 +51,16 @@ func TestRcloneUnproc(t *testing.T) {
 	exitCode, out, errOut = 1, "bar", "2017/02/01 10:17:01 directory not found"
 	err = getErr()
 	assert.IsType(t, procs.MissingDataError{}, err)
+	assert.IsType(t, &exec.ExitError{}, err.(procs.MissingDataError).Err)
 
 	exitCode, out, errOut = 1, "", ""
 	err = getErr()
 	assert.IsType(t, procs.MissingDataError{}, err)
+	assert.IsType(t, &exec.ExitError{}, err.(procs.MissingDataError).Err)
 
 	exitCode, out, errOut = 0, "", ""
 	err = getErr()
-	assert.IsType(t, procs.MissingDataError{}, err)
+	assert.Equal(t, errRcloneZeroBytes, err.(procs.MissingDataError).Err)
 }
 
 func TestRcloneLs(t *testing.T) {
