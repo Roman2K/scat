@@ -53,7 +53,7 @@ func testParity(t *testing.T, cor corruption) {
 		procs.ChecksumProc,
 		procs.NewIndexProc(indexBuf),
 		parity.Proc(),
-		procs.NewGzip().Proc(),
+		procs.Gzip{}.Proc(),
 		procs.ChecksumProc,
 		store.Proc(),
 	}
@@ -87,7 +87,7 @@ func testParity(t *testing.T, cor corruption) {
 		procs.IndexUnproc,
 		store.Unproc(),
 		procs.ChecksumUnproc,
-		procs.NewGzip().Unproc(),
+		procs.Gzip{}.Unproc(),
 		procs.NewGroup(ndata + nparity),
 		parity.Unproc(),
 		procs.NewWriterTo(outBuf),

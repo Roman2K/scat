@@ -9,23 +9,21 @@ import (
 	"scat"
 )
 
-type gzipProc struct {
+type Gzip struct {
 	// TODO level
 }
 
-func NewGzip() ProcUnprocer {
-	return gzipProc{}
+var _ ProcUnprocer = Gzip{}
+
+func (gz Gzip) Proc() Proc {
+	return ChunkFunc(gz.process)
 }
 
-func (gp gzipProc) Proc() Proc {
-	return ChunkFunc(gp.process)
+func (gz Gzip) Unproc() Proc {
+	return ChunkFunc(gz.unprocess)
 }
 
-func (gp gzipProc) Unproc() Proc {
-	return ChunkFunc(gp.unprocess)
-}
-
-func (gzipProc) process(c *scat.Chunk) (new *scat.Chunk, err error) {
+func (Gzip) process(c *scat.Chunk) (new *scat.Chunk, err error) {
 	buf := &bytes.Buffer{}
 	w := gzip.NewWriter(buf)
 	_, err = io.Copy(w, c.Data().Reader())
@@ -37,7 +35,7 @@ func (gzipProc) process(c *scat.Chunk) (new *scat.Chunk, err error) {
 	return
 }
 
-func (gzipProc) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
+func (Gzip) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 	r, err := gzip.NewReader(c.Data().Reader())
 	if err != nil {
 		return

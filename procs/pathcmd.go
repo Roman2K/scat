@@ -18,10 +18,7 @@ type pathCmdIn struct {
 type PathCmdInFn func(*scat.Chunk, string) (*exec.Cmd, error)
 
 func NewPathCmdIn(newCmd PathCmdInFn, tmp *tmpdedup.Dir) Proc {
-	cmdp := pathCmdIn{
-		newCmd: newCmd,
-		tmp:    tmp,
-	}
+	cmdp := pathCmdIn{newCmd, tmp}
 	return InplaceFunc(cmdp.process)
 }
 

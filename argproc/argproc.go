@@ -397,7 +397,7 @@ func newArgParity(getProc getProcFn) ap.Parser {
 func newArgGzip(getProc getProcFn) ap.Parser {
 	return ap.ArgLambda{
 		Run: func([]interface{}) (interface{}, error) {
-			return getProc(procs.NewGzip()), nil
+			return getProc(procs.Gzip{}), nil
 		},
 	}
 }
