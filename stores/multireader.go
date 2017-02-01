@@ -1,6 +1,7 @@
 package stores
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -8,6 +9,10 @@ import (
 	"scat/concur"
 	"scat/procs"
 	"scat/stores/copies"
+)
+
+var (
+	errMultiReaderNoneAvail = errors.New("no readers available")
 )
 
 type mrd struct {
@@ -52,7 +57,8 @@ func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 	if len(casc) == 0 {
 		ch := make(chan procs.Res, 1)
 		defer close(ch)
-		ch <- procs.Res{Err: procs.ErrMissingData}
+		err := procs.MissingDataError{errMultiReaderNoneAvail}
+		ch <- procs.Res{Chunk: c, Err: err}
 		return ch
 	}
 	return casc.Process(c)

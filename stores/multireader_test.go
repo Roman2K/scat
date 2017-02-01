@@ -34,8 +34,11 @@ func TestMultiReader(t *testing.T) {
 	// none available
 	mrd, err := NewMultiReader(copiers)
 	assert.NoError(t, err)
-	_, err = testutil.ReadChunks(mrd.Process(c))
-	assert.Equal(t, procs.ErrMissingData, err)
+	chunks, err := testutil.ReadChunks(mrd.Process(c))
+	missErr, ok := err.(procs.MissingDataError)
+	assert.True(t, ok)
+	assert.Equal(t, errMultiReaderNoneAvail, missErr.Err)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
 
 	readData := func() string {
 		chunks, err := testutil.ReadChunks(mrd.Process(c))
