@@ -2,22 +2,18 @@ package procs
 
 import "scat"
 
-type onEnd struct {
-	proc Proc
-	cb   func(error)
+type OnEnd struct {
+	Proc
+	OnEnd func(error)
 }
 
-func NewOnEnd(proc Proc, cb func(error)) Proc {
-	return onEnd{proc: proc, cb: cb}
-}
-
-func (oe onEnd) Process(c *scat.Chunk) <-chan Res {
-	ch := oe.proc.Process(c)
+func (oe OnEnd) Process(c *scat.Chunk) <-chan Res {
+	ch := oe.Proc.Process(c)
 	out := make(chan Res)
 	go func() {
 		defer close(out)
 		var err error
-		defer func() { oe.cb(err) }()
+		defer func() { oe.OnEnd(err) }()
 		for res := range ch {
 			if e := res.Err; e != nil && err == nil {
 				err = e
@@ -26,8 +22,4 @@ func (oe onEnd) Process(c *scat.Chunk) <-chan Res {
 		}
 	}()
 	return out
-}
-
-func (oe onEnd) Finish() error {
-	return oe.proc.Finish()
 }

@@ -94,7 +94,7 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 		casc := make(procs.Cascade, len(copiers))
 		for i := range copiers {
 			cp := copiers[i]
-			casc[i] = procs.NewOnEnd(cp, func(err error) {
+			casc[i] = procs.OnEnd{cp, func(err error) {
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "mincopies: copier error: %v\n", err)
 					mc.qman.Delete(cp)
@@ -102,10 +102,10 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 				}
 				copies.Add(cp)
 				mc.qman.AddUse(cp, dataUse)
-			})
+			}}
 		}
 		proc := procs.DiscardChunks{casc}
-		return procs.NewOnEnd(proc, func(error) { wg.Done() })
+		return procs.OnEnd{proc, func(error) { wg.Done() }}
 	}
 	for i, copier := range elected {
 		cpProcs[i+1] = copierProc(copier)

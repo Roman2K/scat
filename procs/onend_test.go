@@ -16,9 +16,9 @@ func TestOnEnd(t *testing.T) {
 	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return nil
 	})
-	oe := procs.NewOnEnd(proc, func(err error) {
+	oe := procs.OnEnd{proc, func(err error) {
 		received = append(received, err)
-	})
+	}}
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(oe.Process(c))
 	assert.NoError(t, err)
@@ -32,9 +32,9 @@ func TestOnEndError(t *testing.T) {
 	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return someErr
 	})
-	oe := procs.NewOnEnd(proc, func(err error) {
+	oe := procs.OnEnd{proc, func(err error) {
 		received = append(received, err)
-	})
+	}}
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(oe.Process(c))
 	assert.Equal(t, someErr, err)
@@ -44,6 +44,6 @@ func TestOnEndError(t *testing.T) {
 
 func TestOnEndFinish(t *testing.T) {
 	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
-		return procs.NewOnEnd(proc, func(error) {})
+		return procs.OnEnd{proc, func(error) {}}
 	})
 }

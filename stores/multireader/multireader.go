@@ -43,12 +43,12 @@ func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 	copiers = shuffle(copiers)
 	casc := make(procs.Cascade, len(copiers))
 	for i, cp := range copiers {
-		casc[i] = procs.NewOnEnd(cp, func(err error) {
+		casc[i] = procs.OnEnd{cp, func(err error) {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "multireader: copier error: %v\n", err)
 				mrd.reg.RemoveOwner(cp)
 			}
-		})
+		}}
 	}
 	if len(casc) == 0 {
 		ch := make(chan procs.Res, 1)
