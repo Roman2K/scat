@@ -12,7 +12,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestRcloneUnproc(t *testing.T) {
+func TestRcloneMissingData(t *testing.T) {
 	origCat := rcloneCat
 	defer func() {
 		rcloneCat = origCat

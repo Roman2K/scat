@@ -26,7 +26,7 @@ type dirStoreTest func(stores.Dir) stores.Store
 func (test dirStoreTest) test(t *testing.T) {
 	test.testReadWrite(t)
 	test.testInvalidDir(t)
-	test.testUnprocMissingFile(t)
+	test.testMissingData(t)
 	test.testLs(t)
 	test.testLsMissingDir(t)
 }
@@ -85,7 +85,7 @@ func (test dirStoreTest) testInvalidDir(t *testing.T) {
 	}
 }
 
-func (test dirStoreTest) testUnprocMissingFile(t *testing.T) {
+func (test dirStoreTest) testMissingData(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)

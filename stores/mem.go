@@ -1,6 +1,7 @@
 package stores
 
 import (
+	"errors"
 	"scat"
 	"scat/checksum"
 	"scat/procs"
@@ -44,7 +45,7 @@ func (s *Mem) unprocess(c *scat.Chunk) (*scat.Chunk, error) {
 	data, ok := s.data[c.Hash()]
 	s.dataMu.RUnlock()
 	if !ok {
-		return nil, procs.ErrMissingData
+		return nil, procs.MissingDataError{errors.New("no stored data")}
 	}
 	dup := make(scat.BytesData, len(data))
 	copy(dup, data)
