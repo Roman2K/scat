@@ -7,41 +7,37 @@ import (
 	"os/exec"
 
 	"scat"
-	"scat/procs"
 	"scat/checksum"
+	"scat/procs"
 	"scat/tmpdedup"
 )
 
-type rclone struct {
-	remote string
-	tmp    *tmpdedup.Dir
+type Rclone struct {
+	Remote string
+	Tmp    *tmpdedup.Dir
 }
 
-func NewRclone(remote string, tmp *tmpdedup.Dir) Store {
-	return rclone{remote, tmp}
+func (rc Rclone) Proc() procs.Proc {
+	return procs.NewPathCmdIn(rc.procCmd, rc.Tmp)
 }
 
-func (rc rclone) Proc() procs.Proc {
-	return procs.NewPathCmdIn(rc.procCmd, rc.tmp)
-}
-
-func (rc rclone) procCmd(_ *scat.Chunk, path string) (*exec.Cmd, error) {
-	cmd := exec.Command("rclone", "copy", path, rc.remote, "-q")
+func (rc Rclone) procCmd(_ *scat.Chunk, path string) (*exec.Cmd, error) {
+	cmd := exec.Command("rclone", "copy", path, rc.Remote, "-q")
 	return cmd, nil
 }
 
-func (rc rclone) Unproc() procs.Proc {
+func (rc Rclone) Unproc() procs.Proc {
 	return procs.CmdOutFunc(rc.unprocess)
 }
 
-func (rc rclone) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
-	remote := fmt.Sprintf("%s/%x", rc.remote, c.Hash())
+func (rc Rclone) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
+	remote := fmt.Sprintf("%s/%x", rc.Remote, c.Hash())
 	cmd := exec.Command("rclone", "cat", remote)
 	return cmd, nil
 }
 
-func (rc rclone) Ls() (entries []LsEntry, err error) {
-	cmd := rcloneLs(rc.remote)
+func (rc Rclone) Ls() (entries []LsEntry, err error) {
+	cmd := rcloneLs(rc.Remote)
 	out, err := cmd.Output()
 	if err != nil {
 		return

@@ -29,7 +29,7 @@ func TestRcloneLs(t *testing.T) {
 	e0h := "b35c29e433130160c9e0fddebdc6a705b86cbe657f516efc149520884bdfd899"
 	e1h := "a646cf8e18d00b01c654f7e2c85834491ba0a4fec44e5a630d53a3ef15fc2ea4"
 
-	rcl := NewRclone("xxx:yyy", nil)
+	rcl := Rclone{"xxx:yyy", nil}
 	rcloneLs = func(string) *exec.Cmd {
 		cmd := exec.Command("cat")
 		cmd.Stdin = strings.NewReader(out)
