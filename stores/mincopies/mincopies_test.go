@@ -15,7 +15,7 @@ import (
 	"scat/testutil"
 )
 
-var byId = testutil.SortCopiersByIdString
+var byId = stores.SortCopiersByIdString
 
 func TestMinCopies(t *testing.T) {
 	const min = 2

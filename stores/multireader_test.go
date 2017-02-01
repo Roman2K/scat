@@ -1,4 +1,4 @@
-package multireader
+package stores
 
 import (
 	"testing"
@@ -7,7 +7,6 @@ import (
 
 	"scat"
 	"scat/procs"
-	"scat/stores"
 	"scat/testutil"
 )
 
@@ -20,20 +19,20 @@ func TestMultiReader(t *testing.T) {
 	defer func() {
 		shuffle = origShuffle
 	}()
-	shuffle = testutil.SortCopiersByIdString
+	shuffle = SortCopiersByIdString
 
-	mem1 := stores.NewMem()
-	mem2 := stores.NewMem()
-	copiers := []stores.Copier{
-		stores.Copier{"mem1", mem1, mem1.Unproc()},
-		stores.Copier{"mem2", mem2, mem2.Unproc()},
+	mem1 := NewMem()
+	mem2 := NewMem()
+	copiers := []Copier{
+		Copier{"mem1", mem1, mem1.Unproc()},
+		Copier{"mem2", mem2, mem2.Unproc()},
 	}
 
 	c := scat.NewChunk(0, nil)
 	c.SetHash(hash)
 
 	// none available
-	mrd, err := New(copiers)
+	mrd, err := NewMultiReader(copiers)
 	assert.NoError(t, err)
 	_, err = testutil.ReadChunks(mrd.Process(c))
 	assert.Equal(t, procs.ErrMissingData, err)
@@ -49,13 +48,13 @@ func TestMultiReader(t *testing.T) {
 
 	// on mem2
 	mem2.SetData(hash, []byte("data2"))
-	mrd, err = New(copiers)
+	mrd, err = NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data2", readData())
 
 	// on mem2 and mem1
 	mem1.SetData(hash, []byte("data1"))
-	mrd, err = New(copiers)
+	mrd, err = NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data1", readData())
 }

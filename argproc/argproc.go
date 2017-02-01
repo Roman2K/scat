@@ -12,7 +12,6 @@ import (
 	"scat/stats"
 	"scat/stores"
 	"scat/stores/mincopies"
-	"scat/stores/multireader"
 	"scat/stores/quota"
 	"scat/tmpdedup"
 )
@@ -175,7 +174,7 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 				for i, icp := range args {
 					copiers[i] = icp.(stores.Copier)
 				}
-				return multireader.New(copiers)
+				return stores.NewMultiReader(copiers)
 			},
 		},
 		"parity":  newArgParity(getProc),

@@ -5,7 +5,6 @@ import (
 	"scat"
 	"scat/checksum"
 	"scat/procs"
-	"scat/stores"
 	"sort"
 	"testing"
 
@@ -90,16 +89,4 @@ func TestFinishErrForward(t *testing.T, getFinisher getFinisherFn) {
 	assert.Equal(t, someErr, err)
 	err = getFinisher(proc).Finish() // idempotence
 	assert.Equal(t, someErr, err)
-}
-
-func SortCopiersByIdString(s []stores.Copier) (res []stores.Copier) {
-	res = make([]stores.Copier, len(s))
-	copy(res, s)
-	idStr := func(i int) string {
-		return res[i].Id().(string)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return idStr(i) < idStr(j)
-	})
-	return
 }

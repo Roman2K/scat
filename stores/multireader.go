@@ -1,4 +1,4 @@
-package multireader
+package stores
 
 import (
 	"fmt"
@@ -7,17 +7,16 @@ import (
 	"scat"
 	"scat/concur"
 	"scat/procs"
-	"scat/stores"
 	"scat/stores/copies"
 )
 
 type mrd struct {
 	reg     *copies.Reg
-	copiers []stores.Copier
+	copiers []Copier
 }
 
-func New(copiers []stores.Copier) (proc procs.Proc, err error) {
-	ml := make(stores.MultiLister, len(copiers))
+func NewMultiReader(copiers []Copier) (proc procs.Proc, err error) {
+	ml := make(MultiLister, len(copiers))
 	for i, cp := range copiers {
 		ml[i] = cp
 	}
@@ -26,19 +25,19 @@ func New(copiers []stores.Copier) (proc procs.Proc, err error) {
 		reg:     reg,
 		copiers: copiers,
 	}
-	err = ml.AddEntriesTo([]stores.LsEntryAdder{
-		stores.CopiesEntryAdder{Reg: reg},
+	err = ml.AddEntriesTo([]LsEntryAdder{
+		CopiesEntryAdder{Reg: reg},
 	})
 	return
 }
 
-var shuffle = stores.ShuffleCopiers // var for tests
+var shuffle = ShuffleCopiers // var for tests
 
 func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
-	copiers := make([]stores.Copier, len(owners))
+	copiers := make([]Copier, len(owners))
 	for i, o := range owners {
-		copiers[i] = o.(stores.Copier)
+		copiers[i] = o.(Copier)
 	}
 	copiers = shuffle(copiers)
 	casc := make(procs.Cascade, len(copiers))
@@ -63,7 +62,7 @@ func (mrd mrd) Finish() error {
 	return finishFuncs(mrd.copiers).FirstErr()
 }
 
-func finishFuncs(copiers []stores.Copier) (fns concur.Funcs) {
+func finishFuncs(copiers []Copier) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(copiers))
 	for i, cp := range copiers {
 		fns[i] = cp.Finish
