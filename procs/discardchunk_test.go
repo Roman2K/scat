@@ -35,16 +35,7 @@ func TestDiscardChunksError(t *testing.T) {
 }
 
 func TestDiscardChunksFinish(t *testing.T) {
-	proc := testutil.FinishErrProc{Err: nil}
-	dc := procs.NewDiscardChunks(proc)
-	err := dc.Finish()
-	assert.NoError(t, err)
-}
-
-func TestDiscardChunksFinishError(t *testing.T) {
-	someErr := errors.New("some err")
-	proc := testutil.FinishErrProc{Err: someErr}
-	dc := procs.NewDiscardChunks(proc)
-	err := dc.Finish()
-	assert.Equal(t, someErr, err)
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		return procs.NewDiscardChunks(proc)
+	})
 }

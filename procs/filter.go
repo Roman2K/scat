@@ -7,8 +7,6 @@ type Filter struct {
 	Filter func(Res) Res
 }
 
-var _ Proc = Filter{}
-
 func (p Filter) Process(c *scat.Chunk) <-chan Res {
 	ch := p.Proc.Process(c)
 	out := make(chan Res)

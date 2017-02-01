@@ -55,14 +55,7 @@ func TestCascade(t *testing.T) {
 }
 
 func TestCascadeFinish(t *testing.T) {
-	casc := procs.Cascade{testutil.FinishErrProc{Err: nil}}
-	err := casc.Finish()
-	assert.NoError(t, err)
-}
-
-func TestCascadeFinishError(t *testing.T) {
-	someErr := errors.New("some err")
-	casc := procs.Cascade{testutil.FinishErrProc{Err: someErr}}
-	err := casc.Finish()
-	assert.Equal(t, someErr, err)
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		return procs.Cascade{procs.Nop, proc}
+	})
 }

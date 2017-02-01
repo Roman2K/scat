@@ -43,16 +43,7 @@ func TestOnEndError(t *testing.T) {
 }
 
 func TestOnEndFinish(t *testing.T) {
-	proc := testutil.FinishErrProc{Err: nil}
-	oe := procs.NewOnEnd(proc, func(error) {})
-	err := oe.Finish()
-	assert.NoError(t, err)
-}
-
-func TestOnEndFinishError(t *testing.T) {
-	someErr := errors.New("some err")
-	proc := testutil.FinishErrProc{Err: someErr}
-	oe := procs.NewOnEnd(proc, func(error) {})
-	err := oe.Finish()
-	assert.Equal(t, someErr, err)
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		return procs.NewOnEnd(proc, func(error) {})
+	})
 }

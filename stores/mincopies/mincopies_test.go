@@ -176,28 +176,16 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 }
 
 func TestFinish(t *testing.T) {
-	qman := quota.NewMan()
-	qman.AddRes(stores.NewCopier(nil,
-		stores.SliceLister{},
-		testutil.FinishErrProc{Err: nil},
-	))
-	mc, err := New(2, qman)
-	assert.NoError(t, err)
-	err = mc.Finish()
-	assert.NoError(t, err)
-}
-
-func TestFinishError(t *testing.T) {
-	someErr := errors.New("some err")
-	qman := quota.NewMan()
-	qman.AddRes(stores.NewCopier(nil,
-		stores.SliceLister{},
-		testutil.FinishErrProc{Err: someErr},
-	))
-	mc, err := New(2, qman)
-	assert.NoError(t, err)
-	err = mc.Finish()
-	assert.Equal(t, someErr, err)
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		qman := quota.NewMan()
+		qman.AddRes(stores.NewCopier(nil,
+			stores.SliceLister{},
+			proc,
+		))
+		mc, err := New(2, qman)
+		assert.NoError(t, err)
+		return mc
+	})
 }
 
 func processByAll(c *scat.Chunk, procs []procs.Proc) (

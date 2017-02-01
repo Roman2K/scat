@@ -1,48 +1,16 @@
 package testutil
 
 import (
+	"errors"
 	"scat"
 	"scat/checksum"
 	"scat/procs"
 	"scat/stores"
 	"sort"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
-
-func ReadChunks(ch <-chan procs.Res) (chunks []*scat.Chunk, err error) {
-	for res := range ch {
-		if e := res.Err; e != nil && err == nil {
-			err = e
-		}
-		chunks = append(chunks, res.Chunk)
-	}
-	return
-}
-
-type FinishErrProc struct {
-	Err error
-}
-
-var _ procs.Proc = FinishErrProc{}
-
-func (p FinishErrProc) Process(*scat.Chunk) <-chan procs.Res {
-	panic("Process() not implemented")
-}
-
-func (p FinishErrProc) Finish() error {
-	return p.Err
-}
-
-func SortCopiersByIdString(s []stores.Copier) (res []stores.Copier) {
-	res = make([]stores.Copier, len(s))
-	copy(res, s)
-	idStr := func(i int) string {
-		return res[i].Id().(string)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return idStr(i) < idStr(j)
-	})
-	return
-}
 
 //
 // Generate hashes in Ruby with:
@@ -77,4 +45,61 @@ func init() {
 	sort.Slice(Hashes[:], func(i, j int) bool {
 		return hex(i) < hex(j)
 	})
+}
+
+func ReadChunks(ch <-chan procs.Res) (chunks []*scat.Chunk, err error) {
+	for res := range ch {
+		if e := res.Err; e != nil && err == nil {
+			err = e
+		}
+		chunks = append(chunks, res.Chunk)
+	}
+	return
+}
+
+type FinishErrProc struct {
+	Err error
+}
+
+var _ procs.Proc = FinishErrProc{}
+
+func (p FinishErrProc) Process(*scat.Chunk) <-chan procs.Res {
+	panic("Process() not implemented")
+}
+
+func (p FinishErrProc) Finish() error {
+	return p.Err
+}
+
+type Finisher interface {
+	Finish() error
+}
+
+type getFinisherFn func(procs.Proc) Finisher
+
+func TestFinishErrForward(t *testing.T, getFinisher getFinisherFn) {
+	proc := FinishErrProc{Err: nil}
+	err := getFinisher(proc).Finish()
+	assert.NoError(t, err)
+	err = getFinisher(proc).Finish() // idempotence
+	assert.NoError(t, err)
+
+	someErr := errors.New("some err")
+	proc = FinishErrProc{Err: someErr}
+	err = getFinisher(proc).Finish()
+	assert.Equal(t, someErr, err)
+	err = getFinisher(proc).Finish() // idempotence
+	assert.Equal(t, someErr, err)
+}
+
+func SortCopiersByIdString(s []stores.Copier) (res []stores.Copier) {
+	res = make([]stores.Copier, len(s))
+	copy(res, s)
+	idStr := func(i int) string {
+		return res[i].Id().(string)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return idStr(i) < idStr(j)
+	})
+	return
 }
