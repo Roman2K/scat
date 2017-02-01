@@ -33,17 +33,13 @@ func (sl SliceLister) Ls() ([]LsEntry, error) {
 }
 
 type Copier struct {
-	id interface{}
+	IdVal interface{}
 	Lister
 	procs.Proc
 }
 
-func NewCopier(id interface{}, lser Lister, proc procs.Proc) Copier {
-	return Copier{id, lser, proc}
-}
-
 func (cp Copier) Id() interface{} {
-	return cp.id
+	return cp.IdVal
 }
 
 type LsEntryAdder interface {

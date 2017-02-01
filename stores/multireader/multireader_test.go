@@ -25,8 +25,8 @@ func TestMultiReader(t *testing.T) {
 	mem1 := stores.NewMem()
 	mem2 := stores.NewMem()
 	copiers := []stores.Copier{
-		stores.NewCopier("mem1", mem1, mem1.Unproc()),
-		stores.NewCopier("mem2", mem2, mem2.Unproc()),
+		stores.Copier{"mem1", mem1, mem1.Unproc()},
+		stores.Copier{"mem2", mem2, mem2.Unproc()},
 	}
 
 	c := scat.NewChunk(0, nil)

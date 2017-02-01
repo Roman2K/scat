@@ -41,18 +41,18 @@ func TestMinCopies(t *testing.T) {
 
 	newQman := func() (qman *quota.Man) {
 		qman = quota.NewMan()
-		qman.AddRes(stores.NewCopier("a",
+		qman.AddRes(stores.Copier{"a",
 			stores.SliceLister{{Hash: hash1}},
 			testProc("a"),
-		))
-		qman.AddRes(stores.NewCopier("b",
+		})
+		qman.AddRes(stores.Copier{"b",
 			stores.SliceLister{{Hash: hash1}, {Hash: hash2}},
 			testProc("b"),
-		))
-		qman.AddRes(stores.NewCopier("c",
+		})
+		qman.AddRes(stores.Copier{"c",
 			stores.SliceLister{},
 			testProc("c"),
-		))
+		})
 		return
 	}
 
@@ -157,14 +157,14 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 
 	hash1 := checksum.SumBytes([]byte("hash1"))
 	qman := quota.NewMan()
-	qman.AddRes(stores.NewCopier("a",
+	qman.AddRes(stores.Copier{"a",
 		stores.SliceLister{{Hash: hash1}},
 		testProc("a"),
-	))
-	qman.AddRes(stores.NewCopier("b",
+	})
+	qman.AddRes(stores.Copier{"b",
 		stores.SliceLister{{Hash: hash1}},
 		testProc("b"),
-	))
+	})
 	mc, err := New(1, qman)
 	assert.NoError(t, err)
 
@@ -178,10 +178,8 @@ func TestMinCopiesNegativeMissing(t *testing.T) {
 func TestFinish(t *testing.T) {
 	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
 		qman := quota.NewMan()
-		qman.AddRes(stores.NewCopier(nil,
-			stores.SliceLister{},
-			proc,
-		))
+		qman.AddRes(stores.Copier{1, stores.SliceLister{}, procs.Nop})
+		qman.AddRes(stores.Copier{2, stores.SliceLister{}, proc})
 		mc, err := New(2, qman)
 		assert.NoError(t, err)
 		return mc
@@ -206,9 +204,9 @@ func processByAll(c *scat.Chunk, procs []procs.Proc) (
 
 func TestShuffle(t *testing.T) {
 	s := []stores.Copier{
-		stores.NewCopier("a", nil, nil),
-		stores.NewCopier("b", nil, nil),
-		stores.NewCopier("c", nil, nil),
+		stores.Copier{"a", nil, nil},
+		stores.Copier{"b", nil, nil},
+		stores.Copier{"c", nil, nil},
 	}
 	ids := ids(shuffle(s))
 	sort.Strings(ids)
@@ -227,9 +225,9 @@ func reverse(s []stores.Copier) (res []stores.Copier) {
 
 func TestReverse(t *testing.T) {
 	s := []stores.Copier{
-		stores.NewCopier("a", nil, nil),
-		stores.NewCopier("b", nil, nil),
-		stores.NewCopier("c", nil, nil),
+		stores.Copier{"a", nil, nil},
+		stores.Copier{"b", nil, nil},
+		stores.Copier{"c", nil, nil},
 	}
 	assert.Equal(t, []string{"c", "b", "a"}, ids(reverse(s)))
 }

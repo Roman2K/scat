@@ -321,7 +321,7 @@ func (b builder) newArgCopier(argStore ap.Parser, getProc getProcFn) ap.Parser {
 				}
 				proc = stats.Proc{b.stats, id, proc}
 			}
-			return stores.NewCopier(id, lser, proc), nil
+			return stores.Copier{id, lser, proc}, nil
 		},
 	}
 }
