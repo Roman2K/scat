@@ -23,7 +23,7 @@ func TestMemMissingData(t *testing.T) {
 	assert.Equal(t, []*scat.Chunk{c}, chunks)
 
 	c = scat.NewChunk(0, nil)
-	mem.SetData(c.Hash(), []byte(data))
+	mem.Set(c.Hash(), []byte(data))
 	chunks, err = testutil.ReadChunks(mem.Unproc().Process(c))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(chunks))

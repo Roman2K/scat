@@ -50,13 +50,13 @@ func TestMultiReader(t *testing.T) {
 	}
 
 	// on mem2
-	mem2.SetData(hash, []byte("data2"))
+	mem2.Set(hash, []byte("data2"))
 	mrd, err = NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data2", readData())
 
 	// on mem2 and mem1
-	mem1.SetData(hash, []byte("data1"))
+	mem1.Set(hash, []byte("data1"))
 	mrd, err = NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data1", readData())

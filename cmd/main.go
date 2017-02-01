@@ -25,7 +25,7 @@ func main() {
 	if err := start(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		if exit, ok := err.(*exec.ExitError); ok {
-			fmt.Fprintf(os.Stderr, "stderr: %s\n", exit.Stderr)
+			fmt.Fprintf(os.Stderr, "stderr=%q\n", exit.Stderr)
 		}
 		os.Exit(1)
 	}

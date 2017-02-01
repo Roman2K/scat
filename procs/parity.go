@@ -3,6 +3,9 @@ package procs
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/klauspost/reedsolomon"
 
@@ -79,13 +82,14 @@ func (p *parity) join(c *scat.Chunk) (joined []byte, err error) {
 	shards := make([][]byte, len(chunks))
 	mustReconstruct := false
 	for i, c := range chunks {
-		ok, err := getIntegrityCheck(c)
+		err, ok := parityRecoverableErr(c)
+		if ok {
+			mustReconstruct = true
+			logParityRecoverableErr(err, c)
+			continue
+		}
 		if err != nil {
 			return nil, err
-		}
-		if !ok {
-			mustReconstruct = true
-			continue
 		}
 		bytes, err := c.Data().Bytes()
 		if err != nil {
@@ -120,24 +124,35 @@ func (p *parity) join(c *scat.Chunk) (joined []byte, err error) {
 
 func getGroup(c *scat.Chunk, size int) (chunks []*scat.Chunk, err error) {
 	chunks, ok := c.Meta().Get("group").([]*scat.Chunk)
-	if !ok {
+	switch {
+	case !ok:
 		err = errors.New("missing group")
-		return
-	}
-	if len(chunks) != size {
+	case len(chunks) != size:
 		err = errors.New("invalid group size")
-		return
 	}
 	return
 }
 
-func getIntegrityCheck(c *scat.Chunk) (bool, error) {
-	err, ok := c.Meta().Get("err").(error)
+func parityRecoverableErr(c *scat.Chunk) (err error, ok bool) {
+	err, ok = c.Meta().Get("err").(error)
 	if !ok {
-		return true, nil
+		return
 	}
-	if err == ErrIntegrityCheckFailed {
-		return false, nil
+	if _, isMiss := err.(MissingDataError); isMiss {
+		ok = true
+		return
 	}
-	return false, err
+	ok = (err == ErrIntegrityCheckFailed)
+	return
+}
+
+func logParityRecoverableErr(err error, c *scat.Chunk) {
+	var stderr []byte
+	if exit, ok := err.(*exec.ExitError); ok {
+		stderr = exit.Stderr
+	}
+	fmt.Fprintf(os.Stderr,
+		"parity: recovering err: %v (stderr=%q chunk=%x)\n",
+		err, stderr, c.Hash(),
+	)
 }

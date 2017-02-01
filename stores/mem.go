@@ -32,7 +32,7 @@ func (s *Mem) process(c *scat.Chunk) (err error) {
 	if err != nil {
 		return
 	}
-	s.SetData(c.Hash(), b)
+	s.Set(c.Hash(), b)
 	return nil
 }
 
@@ -52,10 +52,32 @@ func (s *Mem) unprocess(c *scat.Chunk) (*scat.Chunk, error) {
 	return c.WithData(dup), nil
 }
 
-func (s *Mem) SetData(hash checksum.Hash, b []byte) {
+func (s *Mem) Hashes() (hashes []checksum.Hash) {
+	s.dataMu.RLock()
+	defer s.dataMu.RUnlock()
+	hashes = make([]checksum.Hash, 0, len(s.data))
+	for h := range s.data {
+		hashes = append(hashes, h)
+	}
+	return
+}
+
+func (s *Mem) Set(hash checksum.Hash, b []byte) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 	s.data[hash] = b
+}
+
+func (s *Mem) Get(hash checksum.Hash) []byte {
+	s.dataMu.RLock()
+	defer s.dataMu.RUnlock()
+	return s.data[hash]
+}
+
+func (s *Mem) Delete(hash checksum.Hash) {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+	delete(s.data, hash)
 }
 
 func (s *Mem) Ls() ([]LsEntry, error) {

@@ -2,7 +2,7 @@ package integration_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"errors"
 	"testing"
 
 	"github.com/klauspost/reedsolomon"
@@ -11,10 +11,15 @@ import (
 	"scat"
 	"scat/checksum"
 	"scat/procs"
+	"scat/stores"
 )
 
 func TestParityCorruptNone(t *testing.T) {
 	testParity(t, corruptNone)
+}
+
+func TestParityCorruptNoneNonRecoverable(t *testing.T) {
+	testParity(t, corruptNone|corruptNonRecoverable)
 }
 
 func TestParityCorruptRecoverable(t *testing.T) {
@@ -25,12 +30,21 @@ func TestParityCorruptNonRecoverable(t *testing.T) {
 	testParity(t, corruptNonRecoverable)
 }
 
-type corruption int
+func TestParityCorruptMissingData(t *testing.T) {
+	testParity(t, corruptMissingData)
+}
+
+func TestParityCorruptMissingDataNonRecoverable(t *testing.T) {
+	testParity(t, corruptMissingData|corruptNonRecoverable)
+}
+
+type corruption uint
 
 const (
-	corruptNone corruption = iota
+	corruptNone corruption = 1 << iota
 	corruptRecoverable
 	corruptNonRecoverable
+	corruptMissingData
 )
 
 func testParity(t *testing.T, cor corruption) {
@@ -44,7 +58,7 @@ func testParity(t *testing.T, cor corruption) {
 	assert.NoError(t, err)
 
 	indexBuf := &bytes.Buffer{}
-	store := memStore{}
+	store := stores.NewMem()
 
 	// split
 	seed := scat.NewChunk(0, scat.BytesData(inputStr))
@@ -60,23 +74,43 @@ func testParity(t *testing.T, cor corruption) {
 	err = procs.Process(chain, seed)
 	assert.NoError(t, err)
 
-	corrupt := func(n int) {
-		i := 0
-		for hash, data := range store {
-			if i >= n {
-				break
-			}
-			store[hash] = append(data, 'x')
-			i++
+	corrupt := func(n int, modify func(checksum.Hash)) {
+		hashes := store.Hashes()
+		assert.True(t, len(hashes) >= n)
+		for _, h := range hashes[:n] {
+			modify(h)
 		}
 	}
+	tamperWithData := func(h checksum.Hash) {
+		store.Set(h, append(store.Get(h), 'x'))
+	}
+	deleteData := func(h checksum.Hash) {
+		store.Delete(h)
+	}
+
+	storeUnproc := store.Unproc()
+	nonRecoverableErr := reedsolomon.ErrTooFewShards
 
 	switch cor {
 	case corruptNone:
+	case corruptNone | corruptNonRecoverable:
+		someErr := errors.New("some err")
+		nonRecoverableErr = someErr
+		storeUnproc = procs.Filter{
+			Proc: storeUnproc,
+			Filter: func(res procs.Res) procs.Res {
+				res.Err = someErr
+				return res
+			},
+		}
 	case corruptRecoverable:
-		corrupt(nparity)
+		corrupt(nparity, tamperWithData)
 	case corruptNonRecoverable:
-		corrupt(nparity + 1)
+		corrupt(nparity+1, tamperWithData)
+	case corruptMissingData:
+		corrupt(nparity, deleteData)
+	case corruptMissingData | corruptNonRecoverable:
+		corrupt(nparity+1, deleteData)
 	default:
 		panic("unhandled corruption type")
 	}
@@ -85,7 +119,7 @@ func testParity(t *testing.T, cor corruption) {
 	outBuf := &bytes.Buffer{}
 	chain = procs.Chain{
 		procs.IndexUnproc,
-		store.Unproc(),
+		storeUnproc,
 		procs.ChecksumUnproc,
 		procs.Gzip{}.Unproc(),
 		procs.NewGroup(ndata + nparity),
@@ -94,33 +128,10 @@ func testParity(t *testing.T, cor corruption) {
 	}
 	err = procs.Process(chain, seed)
 
-	if cor == corruptNonRecoverable {
-		assert.Equal(t, reedsolomon.ErrTooFewShards, err)
+	if cor&corruptNonRecoverable != 0 {
+		assert.Equal(t, nonRecoverableErr, err)
 		return
 	}
 	assert.NoError(t, err)
 	assert.Equal(t, inputStr, outBuf.String())
-}
-
-type memStore map[checksum.Hash]scat.BytesData
-
-func (ms memStore) Proc() procs.Proc {
-	return procs.InplaceFunc(ms.process)
-}
-
-func (ms memStore) Unproc() procs.Proc {
-	return procs.ChunkFunc(ms.unprocess)
-}
-
-func (ms memStore) process(c *scat.Chunk) (err error) {
-	buf, err := ioutil.ReadAll(c.Data().Reader())
-	if err != nil {
-		return
-	}
-	ms[c.Hash()] = scat.BytesData(buf)
-	return
-}
-
-func (ms memStore) unprocess(c *scat.Chunk) (*scat.Chunk, error) {
-	return c.WithData(ms[c.Hash()]), nil
 }

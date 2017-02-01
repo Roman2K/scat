@@ -6,6 +6,5 @@ ag -s 'Fprintf.*os.Stderr' \
   --ignore-dir tools \
   --color \
   | ag -v 'ansirefresh ticker: write error:' \
-  | ag -v 'stderr:' \
   | ag -v 'mincopies: copier error:' \
   | ag -v 'multireader: copier error:'
