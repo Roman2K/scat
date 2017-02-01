@@ -7,8 +7,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat"
-	"scat/checksum"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
 )
 
 func TestChunk(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/restic/chunker"
 
-	"scat"
+	"github.com/Roman2K/scat"
 )
 
 const (

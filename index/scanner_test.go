@@ -7,8 +7,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat/checksum"
-	"scat/index"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/index"
 )
 
 func TestScannerEmpty(t *testing.T) {

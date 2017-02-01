@@ -1,7 +1,7 @@
 package argproc_test
 
 import (
-	"scat/argproc"
+	"github.com/Roman2K/scat/argproc"
 	"testing"
 )
 

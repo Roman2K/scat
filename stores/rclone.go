@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"regexp"
 
-	"scat"
-	"scat/checksum"
-	"scat/procs"
-	"scat/tmpdedup"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/tmpdedup"
 )
 
 var (

@@ -6,8 +6,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat/index"
-	"scat/testutil"
+	"github.com/Roman2K/scat/index"
+	"github.com/Roman2K/scat/testutil"
 )
 
 func TestWrite(t *testing.T) {

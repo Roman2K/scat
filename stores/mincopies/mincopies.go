@@ -6,12 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"scat"
-	"scat/concur"
-	"scat/procs"
-	"scat/stores"
-	"scat/stores/copies"
-	"scat/stores/quota"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/concur"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stores"
+	"github.com/Roman2K/scat/stores/copies"
+	"github.com/Roman2K/scat/stores/quota"
 )
 
 type minCopies struct {

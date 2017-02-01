@@ -11,7 +11,7 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 
-	"scat/slidecnt"
+	"github.com/Roman2K/scat/slidecnt"
 )
 
 const (

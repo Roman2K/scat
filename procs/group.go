@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"scat"
+	"github.com/Roman2K/scat"
 )
 
 type group struct {

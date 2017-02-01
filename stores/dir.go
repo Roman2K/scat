@@ -3,7 +3,7 @@ package stores
 import (
 	"fmt"
 	"path/filepath"
-	"scat/checksum"
+	"github.com/Roman2K/scat/checksum"
 )
 
 type Dir struct {

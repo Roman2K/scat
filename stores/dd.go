@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"scat"
-	"scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
 	"strconv"
 	"strings"
 )

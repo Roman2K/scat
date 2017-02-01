@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"scat"
-	"scat/checksum"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
 )
 
 type scanner struct {

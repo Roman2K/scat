@@ -5,15 +5,15 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"scat"
+	"github.com/Roman2K/scat"
 
-	ap "scat/argparse"
-	"scat/procs"
-	"scat/stats"
-	"scat/stores"
-	"scat/stores/mincopies"
-	"scat/stores/quota"
-	"scat/tmpdedup"
+	ap "github.com/Roman2K/scat/argparse"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stats"
+	"github.com/Roman2K/scat/stores"
+	"github.com/Roman2K/scat/stores/mincopies"
+	"github.com/Roman2K/scat/stores/quota"
+	"github.com/Roman2K/scat/tmpdedup"
 )
 
 func New(tmp *tmpdedup.Dir, stats *stats.Statsd) ap.Parser {

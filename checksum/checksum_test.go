@@ -2,7 +2,7 @@ package checksum_test
 
 import (
 	"fmt"
-	"scat/checksum"
+	"github.com/Roman2K/scat/checksum"
 	"strings"
 	"testing"
 

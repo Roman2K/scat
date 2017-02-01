@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	"scat"
-	"scat/tmpdedup"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/tmpdedup"
 )
 
 type pathCmdIn struct {

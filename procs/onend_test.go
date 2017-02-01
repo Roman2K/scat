@@ -6,9 +6,9 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat"
-	"scat/procs"
-	"scat/testutil"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/testutil"
 )
 
 func TestOnEnd(t *testing.T) {

@@ -1,8 +1,8 @@
 package procs
 
 import (
-	"scat"
-	"scat/split"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/split"
 )
 
 var Split Proc

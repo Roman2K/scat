@@ -7,9 +7,9 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat"
-	"scat/checksum"
-	"scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/procs"
 )
 
 func testChunkNums(t *testing.T, proc procs.Proc, inChunks int) {

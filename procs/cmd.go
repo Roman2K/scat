@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os/exec"
 
-	"scat"
+	"github.com/Roman2K/scat"
 )
 
 var (

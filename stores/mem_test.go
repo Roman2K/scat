@@ -1,10 +1,10 @@
 package stores_test
 
 import (
-	"scat"
-	"scat/procs"
-	"scat/stores"
-	"scat/testutil"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stores"
+	"github.com/Roman2K/scat/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

@@ -3,8 +3,8 @@ package procs
 import (
 	"sync"
 
-	"scat"
-	"scat/slots"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/slots"
 )
 
 type concurProc struct {

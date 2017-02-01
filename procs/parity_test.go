@@ -6,8 +6,8 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat"
-	"scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
 )
 
 func TestParityNonIntegrityError(t *testing.T) {

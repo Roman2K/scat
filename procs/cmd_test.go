@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"scat"
-	"scat/procs"
-	"scat/testutil"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/testutil"
 )
 
 func TestCmdFunc(t *testing.T) {

@@ -1,6 +1,6 @@
 package procs
 
-import "scat"
+import "github.com/Roman2K/scat"
 
 type OnEnd struct {
 	Proc

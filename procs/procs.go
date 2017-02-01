@@ -3,9 +3,9 @@ package procs
 import (
 	"errors"
 	"fmt"
-	"scat/concur"
+	"github.com/Roman2K/scat/concur"
 
-	"scat"
+	"github.com/Roman2K/scat"
 )
 
 var (

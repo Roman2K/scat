@@ -2,7 +2,7 @@ package concur_test
 
 import (
 	"errors"
-	"scat/concur"
+	"github.com/Roman2K/scat/concur"
 	"testing"
 	"time"
 

@@ -1,9 +1,9 @@
 package stats_test
 
 import (
-	"scat/procs"
-	"scat/stats"
-	"scat/testutil"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stats"
+	"github.com/Roman2K/scat/testutil"
 	"testing"
 )
 

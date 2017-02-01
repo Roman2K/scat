@@ -9,7 +9,7 @@ import (
 
 	"github.com/klauspost/reedsolomon"
 
-	"scat"
+	"github.com/Roman2K/scat"
 )
 
 type parity struct {

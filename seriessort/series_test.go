@@ -5,7 +5,7 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"scat/seriessort"
+	"github.com/Roman2K/scat/seriessort"
 )
 
 func TestSeries(t *testing.T) {

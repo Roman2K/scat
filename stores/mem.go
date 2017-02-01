@@ -2,9 +2,9 @@ package stores
 
 import (
 	"errors"
-	"scat"
-	"scat/checksum"
-	"scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/procs"
 	"sync"
 )
 

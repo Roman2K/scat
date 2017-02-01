@@ -8,10 +8,10 @@ import (
 	"github.com/klauspost/reedsolomon"
 	assert "github.com/stretchr/testify/require"
 
-	"scat"
-	"scat/checksum"
-	"scat/procs"
-	"scat/stores"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stores"
 )
 
 func TestParityCorruptNone(t *testing.T) {
