@@ -13,6 +13,7 @@ type tick struct {
 	num  uint64
 }
 
+// var for tests
 var getNow = func() time.Time {
 	return time.Now()
 }

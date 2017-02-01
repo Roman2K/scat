@@ -62,6 +62,7 @@ func (rc Rclone) Ls() (entries []LsEntry, err error) {
 	return
 }
 
+// var for tests
 var rcloneLs = func(remote string) *exec.Cmd {
 	return exec.Command("rclone", "ls", remote, "-q")
 }
