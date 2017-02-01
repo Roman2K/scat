@@ -2,16 +2,12 @@ package procs
 
 import "scat"
 
-type discardChunks struct {
-	proc Proc
+type DiscardChunks struct {
+	Proc
 }
 
-func NewDiscardChunks(proc Proc) Proc {
-	return discardChunks{proc: proc}
-}
-
-func (dc discardChunks) Process(c *scat.Chunk) <-chan Res {
-	ch := dc.proc.Process(c)
+func (dc DiscardChunks) Process(c *scat.Chunk) <-chan Res {
+	ch := dc.Proc.Process(c)
 	out := make(chan Res)
 	go func() {
 		defer close(out)
@@ -23,8 +19,4 @@ func (dc discardChunks) Process(c *scat.Chunk) <-chan Res {
 		}
 	}()
 	return out
-}
-
-func (dc discardChunks) Finish() error {
-	return dc.proc.Finish()
 }

@@ -104,7 +104,7 @@ func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 				mc.qman.AddUse(cp, dataUse)
 			})
 		}
-		proc := procs.NewDiscardChunks(casc)
+		proc := procs.DiscardChunks{casc}
 		return procs.NewOnEnd(proc, func(error) { wg.Done() })
 	}
 	for i, copier := range elected {

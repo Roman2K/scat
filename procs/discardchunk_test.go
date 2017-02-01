@@ -15,7 +15,7 @@ func TestDiscardChunks(t *testing.T) {
 	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return nil
 	})
-	dc := procs.NewDiscardChunks(proc)
+	dc := procs.DiscardChunks{proc}
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(dc.Process(c))
 	assert.NoError(t, err)
@@ -27,7 +27,7 @@ func TestDiscardChunksError(t *testing.T) {
 	proc := procs.InplaceFunc(func(*scat.Chunk) error {
 		return someErr
 	})
-	dc := procs.NewDiscardChunks(proc)
+	dc := procs.DiscardChunks{proc}
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(dc.Process(c))
 	assert.Equal(t, []*scat.Chunk{c}, chunks)
@@ -36,6 +36,6 @@ func TestDiscardChunksError(t *testing.T) {
 
 func TestDiscardChunksFinish(t *testing.T) {
 	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
-		return procs.NewDiscardChunks(proc)
+		return procs.DiscardChunks{proc}
 	})
 }
