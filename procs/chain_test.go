@@ -9,15 +9,8 @@ import (
 
 	"scat"
 	"scat/procs"
+	"scat/testutil"
 )
-
-func appendData(c *scat.Chunk, b byte) (*scat.Chunk, error) {
-	bytes, err := c.Data().Bytes()
-	if err != nil {
-		return nil, err
-	}
-	return c.WithData(append(scat.BytesData(bytes), b)), nil
-}
 
 func TestChain(t *testing.T) {
 	a := procs.ChunkFunc(func(c *scat.Chunk) (*scat.Chunk, error) {
@@ -35,6 +28,14 @@ func TestChain(t *testing.T) {
 	bytes, err := res.Chunk.Data().Bytes()
 	assert.NoError(t, err)
 	assert.Equal(t, "xab", string(bytes))
+}
+
+func appendData(c *scat.Chunk, b byte) (*scat.Chunk, error) {
+	bytes, err := c.Data().Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return c.WithData(append(scat.BytesData(bytes), b)), nil
 }
 
 func TestChainEndProc(t *testing.T) {
@@ -144,6 +145,12 @@ func TestChainErrRecovery(t *testing.T) {
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, 0, okCount)
 	assert.Equal(t, []error{}, recovered)
+}
+
+func TestChainFinish(t *testing.T) {
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		return procs.Chain{procs.Nop, proc}
+	})
 }
 
 type enderProc struct {
