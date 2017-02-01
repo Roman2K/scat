@@ -35,3 +35,12 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, someErr, err)
 	assert.Equal(t, []*scat.Chunk{c}, chunks)
 }
+
+func TestFilterFinish(t *testing.T) {
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		return procs.Filter{
+			Proc:   proc,
+			Filter: func(res procs.Res) procs.Res { return res },
+		}
+	})
+}
