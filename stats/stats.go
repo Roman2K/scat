@@ -39,7 +39,7 @@ func (st *Statsd) Counter(id Id) *Counter {
 	if _, ok := st.counters[id]; !ok {
 		st.counters[id] = &Counter{
 			pos: st.nextPos,
-			out: slidecnt.New(outRateWindow),
+			out: &slidecnt.Counter{Window: outRateWindow},
 		}
 		st.nextPos++
 	}
@@ -153,7 +153,7 @@ type Counter struct {
 	pos   uint32
 	last  time.Time
 	inst  int32
-	out   slidecnt.Counter
+	out   *slidecnt.Counter
 	outMu sync.Mutex
 	Quota struct {
 		Init     bool

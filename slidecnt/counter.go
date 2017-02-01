@@ -3,14 +3,9 @@ package slidecnt
 
 import "time"
 
-type Counter interface {
-	Add(uint64)
-	AvgRate(time.Duration) uint64
-}
-
-type counter struct {
+type Counter struct {
+	Window time.Duration
 	ticks  []tick
-	window time.Duration
 }
 
 type tick struct {
@@ -18,22 +13,18 @@ type tick struct {
 	num  uint64
 }
 
-func New(window time.Duration) Counter {
-	return &counter{window: window}
-}
-
 var getNow = func() time.Time {
 	return time.Now()
 }
 
-func (c *counter) Add(num uint64) {
+func (c *Counter) Add(num uint64) {
 	now := getNow()
 	c.prune(now)
 	c.ticks = append(c.ticks, tick{time: now, num: num})
 }
 
-func (c *counter) prune(now time.Time) {
-	minTime := now.Add(-c.window)
+func (c *Counter) prune(now time.Time) {
+	minTime := now.Add(-c.Window)
 	i := 0
 	for n := len(c.ticks); i < n; i++ {
 		time := c.ticks[i].time
@@ -44,7 +35,7 @@ func (c *counter) prune(now time.Time) {
 	c.ticks = append(c.ticks[:0], c.ticks[i:]...)
 }
 
-func (c *counter) AvgRate(unit time.Duration) uint64 {
+func (c *Counter) AvgRate(unit time.Duration) uint64 {
 	if unit == 0 {
 		return 0
 	}
