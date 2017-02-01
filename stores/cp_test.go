@@ -93,7 +93,9 @@ func (test dirStoreTest) testUnprocMissingFile(t *testing.T) {
 	store := test(stores.Dir{Path: dir + "/missing"})
 	c := scat.NewChunk(0, nil)
 	_, err = testutil.ReadChunks(store.Unproc().Process(c))
-	assert.Equal(t, procs.ErrMissingData, err)
+	missErr, ok := err.(procs.MissingDataError)
+	assert.True(t, ok)
+	assert.Error(t, missErr.Err)
 }
 
 func (test dirStoreTest) testLs(t *testing.T) {

@@ -96,7 +96,7 @@ func (s Dd) Unproc() procs.Proc {
 		Filter: func(res procs.Res) procs.Res {
 			if exit, ok := res.Err.(*exec.ExitError); ok {
 				if noSuchFileRe.Match(exit.Stderr) {
-					res.Err = procs.ErrMissingData
+					res.Err = procs.MissingDataError{exit}
 				}
 			}
 			return res

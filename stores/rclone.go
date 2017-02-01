@@ -56,8 +56,8 @@ func (rc Rclone) Unproc() procs.Proc {
 // * Drive: exit=1 stdout="" stderr="directory not found"
 // * Dropbox: exit=0 stdout="" stderr=""
 //
-// So the most universal way of detecting a failed download is seeing 0 bytes on
-// stdout.
+// Therefore, the most universal way of detecting a failed download is seeing 0
+// bytes on stdout.
 //
 func rcloneDownloadErr(res procs.Res) error {
 	if res.Err != nil {

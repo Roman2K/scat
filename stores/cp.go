@@ -47,7 +47,7 @@ func (cp Cp) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 	path := Dir(cp).FullPath(c.Hash())
 	b, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
-		err = procs.ErrMissingData
+		err = procs.MissingDataError{err}
 	}
 	new = c.WithData(scat.BytesData(b))
 	return
