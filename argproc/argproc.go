@@ -184,7 +184,7 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 		"ugzip":   newArgGzip(getUnproc),
 		"sort": ap.ArgLambda{
 			Run: func([]interface{}) (interface{}, error) {
-				return procs.NewSort(), nil
+				return &procs.Sort{}, nil
 			},
 		},
 		"write": ap.ArgLambda{
@@ -277,7 +277,7 @@ func (b builder) newArgStore() ap.ArgFn {
 				var (
 					remote = args[0].(string)
 				)
-				return stores.NewRclone(remote, b.tmp), nil
+				return stores.Rclone{remote, b.tmp}, nil
 			},
 		},
 		"cp": ap.ArgLambda{
