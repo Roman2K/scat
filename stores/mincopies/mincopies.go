@@ -46,7 +46,7 @@ func calcDataUse(d scat.Data) (uint64, error) {
 	return uint64(sz.Size()), nil
 }
 
-var shuffle = stores.ShuffleCopiers
+var shuffle = stores.ShuffleCopiers // var for tests
 
 func (mc *minCopies) Procs(c *scat.Chunk) ([]procs.Proc, error) {
 	copies := mc.reg.List(c.Hash())

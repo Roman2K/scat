@@ -8,6 +8,7 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"scat"
 	"scat/procs"
 	"strconv"
@@ -16,7 +17,14 @@ import (
 
 const ddBsArg = "bs=1048576" // most universal ("1M" on GNU, "1m" on macOS)
 
-var cmdGnuFind = "find"
+var (
+	cmdGnuFind   = "find" // var for tests
+	noSuchFileRe *regexp.Regexp
+)
+
+func init() {
+	noSuchFileRe = regexp.MustCompile(`\b(?i:no such file)\b`)
+}
 
 type Dd struct {
 	Dir        Dir
@@ -83,7 +91,17 @@ func defaultStrCommand(env env, str string) (cmd *exec.Cmd) {
 }
 
 func (s Dd) Unproc() procs.Proc {
-	return procs.CmdOutFunc(s.unprocess)
+	return procs.Filter{
+		Proc: procs.CmdOutFunc(s.unprocess),
+		Filter: func(res procs.Res) procs.Res {
+			if exit, ok := res.Err.(*exec.ExitError); ok {
+				if noSuchFileRe.Match(exit.Stderr) {
+					res.Err = procs.ErrMissingData
+				}
+			}
+			return res
+		},
+	}
 }
 
 func (s Dd) unprocess(c *scat.Chunk) (*exec.Cmd, error) {
@@ -129,8 +147,8 @@ func (fn findDirLister) Ls(dir string, depth int) <-chan DirLsRes {
 				if err != nil {
 					return err
 				}
+				// The sign of size is important for the control flow of this loop
 				if sz < 0 {
-					// The sign of size is important for the control flow of this loop
 					return errors.New("size can't be negative")
 				}
 				size = sz

@@ -10,6 +10,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"scat"
+	"scat/procs"
 	"scat/stores"
 	"scat/testutil"
 )
@@ -92,12 +93,7 @@ func (test dirStoreTest) testUnprocMissingFile(t *testing.T) {
 	store := test(stores.Dir{Path: dir + "/missing"})
 	c := scat.NewChunk(0, nil)
 	_, err = testutil.ReadChunks(store.Unproc().Process(c))
-	assert.Error(t, err)
-	if exit, ok := err.(*exec.ExitError); ok {
-		assert.Regexp(t, "No such file", string(exit.Stderr))
-	} else {
-		assert.True(t, os.IsNotExist(err))
-	}
+	assert.Equal(t, procs.ErrMissingData, err)
 }
 
 func (test dirStoreTest) testLs(t *testing.T) {

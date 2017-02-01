@@ -21,7 +21,7 @@ func (cp Cp) Proc() procs.Proc {
 func (cp Cp) process(c *scat.Chunk) (err error) {
 	path := Dir(cp).FullPath(c.Hash())
 	open := func() (io.WriteCloser, error) {
-		return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		return os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
 	}
 	w, err := open()
 	if os.IsNotExist(err) {
@@ -46,6 +46,9 @@ func (cp Cp) Unproc() procs.Proc {
 func (cp Cp) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
 	path := Dir(cp).FullPath(c.Hash())
 	b, err := ioutil.ReadFile(path)
+	if os.IsNotExist(err) {
+		err = procs.ErrMissingData
+	}
 	new = c.WithData(scat.BytesData(b))
 	return
 }
@@ -78,9 +81,10 @@ func (localLister) Ls(dir string, depth int) <-chan DirLsRes {
 				if err != nil {
 					return err
 				}
-				if !fi.IsDir() {
-					ch <- DirLsRes{Name: fi.Name(), Size: fi.Size()}
+				if fi.IsDir() {
+					continue
 				}
+				ch <- DirLsRes{Name: fi.Name(), Size: fi.Size()}
 			}
 			return nil
 		}

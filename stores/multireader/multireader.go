@@ -32,7 +32,7 @@ func New(copiers []stores.Copier) (proc procs.Proc, err error) {
 	return
 }
 
-var shuffle = stores.ShuffleCopiers
+var shuffle = stores.ShuffleCopiers // var for tests
 
 func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 	owners := mrd.reg.List(c.Hash()).Owners()
