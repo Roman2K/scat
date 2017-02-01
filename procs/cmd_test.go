@@ -2,6 +2,7 @@ package procs_test
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"testing"
 
@@ -77,12 +78,18 @@ func TestCmdOutFuncError(t *testing.T) {
 }
 
 func testCmdFuncError(t *testing.T, getProc func(procs.CmdFunc) procs.Proc) {
+	const errOut = "xxx"
 	fn := procs.CmdFunc(func(*scat.Chunk) (*exec.Cmd, error) {
-		return exec.Command("/dev/null"), nil
+		cmd := exec.Command("bash", "-c", fmt.Sprintf(
+			`echo ok; echo -n %q >&2; exit 1`, errOut,
+		))
+		return cmd, nil
 	})
 	cmdp := getProc(fn)
 	c := scat.NewChunk(0, nil)
 	chunks, err := testutil.ReadChunks(cmdp.Process(c))
+	exit, ok := err.(*exec.ExitError)
+	assert.True(t, ok)
 	assert.Equal(t, []*scat.Chunk{c}, chunks)
-	assert.Equal(t, "fork/exec /dev/null: permission denied", err.Error())
+	assert.Equal(t, errOut, string(exit.Stderr))
 }
