@@ -8,9 +8,9 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	oldGet := getNow
+	origGet := getNow
 	defer func() {
-		getNow = oldGet
+		getNow = origGet
 	}()
 
 	var now time.Time

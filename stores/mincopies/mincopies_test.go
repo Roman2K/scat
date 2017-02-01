@@ -20,9 +20,9 @@ var byId = testutil.SortCopiersByIdString
 func TestMinCopies(t *testing.T) {
 	const min = 2
 
-	shuffleOrig := shuffle
+	origShuffle := shuffle
 	defer func() {
-		shuffle = shuffleOrig
+		shuffle = origShuffle
 	}()
 
 	hash1 := checksum.SumBytes([]byte("hash1"))

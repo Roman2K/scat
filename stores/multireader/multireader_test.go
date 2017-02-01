@@ -16,9 +16,9 @@ func TestMultiReader(t *testing.T) {
 		hash = testutil.Hash1.Hash
 	)
 
-	shuffleOrig := shuffle
+	origShuffle := shuffle
 	defer func() {
-		shuffle = shuffleOrig
+		shuffle = origShuffle
 	}()
 	shuffle = testutil.SortCopiersByIdString
 

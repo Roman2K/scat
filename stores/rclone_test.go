@@ -10,9 +10,9 @@ import (
 )
 
 func TestRcloneLs(t *testing.T) {
-	lsOrig := rcloneLs
+	origLs := rcloneLs
 	defer func() {
-		rcloneLs = lsOrig
+		rcloneLs = origLs
 	}()
 
 	out := "" +
