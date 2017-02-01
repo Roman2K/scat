@@ -268,7 +268,7 @@ func (b builder) newArgStore() ap.ArgFn {
 		for i, n := range nesting {
 			part[i] = n.(int)
 		}
-		return stores.Dir{Path: path, Part: part}
+		return stores.Dir{path, part}
 	}
 	return ap.ArgFn{
 		"rclone": ap.ArgLambda{
