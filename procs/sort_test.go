@@ -11,7 +11,7 @@ import (
 )
 
 func TestSortFinish(t *testing.T) {
-	sortp := procs.NewSort()
+	sortp := &procs.Sort{}
 
 	// 0 missing
 	// 1 ok

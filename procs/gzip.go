@@ -13,8 +13,6 @@ type Gzip struct {
 	// TODO level
 }
 
-var _ ProcUnprocer = Gzip{}
-
 func (gz Gzip) Proc() Proc {
 	return ChunkFunc(gz.process)
 }

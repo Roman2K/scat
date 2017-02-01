@@ -5,5 +5,5 @@ import (
 )
 
 func NewJoin(w io.Writer) Proc {
-	return NewBacklog(1, Chain{NewSort(), NewWriterTo(w)})
+	return NewBacklog(1, Chain{&Sort{}, NewWriterTo(w)})
 }

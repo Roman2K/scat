@@ -7,16 +7,12 @@ import (
 	"scat/seriessort"
 )
 
-type sortProc struct {
+type Sort struct {
 	series   seriessort.Series
 	seriesMu sync.Mutex
 }
 
-func NewSort() Proc {
-	return &sortProc{}
-}
-
-func (s *sortProc) Process(c *scat.Chunk) <-chan Res {
+func (s *Sort) Process(c *scat.Chunk) <-chan Res {
 	s.seriesMu.Lock()
 	s.series.Add(c.Num(), c)
 	sorted := s.series.Sorted()
@@ -30,7 +26,7 @@ func (s *sortProc) Process(c *scat.Chunk) <-chan Res {
 	return ch
 }
 
-func (s *sortProc) Finish() error {
+func (s *Sort) Finish() error {
 	s.seriesMu.Lock()
 	len := s.series.Len()
 	s.seriesMu.Unlock()
