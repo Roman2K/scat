@@ -1,10 +1,12 @@
 package stores_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
@@ -163,7 +165,7 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	assert.Equal(t, hash, ls[0].Hash)
 	assert.Equal(t, int64(1), ls[0].Size)
 
-	// depth=1 files=2 chunkFiles=1
+	// depth=1 files=2 chunkFiles=2
 	path = filepath.Join(dir, hex2[:1], hex2)
 	err = os.MkdirAll(filepath.Dir(path), 0755)
 	assert.NoError(t, err)
@@ -172,6 +174,12 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(ls))
+	getHex := func(i int) string {
+		return fmt.Sprintf("%x", ls[i].Hash)
+	}
+	sort.Slice(ls, func(i, j int) bool {
+		return getHex(i) < getHex(j)
+	})
 	assert.Equal(t, hash, ls[0].Hash)
 	assert.Equal(t, hash2, ls[1].Hash)
 
