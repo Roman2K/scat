@@ -1,0 +1,154 @@
+#!/usr/bin/env ruby
+
+require 'tmpdir'
+require 'open3'
+require 'json'
+
+PROJECT       = "scat"
+COMPARE_URL   = "https://github.com/Roman2K/#{PROJECT}/compare"
+RELEASE_FMT   = "#{PROJECT}-%s-%s-%s.tgz" # ex: scat-1.2.3-linux-amd64.tgz
+DIR = EXE = PROJECT                       # ex: scat/scat
+VERSION_SRC   = "version.go"
+PACKAGE       = "./cmd"
+BUILD_WORKERS = 8
+OS_WINDOWS    = "windows"
+
+def release(commitish)
+  # ensure clean index
+  log "release: checking if index is clean"
+  if system "git status --porcelain | grep -v '^??' -q"
+    raise "dirty index"
+  end
+
+  # current version to release
+  ver = get_ver
+  log "release: current version: %s" % ver
+
+  # previous version
+  prev = `hub release | head -1`.chomp
+  $?.success? or raise "`hub release` failed"
+  log "release: prev version: %s" % prev
+
+  # release message
+  msg = ""
+  unless prev.empty?
+    changes = `git log --pretty="format:%s" #{prev}..#{commitish}`.chomp
+    $?.success? or raise "`git log` failed"
+    msg = [
+      ver,
+      "\n\n",
+      changes.gsub(/^/, "* "),
+      "\n\n",
+      "[Diff](#{COMPARE_URL}/#{prev}...#{ver})",
+    ].join
+  end
+
+  # build & publish
+  log "release: %s -> %s" % [ver, commitish]
+  log "release: message:\n\n" + msg.gsub(/^/, "\t") + "\n\n"
+  ok = build_archives(ver) do |paths|
+    system "hub", "release", "create",
+      "--draft",
+      *paths.flat_map { |path| ["-a", path] },
+      "-t", commitish,
+      "-m", msg,
+      ver
+  end
+  ok or raise "`hub release create` failed"
+end
+
+def get_ver
+  Dir.mktmpdir do |dir|
+    log "get_ver: work dir: %s" % dir
+    log "get_ver: extracting version from %s" % VERSION_SRC
+    FileUtils.cp VERSION_SRC, dir
+    Dir.chdir(dir) do
+      File.write "main.go", <<-EOF
+        package main
+        import "fmt"
+        func main() { fmt.Print(version) }
+      EOF
+      out, err, st = Open3.capture3 "go", "run", "main.go", VERSION_SRC
+      st.success? or raise "`go run` failed: " + err
+      out
+    end
+  end
+end
+
+def build_archives(ver)
+  queue = Thread::Queue.new
+  dists = JSON.parse(`go tool dist list -json`.tap { 
+    $?.success? or raise "`go tool dist list` failed"
+  })
+  envs = dists.map { |dist|
+    os, arch = dist.values_at("GOOS", "GOARCH").tap { |names|
+      names.all? or raise "missing GOOS or GOARCH"
+    }
+    {"GOOS" => os, "GOARCH" => arch}
+  }
+
+  log "build_archives: v%s: building %d dists with %d workers:\n" \
+    % [envs.size, ver, BUILD_WORKERS] \
+    + envs.map { |e| "\t" + e.values.join("/") }.join("\n")
+
+  envs.each { |e| queue << e }
+  BUILD_WORKERS.times { queue << nil }
+
+  Dir.mktmpdir do |tmp|
+    work = lambda do
+      [].tap do |paths|
+        while env = queue.shift
+          path = build_archive(tmp, ver, env) or next
+          paths << path
+        end
+      end
+    end
+    paths = BUILD_WORKERS.times.map { Thread.new &work }.flat_map(&:value)
+    yield paths
+  end
+end
+
+def build_archive(dir, ver, env)
+  os, arch = env.fetch("GOOS"), env.fetch("GOARCH")
+  alog = lambda do |msg|
+    log "build_archive: %-15s: %s" % ["#{os}/#{arch}", msg]
+  end
+  Dir.mktmpdir do |workdir|
+    # <workdir>/scat/
+    out_dir = File.join(workdir, DIR)
+    FileUtils.mkdir(out_dir)
+
+    # <workdir>/scat/scat
+    exe = File.join(out_dir, EXE)
+    exe << ".exe" if os == OS_WINDOWS
+
+    # compile exe
+    alog.("compiling %s" % File.basename(exe))
+    start = Time.now
+    ok = system(env, "go", "build", "-o", exe, PACKAGE, err: "/dev/null")
+    unless ok
+      alog.("compilation failed")
+      return nil
+    end
+    elapsed = Time.now - start
+    alog.("compiled in %.2fs" % elapsed)
+
+    # archive <workdir>/scat/
+    # as <workdir>/scat-<ver>-<os>-<arch>.tgz
+    File.join(dir, RELEASE_FMT % [ver, os, arch]).tap do |archive|
+      alog.("archive: %s" % File.basename(archive))
+      dir, filename = File.split(out_dir)
+      system "tar", "cf", archive, filename, chdir: dir \
+        or raise "`tar cf` failed"
+    end
+  end
+end
+
+def log(msg)
+  @logmu ||= Mutex.new
+  @logmu.synchronize do
+    $stderr.puts msg
+  end
+end
+
+release *ARGV
