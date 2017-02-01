@@ -1,10 +1,11 @@
 package stats_test
 
 import (
+	"testing"
+
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/stats"
 	"github.com/Roman2K/scat/testutil"
-	"testing"
 )
 
 func TestProcFinish(t *testing.T) {

@@ -2,11 +2,12 @@ package testutil
 
 import (
 	"errors"
+	"sort"
+	"testing"
+
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/procs"
-	"sort"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

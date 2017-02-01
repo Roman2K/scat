@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestChunk(t *testing.T) {

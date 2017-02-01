@@ -3,12 +3,12 @@ package stores
 import (
 	"fmt"
 	"os/exec"
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/testutil"
 	"strings"
 	"testing"
 
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/testutil"
 	assert "github.com/stretchr/testify/require"
 )
 

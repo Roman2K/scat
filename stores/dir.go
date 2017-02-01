@@ -3,6 +3,7 @@ package stores
 import (
 	"fmt"
 	"path/filepath"
+
 	"github.com/Roman2K/scat/checksum"
 )
 

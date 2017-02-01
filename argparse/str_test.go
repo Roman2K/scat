@@ -3,9 +3,8 @@ package argparse_test
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/argparse"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestArgStr(t *testing.T) {

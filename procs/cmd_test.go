@@ -6,11 +6,10 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCmdFunc(t *testing.T) {

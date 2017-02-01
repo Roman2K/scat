@@ -3,9 +3,8 @@ package seriessort_test
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/seriessort"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestSeries(t *testing.T) {

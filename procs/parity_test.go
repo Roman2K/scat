@@ -4,10 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/procs"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestParityNonIntegrityError(t *testing.T) {

@@ -1,8 +1,9 @@
 package argproc_test
 
 import (
-	"github.com/Roman2K/scat/argproc"
 	"testing"
+
+	"github.com/Roman2K/scat/argproc"
 )
 
 func TestNew(t *testing.T) {

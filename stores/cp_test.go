@@ -9,12 +9,11 @@ import (
 	"sort"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/stores"
 	"github.com/Roman2K/scat/testutil"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestCp(t *testing.T) {

@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/index"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestScannerEmpty(t *testing.T) {

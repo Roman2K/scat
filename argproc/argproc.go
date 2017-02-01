@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"github.com/Roman2K/scat"
 
+	"github.com/Roman2K/scat"
 	ap "github.com/Roman2K/scat/argparse"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/stats"

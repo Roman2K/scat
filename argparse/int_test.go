@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/argparse"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestArgInt(t *testing.T) {

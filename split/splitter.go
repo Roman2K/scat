@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/restic/chunker"
-
 	"github.com/Roman2K/scat"
+	"github.com/restic/chunker"
 )
 
 const (

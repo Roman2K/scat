@@ -3,9 +3,8 @@ package quota_test
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/stores/quota"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestMan(t *testing.T) {

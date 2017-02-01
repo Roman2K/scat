@@ -2,10 +2,10 @@ package concur_test
 
 import (
 	"errors"
-	"github.com/Roman2K/scat/concur"
 	"testing"
 	"time"
 
+	"github.com/Roman2K/scat/concur"
 	assert "github.com/stretchr/testify/require"
 )
 

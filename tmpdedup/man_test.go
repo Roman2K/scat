@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/tmpdedup"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestMan(t *testing.T) {

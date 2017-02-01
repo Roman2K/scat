@@ -2,10 +2,11 @@ package stores
 
 import (
 	"errors"
+	"sync"
+
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/procs"
-	"sync"
 )
 
 type Mem struct {

@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/index"
 	"github.com/Roman2K/scat/testutil"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestWrite(t *testing.T) {

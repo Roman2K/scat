@@ -9,10 +9,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/procs"
 	"strconv"
 	"strings"
+
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
 )
 
 const ddBsArg = "bs=1048576" // most universal ("1M" on GNU, "1m" on macOS)

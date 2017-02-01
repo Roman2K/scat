@@ -9,9 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
-
 	"github.com/Roman2K/scat/slidecnt"
+	humanize "github.com/dustin/go-humanize"
 )
 
 const (

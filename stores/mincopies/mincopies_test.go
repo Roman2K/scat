@@ -5,14 +5,13 @@ import (
 	"sort"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/stores"
 	"github.com/Roman2K/scat/stores/quota"
 	"github.com/Roman2K/scat/testutil"
+	assert "github.com/stretchr/testify/require"
 )
 
 var byId = stores.SortCopiersByIdString

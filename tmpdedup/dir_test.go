@@ -7,9 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/tmpdedup"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestDir(t *testing.T) {

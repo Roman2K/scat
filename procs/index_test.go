@@ -7,12 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/testutil"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestIndex(t *testing.T) {

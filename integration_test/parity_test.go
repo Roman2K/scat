@@ -5,13 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/klauspost/reedsolomon"
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat"
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/procs"
 	"github.com/Roman2K/scat/stores"
+	"github.com/klauspost/reedsolomon"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestParityCorruptNone(t *testing.T) {

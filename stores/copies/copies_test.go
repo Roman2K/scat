@@ -3,10 +3,9 @@ package copies_test
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
-
 	"github.com/Roman2K/scat/checksum"
 	"github.com/Roman2K/scat/stores/copies"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestCopies(t *testing.T) {

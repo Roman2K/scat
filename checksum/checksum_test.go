@@ -2,10 +2,10 @@ package checksum_test
 
 import (
 	"fmt"
-	"github.com/Roman2K/scat/checksum"
 	"strings"
 	"testing"
 
+	"github.com/Roman2K/scat/checksum"
 	assert "github.com/stretchr/testify/require"
 )
 

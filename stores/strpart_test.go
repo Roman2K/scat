@@ -1,9 +1,9 @@
 package stores_test
 
 import (
-	"github.com/Roman2K/scat/stores"
 	"testing"
 
+	"github.com/Roman2K/scat/stores"
 	assert "github.com/stretchr/testify/require"
 )
 
