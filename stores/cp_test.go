@@ -20,12 +20,12 @@ import (
 func TestCp(t *testing.T) {
 	dirStoreTest(func(dir stores.Dir) stores.Store {
 		return stores.Cp(dir)
-	}).test(t)
+	}).run(t)
 }
 
 type dirStoreTest func(stores.Dir) stores.Store
 
-func (test dirStoreTest) test(t *testing.T) {
+func (test dirStoreTest) run(t *testing.T) {
 	test.testReadWrite(t)
 	test.testInvalidDir(t)
 	test.testMissingData(t)
@@ -101,6 +101,10 @@ func (test dirStoreTest) testMissingData(t *testing.T) {
 }
 
 func (test dirStoreTest) testLs(t *testing.T) {
+	const (
+		fileMode = 0644
+		dirMode  = 0755
+	)
 	var (
 		hash  = testutil.Hashes[0].Hash
 		hex   = testutil.Hashes[0].Hex
@@ -120,14 +124,14 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	assert.Equal(t, 0, len(ls))
 
 	// depth=0 files=1 chunkFiles=0
-	err = ioutil.WriteFile(filepath.Join(dir, "xxx"), nil, 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, "xxx"), nil, fileMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ls))
 
 	// depth=0 files=2 chunkFiles=1
-	err = ioutil.WriteFile(filepath.Join(dir, hex), []byte("x"), 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, hex), []byte("x"), fileMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
@@ -147,7 +151,7 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	assert.Equal(t, 0, len(ls))
 
 	// depth=1 files=1 chunkFiles=0
-	err = ioutil.WriteFile(filepath.Join(dir, hex), nil, 0644)
+	err = ioutil.WriteFile(filepath.Join(dir, hex), nil, fileMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
@@ -155,9 +159,9 @@ func (test dirStoreTest) testLs(t *testing.T) {
 
 	// depth=1 files=1 chunkFiles=1
 	path := filepath.Join(dir, hex[:1], hex)
-	err = os.Mkdir(filepath.Dir(path), 0755)
+	err = os.Mkdir(filepath.Dir(path), dirMode)
 	assert.NoError(t, err)
-	err = ioutil.WriteFile(path, []byte("a"), 0644)
+	err = ioutil.WriteFile(path, []byte("a"), fileMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
@@ -167,9 +171,9 @@ func (test dirStoreTest) testLs(t *testing.T) {
 
 	// depth=1 files=2 chunkFiles=2
 	path = filepath.Join(dir, hex2[:1], hex2)
-	err = os.MkdirAll(filepath.Dir(path), 0755)
+	err = os.MkdirAll(filepath.Dir(path), dirMode)
 	assert.NoError(t, err)
-	err = ioutil.WriteFile(path, []byte("a"), 0644)
+	err = ioutil.WriteFile(path, []byte("a"), fileMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
@@ -186,7 +190,7 @@ func (test dirStoreTest) testLs(t *testing.T) {
 	// depth=1 files=1 dirs=1 chunkFiles=1
 	err = os.Remove(path)
 	assert.NoError(t, err)
-	err = os.Mkdir(path, 0755)
+	err = os.Mkdir(path, dirMode)
 	assert.NoError(t, err)
 	ls, err = store.Ls()
 	assert.NoError(t, err)
