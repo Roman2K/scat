@@ -12,15 +12,14 @@ import (
 )
 
 type parity struct {
-	enc            reedsolomon.Encoder
-	ndata, nshards int
+	enc     reedsolomon.Encoder
+	nshards int
 }
 
 func NewParity(ndata, nparity int) (p ProcUnprocer, err error) {
 	enc, err := reedsolomon.New(ndata, nparity)
 	p = &parity{
 		enc:     enc,
-		ndata:   ndata,
 		nshards: ndata + nparity,
 	}
 	return
