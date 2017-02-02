@@ -193,7 +193,7 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 					path = args[0].(string)
 				)
 				w, err := openOut(path)
-				return procs.NewWriterTo(w), err
+				return procs.WriterTo{w}, err
 			},
 		},
 		"join": ap.ArgLambda{

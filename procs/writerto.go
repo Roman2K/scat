@@ -6,15 +6,18 @@ import (
 	"github.com/Roman2K/scat"
 )
 
-type writerTo struct {
-	w io.Writer
+type WriterTo struct {
+	W io.Writer
 }
 
-func NewWriterTo(w io.Writer) Proc {
-	return InplaceFunc(writerTo{w: w}.process)
+func (wt WriterTo) Process(c *scat.Chunk) <-chan Res {
+	ch := make(chan Res, 1)
+	defer close(ch)
+	_, err := io.Copy(wt.W, c.Data().Reader())
+	ch <- Res{Chunk: c, Err: err}
+	return ch
 }
 
-func (wt writerTo) process(c *scat.Chunk) (err error) {
-	_, err = io.Copy(wt.w, c.Data().Reader())
-	return
+func (wt WriterTo) Finish() error {
+	return nil
 }

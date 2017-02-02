@@ -22,10 +22,12 @@ func (ProcFunc) Finish() error {
 type InplaceFunc func(*scat.Chunk) error
 
 func (fn InplaceFunc) Process(c *scat.Chunk) <-chan Res {
-	ch := make(chan Res, 1)
-	defer close(ch)
-	err := fn(c)
-	ch <- Res{Chunk: c, Err: err}
+	ch := make(chan Res)
+	go func() {
+		defer close(ch)
+		err := fn(c)
+		ch <- Res{Chunk: c, Err: err}
+	}()
 	return ch
 }
 
@@ -36,13 +38,16 @@ func (InplaceFunc) Finish() error {
 type ChunkFunc func(*scat.Chunk) (*scat.Chunk, error)
 
 func (fn ChunkFunc) Process(c *scat.Chunk) <-chan Res {
-	ch := make(chan Res, 1)
-	defer close(ch)
-	if new, err := fn(c); err != nil {
-		ch <- Res{Chunk: c, Err: err}
-	} else {
+	ch := make(chan Res)
+	go func() {
+		defer close(ch)
+		new, err := fn(c)
+		if err != nil {
+			ch <- Res{Chunk: c, Err: err}
+			return
+		}
 		ch <- Res{Chunk: new}
-	}
+	}()
 	return ch
 }
 

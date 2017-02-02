@@ -123,7 +123,7 @@ func testParity(t *testing.T, cor corruption) {
 		procs.Gzip{}.Unproc(),
 		procs.NewGroup(ndata + nparity),
 		parity.Unproc(),
-		procs.NewWriterTo(outBuf),
+		procs.WriterTo{outBuf},
 	}
 	err = procs.Process(chain, seed)
 
