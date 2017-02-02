@@ -3,7 +3,7 @@ package stores_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/stores"
+	"gitlab.com/Roman2K/scat/stores"
 )
 
 func TestDd(t *testing.T) {

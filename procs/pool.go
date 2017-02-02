@@ -3,7 +3,7 @@ package procs
 import (
 	"sync"
 
-	"github.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat"
 )
 
 type pool struct {

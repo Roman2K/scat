@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Roman2K/scat/slidecnt"
+	"gitlab.com/Roman2K/scat/slidecnt"
 	humanize "github.com/dustin/go-humanize"
 )
 

@@ -3,8 +3,8 @@ package procs
 import (
 	"sync"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/seriessort"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/seriessort"
 )
 
 type Sort struct {

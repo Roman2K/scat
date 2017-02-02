@@ -10,13 +10,13 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/ansirefresh"
-	"github.com/Roman2K/scat/argparse"
-	"github.com/Roman2K/scat/argproc"
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/stats"
-	"github.com/Roman2K/scat/tmpdedup"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/ansirefresh"
+	"gitlab.com/Roman2K/scat/argparse"
+	"gitlab.com/Roman2K/scat/argproc"
+	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/stats"
+	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
 const url = "https://github.com/Roman2K/scat#usage"

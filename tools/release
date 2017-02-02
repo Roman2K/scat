@@ -5,7 +5,7 @@ require 'open3'
 require 'json'
 
 PROJECT       = "scat"
-COMPARE_URL   = "https://github.com/Roman2K/#{PROJECT}/compare"
+COMPARE_URL   = "https://gitlab.com/Roman2K/#{PROJECT}/compare"
 RELEASE_FMT   = "#{PROJECT}-%s-%s-%s.tgz" # ex: scat-1.2.3-linux-amd64.tgz
 DIR = EXE = PROJECT                       # ex: scat/scat
 VERSION_SRC   = "version.go"

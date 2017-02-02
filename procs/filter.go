@@ -1,6 +1,6 @@
 package procs
 
-import "github.com/Roman2K/scat"
+import "gitlab.com/Roman2K/scat"
 
 type Filter struct {
 	Proc

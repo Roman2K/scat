@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/procs"
 )
 
 type Cp Dir

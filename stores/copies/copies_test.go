@@ -3,8 +3,8 @@ package copies_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/checksum"
-	"github.com/Roman2K/scat/stores/copies"
+	"gitlab.com/Roman2K/scat/checksum"
+	"gitlab.com/Roman2K/scat/stores/copies"
 	assert "github.com/stretchr/testify/require"
 )
 

@@ -3,7 +3,7 @@ package quota_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/stores/quota"
+	"gitlab.com/Roman2K/scat/stores/quota"
 	assert "github.com/stretchr/testify/require"
 )
 

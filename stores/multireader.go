@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/concur"
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/stores/copies"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/concur"
+	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/stores/copies"
 )
 
 var (

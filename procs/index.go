@@ -6,10 +6,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/checksum"
-	"github.com/Roman2K/scat/index"
-	"github.com/Roman2K/scat/seriessort"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/checksum"
+	"gitlab.com/Roman2K/scat/index"
+	"gitlab.com/Roman2K/scat/seriessort"
 )
 
 type IndexProc interface {

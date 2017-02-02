@@ -6,14 +6,14 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/Roman2K/scat"
-	ap "github.com/Roman2K/scat/argparse"
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/stats"
-	"github.com/Roman2K/scat/stores"
-	"github.com/Roman2K/scat/stores/mincopies"
-	"github.com/Roman2K/scat/stores/quota"
-	"github.com/Roman2K/scat/tmpdedup"
+	"gitlab.com/Roman2K/scat"
+	ap "gitlab.com/Roman2K/scat/argparse"
+	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/stats"
+	"gitlab.com/Roman2K/scat/stores"
+	"gitlab.com/Roman2K/scat/stores/mincopies"
+	"gitlab.com/Roman2K/scat/stores/quota"
+	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
 func New(tmp *tmpdedup.Dir, stats *stats.Statsd) ap.Parser {

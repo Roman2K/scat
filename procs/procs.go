@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/concur"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/concur"
 )
 
 var (

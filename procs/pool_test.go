@@ -3,8 +3,8 @@ package procs_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/testutil"
+	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/testutil"
 )
 
 func TestPoolFinish(t *testing.T) {

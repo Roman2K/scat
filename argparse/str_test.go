@@ -3,7 +3,7 @@ package argparse_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/argparse"
+	"gitlab.com/Roman2K/scat/argparse"
 	assert "github.com/stretchr/testify/require"
 )
 

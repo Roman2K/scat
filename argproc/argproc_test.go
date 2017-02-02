@@ -3,7 +3,7 @@ package argproc_test
 import (
 	"testing"
 
-	"github.com/Roman2K/scat/argproc"
+	"gitlab.com/Roman2K/scat/argproc"
 )
 
 func TestNew(t *testing.T) {

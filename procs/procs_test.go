@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/checksum"
-	"github.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/checksum"
+	"gitlab.com/Roman2K/scat/procs"
 	assert "github.com/stretchr/testify/require"
 )
 

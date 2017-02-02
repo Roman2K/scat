@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat"
 	"github.com/klauspost/reedsolomon"
 )
 

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Roman2K/scat"
-	"github.com/Roman2K/scat/procs"
-	"github.com/Roman2K/scat/testutil"
+	"gitlab.com/Roman2K/scat"
+	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/testutil"
 	assert "github.com/stretchr/testify/require"
 )
 
