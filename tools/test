@@ -9,6 +9,8 @@ with_test() {
   done
 }
 
-find . -type d -not -path './vendor/*' \
+find . -type d \
+  -not -path './.*' \
+  -not -path './vendor/*' \
   | with_test \
   | exec xargs go test "$@"
