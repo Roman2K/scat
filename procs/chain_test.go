@@ -2,6 +2,7 @@ package procs_test
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"testing"
 
@@ -74,6 +75,9 @@ func TestChainEndProc(t *testing.T) {
 	for range ch {
 	}
 	assert.Equal(t, 1, len(finals))
+	assert.Equal(t, 1, len(ends))
+	sort.Ints(finals[chunk])
+	sort.Ints(ends[chunk])
 	assert.Equal(t, []int{22, 33}, finals[chunk])
 	assert.Equal(t, []int{22, 33}, ends[chunk])
 }
