@@ -1,12 +1,20 @@
-hash: 4a810086765f221a45c14aaa1bd228f204c707563ee10ea31e95648c0058a64a
-updated: 2017-01-25T03:35:03.7759627+01:00
+hash: a5bc77e00f7ee3b377be14d1524afb4eb6d03c10fa79e4283daac19223805056
+updated: 2017-02-02T14:02:02.915029348+01:00
 imports:
+- name: github.com/davecgh/go-spew
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  subpackages:
+  - spew
 - name: github.com/dustin/go-humanize
   version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/reedsolomon
   version: c056598956acbb4a085b3c23914415937b3335e5
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
 - name: github.com/restic/chunker
   version: 15748add008169ebbec6800155db55c8568700f6
 - name: github.com/stretchr/testify
@@ -14,12 +22,4 @@ imports:
   subpackages:
   - assert
   - require
-testImports:
-- name: github.com/davecgh/go-spew
-  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
-  subpackages:
-  - spew
-- name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
-  subpackages:
-  - difflib
+testImports: []

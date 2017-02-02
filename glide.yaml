@@ -1,4 +1,4 @@
-package: scat
+package: gitlab.com/Roman2K/scat
 import:
 - package: github.com/restic/chunker
 - package: github.com/stretchr/testify
