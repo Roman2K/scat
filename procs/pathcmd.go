@@ -18,11 +18,10 @@ type pathCmdIn struct {
 type PathCmdInFn func(*scat.Chunk, string) (*exec.Cmd, error)
 
 func NewPathCmdIn(newCmd PathCmdInFn, tmp *tmpdedup.Dir) Proc {
-	cmdp := pathCmdIn{newCmd, tmp}
-	return InplaceFunc(cmdp.process)
+	return InplaceFunc(pathCmdIn{newCmd, tmp}.process)
 }
 
-func (cmdp *pathCmdIn) process(c *scat.Chunk) error {
+func (cmdp pathCmdIn) process(c *scat.Chunk) error {
 	filename := fmt.Sprintf("%x", c.Hash())
 	path, wg, err := cmdp.tmp.Get(filename, func(path string) (err error) {
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
