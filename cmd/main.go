@@ -19,7 +19,7 @@ import (
 	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
-const url = "https://github.com/Roman2K/scat#usage"
+const url = "https://gitlab.com/Roman2K/scat#usage"
 
 func main() {
 	if err := start(); err != nil {
