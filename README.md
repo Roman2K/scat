@@ -1,19 +1,23 @@
 
 
 # scat
-> Scatter your data away before loosing it
-> [![godoc][godocbadge]][godoc]
 
-[godocbadge]:https://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
+[![godoc][godocbadge]][godoc]
+
+[godocbadge]:https://img.shields.io/badge/godoc-reference-5272B4.svg
 [godoc]:https://godoc.org/github.com/Roman2K/scat
 
-Backup program featuring:
+> Scatter your data away before [loosing][gitlabdb] it
+
+[gitlabdb]:https://docs.google.com/document/u/0/d/1GCK53YDcBWQveod9kfzW-VCxIABGiryG7_z_6jHdVik/pub
+
+Backup tool featuring:
 
 * **Decentralization:** avoid trusting any one third-party with all your data
 
 	* data divided into chunks **distributed** anywhere there's space available
 	* mix and match **cloud** and local storage in a RAID-like fashion
-	* ex: *spread 15GiB of data over 2GiB in Google Drive, 5GiB on some VPS and the rest on an external drive*
+	* ex: *spread 15GiB of data over 2GiB in Google Drive, 5GiB on a VPS and the rest on an external drive*
 
 * Block-level **de-duplication**
 
@@ -23,37 +27,38 @@ Backup program featuring:
 	* immutable storage: stored blocks are never touched upon successive backups
 	* ex: *back up 10GiB sparse disk image with 2GiB used, backup takes ~2GiB*
 	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~MiBs*
-	* ex: *append 1 byte to foo in VM b, backup takes ~1MiB (block containing foo)*
+	* ex: *append 1 byte to a 1GiB file, next backup takes ~1MiB (last block)*
 
 * RAID-like **error correction**
 
 	* SHA256-based integrity checks ensure data is retrieved unadulterated
 	* [Reed-Solomon][b2reedsolomon] erasure coding
-	* ex: *some chunk comes back corrupted from Dropbox, recover it from Drive and Backblaze*
+	* ex: *some chunk comes back corrupted from Dropbox, recover from Backblaze and Drive*
 	* ex: *I'm locked out of my Google account, reconstruct all data from Dropbox and Backblaze*
+	* ex: *my external drive died, reconstruct all data from Drive and Dropbox*
 
 * **Redundancy:** N-copies duplication, auto-failover on restore
 
-  * random spread across eligible remotes
-  * ex: *ensure at least 2 copies exist on any 2 of Drive, Dropbox and some VPS*
+  * Round-Robin spread across eligible remotes
+  * ex: *ensure at least 2 copies exist on any two of Drive, Dropbox and some VPS*
 
 * **Stream**-based: less is more
 
 	* file un-/packing, filtering → tar
-	* **snapshot** management (index versioning) → git
+	* **snapshot** management → git
 	* remote file transfer → ssh
-	* **cloud** storage → [rclone][rclone]
+	* **cloud** storage → [rclone](http://rclone.org)
 	* asymmetric-key **encryption** → gpg
-	* progress, throughput → [pv][pv]
-	* Android backup → [Termux][termux] + ssh
+	* progress, throughput → [pv](http://www.ivarch.com/programs/pv.shtml)
+	* Android backup → [Termux](https://termux.com) + ssh
 
-* Other features:
+* And:
 
 	* compression
 	* multithreaded: configurable concurrency
 	* resumable both ways
-	* easy: to setup, use, and hack on
-	* multiplatform: binaries for Linux, macOS, Windows, etc.
+	* easy to setup, use, and hack on
+	* **cross-platform**: binaries for Linux, macOS, Windows, [etc.][release]
 
 ...pick some or all of the above, apply in any order.
 
@@ -126,9 +131,9 @@ $ cat foo
 hello
 ```
 
-Following sections demonstrate usage examples of most existing procs. See [Proc string][procstr] for the full list.
+The following examples showcase some procs. See [Proc string][procstr] for the full list.
 
-### Example backup
+### Example: backup
 
 Example of backing up dir `foo/` to 2 Google Drive accounts and 1 VPS (2 data shards, 1 parity shard, compress, encrypt, checksum, 2 copies, upload - using 8 threads, 4 concurrent transfers)
 
@@ -165,7 +170,7 @@ Order matters. Notably:
 
 **Note:** Both `backlog` and `concur` are being used above, the former limits the number of concurrent instances of `chain` to 8, while the latter limits the number of concurrent uploads by `mincopies` to 4. They may appear redundant, why not one or the other for both? They actually take different types of arguments and have distinct purposes: see [`backlog`][procbacklog] and [`concur`][procconcur].
 
-### Example restore
+### Example: restore
 
 Reverse chain:
 
@@ -232,12 +237,12 @@ Args:
 
 scat is born out of frustration from existing backup solutions:
 
-* [restic][restic], [Borg][borg], [ZBackup][zbackup]:
+* [restic][restic], [Borg](https://borgbackup.readthedocs.io), [ZBackup](http://zbackup.org):
 
   * good: easy to use, block-level deduplication, incremental backups
   * bad: central repository, limited choice of storage engines: local filesystem, SSH, S3
 
-* [git-annex][git-annex]:
+* [git-annex](https://git-annex.branchable.com):
 
   * good: decentralized, git-based versioning, choice of storage engines (special remotes)
   * bad: difficult to use, file-level deduplication, PITA to compile
@@ -257,7 +262,7 @@ I wanted to be able to:
 * back up anything (one file/dir, some files)
 * from anywhere (PC, phone)
 * to anywhere (other PC, cloud, vacant space on some VPS)
-* when sensible, rely on tools I already know and feel comfortable with (ex: tar, git, ssh, rclone, gpg) instead of trusting whether some new program properly reimplements what existing battle-tested programs already do well
+* when sensible, rely on tools I already know and feel comfortable with (ex: tar, git, ssh, rclone, gpg) instead of trusting whether some new tool properly reimplements what existing battle-tested tools already do well
 
 without:
 
@@ -269,9 +274,9 @@ I believe scat achieves these objectives 🤓
 
 ## Future
 
-I'm very excited to finally have a way to perform backups like I always wanted. I will strive to keep on maintaining this project for as long as I use it. And since I'm pretty happy with how the code turned out, I won't be reluctant to do so and will do my best to keep it that way, even if it means deep refactors.
+I'm very excited to finally have a way to perform backups like I always wanted. I will strive to keep on maintaining it, making sure it stays as simple as possible and fun to hack on.
 
-Even if I do abandon the project at some point in the future, or if it takes a completely different direction, existing backups stay usable independently using existing tools (`shasum`, `ssh`, `rclone`, `gunzip`, `gpg`, `cat`, etc.).
+Should the project be abandoned, existing backups would remain usable with with older versions as well independently of scat using existing tools (`shasum`, `ssh`, `rclone`, `gunzip`, `gpg`, `cat`, etc.).
 
 Upcoming:
 
@@ -282,35 +287,19 @@ Upcoming:
 	* equivalent of deleting a snapshot in restic or COW filesystems
 * streaming file listing
 	* lists of existing files are currently buffered due to bad initial decision
-		* shouldn't affect performance or mem usage below ~terabytes of data but still feels wrong
+		* shouldn't have too much of an impact on memory usage below ~terabytes of data but still feels wrong
 
 ## Thanks
 
-* [TJ Holowaychuk][tj] for his stunning wielding of simplicity that inspires me all day, everyday
-* Gophers for Go, such a well thought-out, fun and OCD-satisfying language
-* [Rob Pike][robpike] for his Go talks, especially [Simplicity is Complicated][simplicity]
-* [Klaus Post][klauspost] for [reedsolomon][reedsolomon] and his inspirational coding style
-* [Alexander Neumann][fd0] for [chunker][chunker]
+* [TJ Holowaychuk](https://github.com/tj) for his stunning wielding of simplicity that inspires me everyday
+* Gophers for Go, such a well thought-out, fun, OCD-satisfying language
+* [Rob Pike](https://github.com/robpike) for his Go talks, especially [Simplicity is Complicated](https://www.youtube.com/watch?v=rFejpH_tAHM)
+* [Klaus Post](https://github.com/klauspost) for [reedsolomon](https://github.com/klauspost/reedsolomon) and his inspirational coding style
+* [Alexander Neumann](https://github.com/fd0) for [chunker](https://github.com/restic/chunker)
 
 [restic]:https://github.com/restic/restic
 [cdc]:https://restic.github.io/blog/2015-09-12/restic-foundation1-cdc
-[chunker]:https://github.com/restic/chunker
-[jpak]:https://github.com/jpakkane/jpak
-[rclone]:http://rclone.org
-[termux]:https://termux.com
-[git-annex]:https://git-annex.branchable.com
-[borg]:https://borgbackup.readthedocs.io
-[zbackup]:http://zbackup.org
-[reedsolomon]:https://github.com/klauspost/reedsolomon
 [b2reedsolomon]:https://www.backblaze.com/blog/reed-solomon
-[textik]:https://textik.com
-[simplicity]:https://www.youtube.com/watch?v=rFejpH_tAHM
-[pv]:http://www.ivarch.com/programs/pv.shtml
-
-[tj]:https://github.com/tj
-[robpike]:https://github.com/robpike
-[fd0]:https://github.com/fd0
-[klauspost]:https://github.com/klauspost
 
 [release]:/Roman2K/scat/releases/latest
 [procstr]:/Roman2K/scat/wiki/Proc-string
