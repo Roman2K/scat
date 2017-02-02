@@ -30,15 +30,11 @@ func (p *parity) Proc() Proc {
 	return ProcFunc(p.process)
 }
 
-func (p *parity) Unproc() Proc {
-	return ChunkFunc(p.unprocess)
-}
-
 func (p *parity) process(c *scat.Chunk) <-chan Res {
 	ch := make(chan Res)
-	shards, err := p.split(c)
 	go func() {
 		defer close(ch)
+		shards, err := p.split(c)
 		if err != nil {
 			ch <- Res{Chunk: c, Err: err}
 			return
@@ -62,6 +58,10 @@ func (p *parity) split(c *scat.Chunk) (shards [][]byte, err error) {
 	}
 	err = p.enc.Encode(shards)
 	return
+}
+
+func (p *parity) Unproc() Proc {
+	return ChunkFunc(p.unprocess)
 }
 
 func (p *parity) unprocess(c *scat.Chunk) (new *scat.Chunk, err error) {
@@ -116,7 +116,7 @@ func (p *parity) join(c *scat.Chunk) (joined []byte, err error) {
 
 	// Join data shards, trim trailing padding
 	out := bytes.NewBuffer(make([]byte, 0, c.TargetSize()))
-	err = p.enc.Join(out, shards, c.TargetSize())
+	err = p.enc.Join(out, shards, out.Cap())
 	joined = out.Bytes()
 	return
 }
