@@ -141,16 +141,6 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 				return procs.NewBacklog(nslots, proc), nil
 			},
 		},
-		"pool": ap.ArgLambda{
-			Args: ap.Args{ap.ArgInt, argProc},
-			Run: func(args []interface{}) (interface{}, error) {
-				var (
-					size = args[0].(int)
-					proc = args[1].(procs.Proc)
-				)
-				return procs.NewPool(size, proc), nil
-			},
-		},
 		"chain": ap.ArgLambda{
 			Args: ap.ArgVariadic{argProc},
 			Run: func(args []interface{}) (interface{}, error) {
