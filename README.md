@@ -2,7 +2,7 @@
 
 [![godoc][buildbadge]][pipelines] [![godoc][godocbadge]][godoc]
 
-[buildbadge]:https://gitlab.com/Roman2K/scat/badges/release/build.svg
+[buildbadge]:https://gitlab.com/Roman2K/scat/badges/master/build.svg
 [pipelines]:https://gitlab.com/Roman2K/scat/pipelines
 [godocbadge]:https://godoc.org/gitlab.com/Roman2K/scat?status.svg
 [godoc]:https://godoc.org/gitlab.com/Roman2K/scat
@@ -22,28 +22,27 @@ Backup tool featuring:
 * Block-level **de-duplication**
 
 	* [CDC][cdc]-based detection of duplicate blocks, from [restic][restic]
-	* **incremental** backups
+	* **incremental**, immutable backups
 	* reuse identical blocks of unrelated backups from common remotes
-	* immutable storage: stored blocks are never touched upon successive backups
 	* ex: *back up a 10GiB sparse disk image with 2GiB used, backup takes <2GiB*
 	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~MiBs*
 	* ex: *append 1 byte to a 1GiB file, next backup takes ~1MiB (last block)*
 
 * RAID-like **error correction**
 
-	* SHA256-based integrity checks ensure data is retrieved unadulterated
+	* block-level striping with distributed parity ~RAID 5/6
 	* [Reed-Solomon][b2reedsolomon] erasure coding
-	* reconstruct any or all lost shards backed up by any one remote of a given set
-	* ex: *I'm locked out of my Google account, recover from Dropbox and Backblaze*
-	* ex: *some chunk comes back corrupted from Dropbox, recover from Backblaze and Drive*
-	* ex: *my HDD died and I forgot my Backblaze password, recover from Drive and Dropbox*
+	* SHA256-based integrity checks ensure data is retrieved unadulterated
+	* ex: *backup with 1 parity shard to Google, Backblaze and my HDD*
+		* *I'm locked out of my Google account, recover from B2 and my HDD*
+		* *some chunk comes back corrupted from B2, recover from my HDD and Drive*
 
 * **Redundancy:** N-copies duplication, auto-failover on restore
 
-  * Round-Robin spread across eligible remotes
-  * increase fault-tolerance of erasure coding
-  * ex: *ensure at least 2 copies exist on any two of Drive, Dropbox and some VPS*
-  * ex: *back up to 3 cloud providers, recover lost data from up to any 2 of them*
+  * Round-Robin spread across eligible remotes ~RAID 0
+  * increase fault-tolerance of erasure coding ~RAID 0+5/6
+  * ex: *backup with 1 parity shard in 2 copies to Google, Backblaze and my HDD*
+		* *my HDD died and I forgot my Google password, recover Backblaze*
 
 * **Stream**-based: less is more
 
@@ -232,7 +231,7 @@ $ scat [options] <proc>
 
 Options:
 
-* `-stats` print stats: data rates, quotas, etc.
+* `-stats` print stats: rates, quotas, etc.
 * `-version` show version
 * `-help` show usage
 
