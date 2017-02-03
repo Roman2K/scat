@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+verpath, inpath, outpath = (0..2).map { |i| ARGV.fetch(i) }
+ver = File.read(verpath, encoding: Encoding::UTF_8).chomp
+ver =~ /\A\d+\z/ or raise "invalid format in %s" % verpath
+code = File.read(inpath, encoding: Encoding::UTF_8).sub("{{version}}", ver)
+File.write(outpath, code)

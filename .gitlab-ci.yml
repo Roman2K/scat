@@ -34,6 +34,8 @@ test:
 
 binaries:
   stage: binaries
+  only:
+    - tags
   artifacts:
     paths:
       - scat-*.tar
@@ -41,5 +43,5 @@ binaries:
     - cd $SRC
     - gox -output=".gox/{{.OS}}-{{.Arch}}/scat/scat" $MAIN_PACKAGE
     - cd .gox
-    - ref=${CI_BUILD_REF:0:8}
+    - ref=${CI_BUILD_TAG-${CI_BUILD_REF:0:8}}
     - for d in *; do (cd $d && tar cf ../../scat-${ref}-${d}.tar scat) || break; done

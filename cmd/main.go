@@ -19,6 +19,8 @@ import (
 	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
+//go:generate ../tools/genversion VERSION _version.go version.go
+
 const url = "https://gitlab.com/Roman2K/scat#usage"
 
 func main() {
