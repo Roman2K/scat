@@ -84,7 +84,7 @@ func (a *cmdArgs) Parse(args []string) {
 		name, args = args[0], args[1:]
 	}
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
-	fl.BoolVar(&a.stats, "stats", false, "print stats: data rates, quotas, etc.")
+	fl.BoolVar(&a.stats, "stats", false, "print stats: rates, quotas, etc.")
 	fl.BoolVar(&a.version, "version", false, "show version")
 	fl.SetOutput(ioutil.Discard)
 	usage := func(w io.Writer) {
