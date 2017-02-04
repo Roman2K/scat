@@ -11,8 +11,8 @@ import (
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/stats"
 	"gitlab.com/Roman2K/scat/stores"
-	"gitlab.com/Roman2K/scat/stores/mincopies"
 	"gitlab.com/Roman2K/scat/stores/quota"
+	"gitlab.com/Roman2K/scat/stripe"
 	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
@@ -219,15 +219,17 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 
 func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 	return ap.ArgFn{
-		"mincopies": ap.ArgLambda{
+		"stripe": ap.ArgLambda{
 			Args: ap.Args{
+				ap.ArgInt,
 				ap.ArgInt,
 				ap.ArgVariadic{b.newArgQuota(b.newArgCopier(argStore, getProc))},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
-					min   = args[0].(int)
-					iress = args[1].([]interface{})
+					distinct = args[0].(int)
+					min      = args[1].(int)
+					iress    = args[2].([]interface{})
 				)
 				qman := quota.NewMan()
 				if b.stats != nil {
@@ -241,7 +243,11 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 					res := ires.(quotaRes)
 					qman.AddResQuota(res.copier, res.max)
 				}
-				return mincopies.New(min, qman)
+				cfg := stripe.Config{
+					Distinct: distinct,
+					Min:      min,
+				}
+				return stores.NewStripe(cfg, qman)
 			},
 		},
 	}
