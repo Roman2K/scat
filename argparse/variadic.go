@@ -19,7 +19,7 @@ func (arg ArgVariadic) Parse(str string) (interface{}, int, error) {
 		val, n, err := arg.Arg.Parse(str[nparsed:])
 		nparsed += n
 		if err != nil {
-			err = errDetails(err, str, nparsed)
+			err = ErrDetails{err, str, nparsed}
 			return nil, nparsed, err
 		}
 		values = append(values, val)

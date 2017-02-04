@@ -35,7 +35,7 @@ func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
 	res, n, err = parser.Parse(argsStr)
 	nparsed += n
 	if err != nil {
-		err = errDetails(err, str, nparsed)
+		err = ErrDetails{err, str, nparsed}
 		return
 	}
 	nparsed += nparsedAdjust

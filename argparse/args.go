@@ -32,7 +32,7 @@ func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
 		val, n, e := arg.Parse(str[nparsed:])
 		nparsed += n
 		if e != nil {
-			err = errDetails(e, str, nparsed)
+			err = ErrDetails{e, str, nparsed}
 			return
 		}
 		values[i] = val
