@@ -3,8 +3,8 @@ package quota_test
 import (
 	"testing"
 
-	"gitlab.com/Roman2K/scat/stores/quota"
 	assert "github.com/stretchr/testify/require"
+	"gitlab.com/Roman2K/scat/stores/quota"
 )
 
 func TestMan(t *testing.T) {
@@ -36,7 +36,8 @@ func TestMan(t *testing.T) {
 	man.AddResQuota(a, 100)
 	man.AddUse(a, 1)
 	assert.Equal(t, []string{"a"}, ids(man.Resources(97)))
-	assert.Equal(t, []string{}, ids(man.Resources(98)))
+	assert.Equal(t, []string{"a"}, ids(man.Resources(98)))
+	assert.Equal(t, []string{}, ids(man.Resources(99)))
 
 	// a) quota = 100, used = 100
 	man.AddUse(a, 98)

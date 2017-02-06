@@ -74,7 +74,7 @@ func (man *Man) Resources(use uint64) (ress []Res) {
 	man.mu.RLock()
 	defer man.mu.RUnlock()
 	for _, u := range man.m {
-		if u.use+use >= u.max {
+		if u.use+use > u.max {
 			continue
 		}
 		ress = append(ress, u.res)
