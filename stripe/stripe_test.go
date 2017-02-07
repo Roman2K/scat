@@ -47,7 +47,9 @@ func TestStripe(t *testing.T) {
 	}
 	res, err = s.Stripe(dests, seq, 0, 1)
 	assert.NoError(t, err)
-	assert.Equal(t, S{}, res)
+	assert.Equal(t, S{
+		"chunk1": NewLocs(),
+	}, res)
 
 	seq.Reset()
 
@@ -95,8 +97,7 @@ func TestStripe(t *testing.T) {
 	short, ok := err.(ShortError)
 	assert.True(t, ok)
 	assert.Equal(t, 4, short.Min)
-	assert.Equal(t, 3, short.Missing)
-	assert.Equal(t, 2, short.Avail)
+	assert.Equal(t, 3, short.Avail)
 
 	seq.Reset()
 
@@ -108,8 +109,7 @@ func TestStripe(t *testing.T) {
 	short, ok = err.(ShortError)
 	assert.True(t, ok)
 	assert.Equal(t, 3, short.Min)
-	assert.Equal(t, 2, short.Missing)
-	assert.Equal(t, 1, short.Avail)
+	assert.Equal(t, 2, short.Avail)
 
 	seq.Reset()
 
@@ -120,7 +120,20 @@ func TestStripe(t *testing.T) {
 	res, err = s.Stripe(dests, seq, 1, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, S{
-		"chunk1": NewLocs("b"),
+		"chunk1": NewLocs("c"),
+		"chunk2": NewLocs("c"),
+	}, res)
+
+	seq.Reset()
+
+	s = S{
+		"chunk1": NewLocs("a", "b"),
+		"chunk2": NewLocs("a", "b"),
+	}
+	res, err = s.Stripe(dests, seq, 1, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, S{
+		"chunk1": NewLocs(),
 		"chunk2": NewLocs("c"),
 	}, res)
 
@@ -135,8 +148,7 @@ func TestStripe(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, 2, short.Distinct)
 	assert.Equal(t, 2, short.Min)
-	assert.Equal(t, 1, short.Missing)
-	assert.Equal(t, 0, short.Avail)
+	assert.Equal(t, 1, short.Avail)
 
 	seq.Reset()
 

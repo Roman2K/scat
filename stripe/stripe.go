@@ -17,6 +17,7 @@ var sortItems = func([]Item) {}
 func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 	items := make([]Item, 0, len(s))
 	exist := make(S, len(s))
+	prios := make(map[Loc]uint)
 	for it, locs := range s {
 		items = append(items, it)
 		got := make(Locs, len(locs))
@@ -25,47 +26,60 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 				continue
 			}
 			got[loc] = struct{}{}
+			prios[loc]++
 		}
 		exist[it] = got
 	}
 	sortItems(items)
 	res := make(S, len(items))
 	for _, it := range items {
-		locs, ok := exist[it]
+		got, ok := exist[it]
 		if !ok {
 			panic("invalid item")
 		}
-		missing := min - len(locs)
-		if missing <= 0 {
-			continue
+		gotBefore := make(Locs, len(got))
+		for k, v := range got {
+			gotBefore[k] = v
 		}
-		newLocs := make(Locs, missing)
-		for i := 0; i < missing; i++ {
-			seen := make(Locs, len(dests))
+		newLocs := make(Locs, min)
+		seen := make(Locs, len(dests))
+		for len(newLocs) < min {
 			for {
 				new := seq.Next()
-				if _, ok := seen[new]; ok {
-					err := ShortError{
-						Distinct: distinct, Min: min,
-						Missing: missing, Avail: i,
-					}
-					return nil, err
-				}
-				seen[new] = struct{}{}
 				if _, ok := dests[new]; !ok {
 					continue
 				}
-				if _, ok := locs[new]; ok {
-					continue
+				if _, ok := seen[new]; ok {
+					err := ShortError{
+						Distinct: distinct,
+						Min:      min,
+						Avail:    len(newLocs),
+					}
+					return nil, err
 				}
-				locs[new] = struct{}{}
-				if len(locs) <= distinct && !exist.exclusive(it) {
-					delete(locs, new)
-					continue
+				if _, ok := got[new]; !ok {
+					if prio, ok := prios[new]; ok && prio > 0 {
+						prios[new]--
+						continue
+					}
+				}
+				seen[new] = struct{}{}
+				if len(got) < distinct {
+					_, had := got[new]
+					got[new] = struct{}{}
+					if !exist.exclusive(it) {
+						if !had {
+							delete(got, new)
+						}
+						continue
+					}
 				}
 				newLocs[new] = struct{}{}
 				break
 			}
+		}
+		for k := range gotBefore {
+			delete(newLocs, k)
 		}
 		res[it] = newLocs
 	}
@@ -95,13 +109,13 @@ func (s S) exclusive(it Item) bool {
 }
 
 type ShortError struct {
-	Distinct, Min, Missing, Avail int
+	Distinct, Min, Avail int
 }
 
 func (e ShortError) Error() string {
 	return fmt.Sprintf("not enough target locations for"+
-		" distinct=%d min=%d missing=%d avail=%d",
-		e.Distinct, e.Min, e.Missing, e.Avail,
+		" distinct=%d min=%d avail=%d",
+		e.Distinct, e.Min, e.Avail,
 	)
 }
 
