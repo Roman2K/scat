@@ -13,13 +13,13 @@ func TestStripeRR(t *testing.T) {
 	assert.Equal(t, nil, seq.Next())
 	assert.Equal(t, nil, seq.Next())
 
-	seq = stripe.RR{Items: []stripe.Item{
+	seq = stripe.RR{Items: []interface{}{
 		1,
 	}}
 	assert.Equal(t, 1, seq.Next())
 	assert.Equal(t, 1, seq.Next())
 
-	seq = stripe.RR{Items: []stripe.Item{
+	seq = stripe.RR{Items: []interface{}{
 		1,
 		2,
 	}}

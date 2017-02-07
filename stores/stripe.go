@@ -26,7 +26,7 @@ func NewStripe(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
 	reg := copies.NewReg()
 	ress := copiersRes(qman.Resources(0))
 	ids := ress.ids()
-	rrItems := make([]stripe.Item, len(ids))
+	rrItems := make([]interface{}, len(ids))
 	for i, id := range ids {
 		rrItems[i] = id
 	}

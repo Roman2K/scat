@@ -1,7 +1,7 @@
 package stripe
 
 type RR struct {
-	Items []Item
+	Items []interface{}
 	cur   int
 }
 

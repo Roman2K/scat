@@ -21,7 +21,7 @@ func TestStripe(t *testing.T) {
 		})
 	}
 
-	seq := &RR{Items: []Item{"a", "b", "c"}}
+	seq := &RR{Items: []interface{}{"a", "b", "c"}}
 	dests := NewLocs("a", "b", "c")
 
 	s := S{}
@@ -145,7 +145,7 @@ func TestStripe(t *testing.T) {
 		"chunk2": NewLocs("b"),
 	}
 	dests2 = NewLocs("a", "b", "c", "d")
-	seq2 := &RR{Items: []Item{"a", "b", "c", "d"}}
+	seq2 := &RR{Items: []interface{}{"a", "b", "c", "d"}}
 	res, err = s.Stripe(dests2, seq2, 2, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, S{
