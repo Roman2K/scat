@@ -95,7 +95,8 @@ func TestFinishErrForward(t *testing.T, getFinisher getFinisherFn) {
 func Group(chunks []*scat.Chunk) (*scat.Chunk, error) {
 	group := procs.NewGroup(len(chunks))
 	for i, c := range chunks {
-		res, err := ReadChunks(group.Process(c))
+		ch := group.Process(c)
+		res, err := ReadChunks(ch)
 		if err != nil {
 			return nil, err
 		}
@@ -111,4 +112,12 @@ func Group(chunks []*scat.Chunk) (*scat.Chunk, error) {
 		}
 	}
 	panic("didn't return any group chunk")
+}
+
+func SetGroupErr(c *scat.Chunk, err error) {
+	ch := procs.NewGroup(1).ProcessErr(c, err)
+	_, err = ReadChunks(ch)
+	if err != nil {
+		panic(err)
+	}
 }

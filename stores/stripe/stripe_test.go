@@ -193,6 +193,22 @@ func TestStripeDataUse(t *testing.T) {
 	assert.Equal(t, stripe.NewLocs("b"), striper.calls[1].dests)
 }
 
+func TestStripeGroupErr(t *testing.T) {
+	chunk1 := scat.NewChunk(0, nil)
+	chunk2 := scat.NewChunk(1, nil)
+	someErr := errors.New("some err")
+	testutil.SetGroupErr(chunk2, someErr)
+	chunk, err := testutil.Group([]*scat.Chunk{
+		chunk1,
+		chunk2,
+	})
+	assert.NoError(t, err)
+	sp, err := storestripe.New(stripe.Config{}, quota.NewMan())
+	assert.NoError(t, err)
+	_, err = sp.Procs(chunk)
+	assert.Equal(t, someErr, err)
+}
+
 func TestStripeFinish(t *testing.T) {
 	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
 		qman := quota.NewMan()

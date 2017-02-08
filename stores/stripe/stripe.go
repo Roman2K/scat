@@ -51,6 +51,9 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 	chunks := map[checksum.Hash]*scat.Chunk{}
 	if group, ok := procs.GetGroup(chunk); ok {
 		for _, c := range group {
+			if err, ok := procs.GetGroupErr(c); ok && err != nil {
+				return nil, err
+			}
 			chunks[c.Hash()] = c
 		}
 	} else {

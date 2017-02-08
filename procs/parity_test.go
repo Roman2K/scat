@@ -21,25 +21,19 @@ func TestParityNonIntegrityError(t *testing.T) {
 	assert.NoError(t, err)
 	someErr := errors.New("some non-integrity err")
 
-	setGroupErr(shardChunks[1], someErr)
+	testutil.SetGroupErr(shardChunks[1], someErr)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Equal(t, someErr, err)
 
-	setGroupErr(shardChunks[1], procs.ErrIntegrityCheckFailed)
+	testutil.SetGroupErr(shardChunks[1], procs.ErrIntegrityCheckFailed)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, procs.ErrIntegrityCheckFailed, err)
 
-	setGroupErr(shardChunks[1], nil)
+	testutil.SetGroupErr(shardChunks[1], nil)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, someErr, err)
-}
-
-func setGroupErr(c *scat.Chunk, err error) {
-	ch := procs.NewGroup(1).ProcessErr(c, err)
-	for range ch {
-	}
 }
 
 func TestParityChunkNums(t *testing.T) {
