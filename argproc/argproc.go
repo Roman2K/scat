@@ -219,12 +219,45 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 }
 
 func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
+	newStripe := func(d, min int, iress []interface{}) (procs.DynProcer, error) {
+		qman := quota.NewMan()
+		if b.stats != nil {
+			qman.OnUse = func(res quota.Res, use, max uint64) {
+				cnt := b.stats.Counter(res.Id())
+				cnt.Quota.Use = use
+				cnt.Quota.Max = max
+			}
+		}
+		for _, ires := range iress {
+			res := ires.(quotaRes)
+			qman.AddResQuota(res.copier, res.max)
+		}
+		cfg := stripe.Config{
+			Distinct: d,
+			Min:      min,
+		}
+		return storestripe.New(cfg, qman)
+	}
+	argQuota := b.newArgQuota(b.newArgCopier(argStore, getProc))
 	return ap.ArgFn{
+		"mincopies": ap.ArgLambda{
+			Args: ap.Args{
+				ap.ArgInt,
+				ap.ArgVariadic{argQuota},
+			},
+			Run: func(args []interface{}) (interface{}, error) {
+				var (
+					min   = args[0].(int)
+					iress = args[1].([]interface{})
+				)
+				return newStripe(0, min, iress)
+			},
+		},
 		"stripe": ap.ArgLambda{
 			Args: ap.Args{
 				ap.ArgInt,
 				ap.ArgInt,
-				ap.ArgVariadic{b.newArgQuota(b.newArgCopier(argStore, getProc))},
+				ap.ArgVariadic{argQuota},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
@@ -232,23 +265,7 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 					min      = args[1].(int)
 					iress    = args[2].([]interface{})
 				)
-				qman := quota.NewMan()
-				if b.stats != nil {
-					qman.OnUse = func(res quota.Res, use, max uint64) {
-						cnt := b.stats.Counter(res.Id())
-						cnt.Quota.Use = use
-						cnt.Quota.Max = max
-					}
-				}
-				for _, ires := range iress {
-					res := ires.(quotaRes)
-					qman.AddResQuota(res.copier, res.max)
-				}
-				cfg := stripe.Config{
-					Distinct: distinct,
-					Min:      min,
-				}
-				return storestripe.New(cfg, qman)
+				return newStripe(distinct, min, iress)
 			},
 		},
 	}
