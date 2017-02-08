@@ -37,51 +37,65 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 		if !ok {
 			panic("invalid item")
 		}
-		gotBefore := make(Locs, len(got))
-		for k, v := range got {
-			gotBefore[k] = v
-		}
 		newLocs := make(Locs, min)
+		res[it] = newLocs
+		old := make([]Loc, 0, len(got))
+		for loc := range got {
+			old = append(old, loc)
+		}
 		seen := make(Locs, len(dests))
+		next := func() (Loc, error) {
+			if len(old) > 0 {
+				new := old[0]
+				old = old[1:]
+				return new, nil
+			}
+			new := seq.Next()
+			if _, ok := dests[new]; !ok {
+				return nil, nil
+			}
+			if _, ok := got[new]; !ok {
+				if prio, ok := prios[new]; ok && prio > 0 {
+					prios[new]--
+					return nil, nil
+				}
+			}
+			if _, ok := seen[new]; ok {
+				err := ShortError{
+					Distinct: distinct,
+					Min:      min,
+					Avail:    len(newLocs),
+				}
+				return nil, err
+			}
+			seen[new] = struct{}{}
+			return new, nil
+		}
 		for len(newLocs) < min {
 			for {
-				new := seq.Next()
-				if _, ok := dests[new]; !ok {
-					continue
-				}
-				if _, ok := seen[new]; ok {
-					err := ShortError{
-						Distinct: distinct,
-						Min:      min,
-						Avail:    len(newLocs),
-					}
+				new, err := next()
+				if err != nil {
 					return nil, err
 				}
-				if _, ok := got[new]; !ok {
-					if prio, ok := prios[new]; ok && prio > 0 {
-						prios[new]--
-						continue
-					}
+				if new == nil {
+					continue
 				}
-				seen[new] = struct{}{}
-				if len(got) < distinct {
-					_, had := got[new]
-					got[new] = struct{}{}
-					if !exist.exclusive(it) {
-						if !had {
-							delete(got, new)
-						}
-						continue
-					}
+				if _, ok := newLocs[new]; ok {
+					continue
 				}
 				newLocs[new] = struct{}{}
+				if len(newLocs) <= distinct && !res.exclusive(it) {
+					delete(newLocs, new)
+					continue
+				}
 				break
 			}
 		}
-		for k := range gotBefore {
-			delete(newLocs, k)
+	}
+	for it, new := range res {
+		for loc := range exist[it] {
+			delete(new, loc)
 		}
-		res[it] = newLocs
 	}
 	return res, nil
 }

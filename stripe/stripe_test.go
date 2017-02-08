@@ -127,14 +127,27 @@ func TestStripe(t *testing.T) {
 	seq.Reset()
 
 	s = S{
-		"chunk1": NewLocs("a", "b"),
-		"chunk2": NewLocs("a", "b"),
+		"chunk1": NewLocs("b", "c"),
+		"chunk2": NewLocs("b", "c"),
 	}
 	res, err = s.Stripe(dests, seq, 1, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, S{
 		"chunk1": NewLocs(),
-		"chunk2": NewLocs("c"),
+		"chunk2": NewLocs("a"),
+	}, res)
+
+	seq.Reset()
+
+	s = S{
+		"chunk1": NewLocs("c"),
+		"chunk2": NewLocs("b"),
+	}
+	res, err = s.Stripe(dests, seq, 1, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, S{
+		"chunk1": NewLocs(),
+		"chunk2": NewLocs(),
 	}, res)
 
 	seq.Reset()
