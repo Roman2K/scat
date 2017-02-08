@@ -2,7 +2,6 @@ package stores
 
 import (
 	"math/rand"
-	"sort"
 
 	"gitlab.com/Roman2K/scat/checksum"
 	"gitlab.com/Roman2K/scat/concur"
@@ -92,18 +91,5 @@ func ShuffleCopiers(copiers []Copier) (res []Copier) {
 	for i, idx := range indexes {
 		res[i] = copiers[idx]
 	}
-	return
-}
-
-// For tests. Putting it in testutil results in import cycles.
-func SortCopiersByIdString(s []Copier) (res []Copier) {
-	res = make([]Copier, len(s))
-	copy(res, s)
-	idStr := func(i int) string {
-		return res[i].Id().(string)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return idStr(i) < idStr(j)
-	})
 	return
 }

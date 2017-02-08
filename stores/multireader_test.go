@@ -1,12 +1,13 @@
 package stores
 
 import (
+	"sort"
 	"testing"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestMultiReader(t *testing.T) {
@@ -18,7 +19,7 @@ func TestMultiReader(t *testing.T) {
 	defer func() {
 		shuffle = origShuffle
 	}()
-	shuffle = SortCopiersByIdString
+	shuffle = sortCopiersByIdString
 
 	mem1 := NewMem()
 	mem2 := NewMem()
@@ -59,4 +60,16 @@ func TestMultiReader(t *testing.T) {
 	mrd, err = NewMultiReader(copiers)
 	assert.NoError(t, err)
 	assert.Equal(t, "data1", readData())
+}
+
+func sortCopiersByIdString(s []Copier) (res []Copier) {
+	res = make([]Copier, len(s))
+	copy(res, s)
+	idStr := func(i int) string {
+		return res[i].Id().(string)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return idStr(i) < idStr(j)
+	})
+	return
 }
