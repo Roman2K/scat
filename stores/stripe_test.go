@@ -93,6 +93,14 @@ func TestStripe(t *testing.T) {
 	tester.resetErrs()
 	assert.Equal(t, someErr, err)
 
+	// nothing to do
+	setTester(&testStriper{s: stripe.S{
+		chunk1: stripe.Locs{},
+	}})
+	tester.setCopier("a")
+	tester.reset()
+	tester.test(t, chunk1, []string(nil))
+
 	// group
 	striper = &testStriper{s: stripe.S{
 		chunk1: stripe.NewLocs("a"),
@@ -285,21 +293,7 @@ func (t *stripeTester) test(tt *testing.T, c *scat.Chunk, ids []string) {
 }
 
 func (t *stripeTester) testE(tt *testing.T, c *scat.Chunk, ids []string) error {
-	procs, err := t.sp.Procs(c)
-	assert.NoError(tt, err)
-	chunks, err := processByAll(c, procs)
-	assert.Equal(tt, 1, len(chunks))
-	assert.Equal(tt, []*scat.Chunk{c}, chunks)
-	if len(ids) == 0 {
-		assert.Equal(tt, 0, len(t.called))
-	} else {
-		assert.Equal(tt, 1, len(t.called))
-		called := t.called[c.Hash()]
-		sort.Strings(ids)
-		sort.Strings(called)
-		assert.Equal(tt, ids, called)
-	}
-	return err
+	return t.testME(tt, c, callM{c.Hash(): ids})
 }
 
 func (t *stripeTester) testM(tt *testing.T, c *scat.Chunk, calls callM) {
@@ -310,12 +304,16 @@ func (t *stripeTester) testM(tt *testing.T, c *scat.Chunk, calls callM) {
 func (t *stripeTester) testME(tt *testing.T, c *scat.Chunk, calls callM) error {
 	procs, err := t.sp.Procs(c)
 	assert.NoError(tt, err)
+	assert.Equal(tt, len(procs), cap(procs))
 	chunks, err := processByAll(c, procs)
 	assert.Equal(tt, len(calls), len(chunks))
 
-	callHashes := func(m callM) (hexes []string) {
+	callHashes := func(m callM, empties bool) (hexes []string) {
 		hexes = make([]string, 0, len(m))
-		for h := range m {
+		for h, ids := range m {
+			if !empties && len(ids) == 0 {
+				continue
+			}
 			hexes = append(hexes, fmt.Sprintf("%x", h))
 		}
 		sort.Strings(hexes)
@@ -328,10 +326,12 @@ func (t *stripeTester) testME(tt *testing.T, c *scat.Chunk, calls callM) error {
 	}
 	sort.Strings(chunkHexes)
 
-	assert.Equal(tt, callHashes(calls), chunkHexes)
-	assert.Equal(tt, callHashes(calls), callHashes(t.called))
+	assert.Equal(tt, callHashes(calls, true), chunkHexes)
+	assert.Equal(tt, callHashes(calls, false), callHashes(t.called, true))
 
 	for h, ids := range calls {
+		sort.Strings(ids)
+		sort.Strings(t.called[h])
 		assert.Equal(tt, ids, t.called[h])
 	}
 	return err
