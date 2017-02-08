@@ -12,6 +12,7 @@ import (
 	"gitlab.com/Roman2K/scat/stats"
 	"gitlab.com/Roman2K/scat/stores"
 	"gitlab.com/Roman2K/scat/stores/quota"
+	storestripe "gitlab.com/Roman2K/scat/stores/stripe"
 	"gitlab.com/Roman2K/scat/stripe"
 	"gitlab.com/Roman2K/scat/tmpdedup"
 )
@@ -247,7 +248,7 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 					Distinct: distinct,
 					Min:      min,
 				}
-				return stores.NewStripe(cfg, qman)
+				return storestripe.New(cfg, qman)
 			},
 		},
 	}

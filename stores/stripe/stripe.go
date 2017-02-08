@@ -1,4 +1,4 @@
-package stores
+package stripe
 
 import (
 	"errors"
@@ -8,6 +8,7 @@ import (
 	"gitlab.com/Roman2K/scat/checksum"
 	"gitlab.com/Roman2K/scat/concur"
 	"gitlab.com/Roman2K/scat/procs"
+	"gitlab.com/Roman2K/scat/stores"
 	"gitlab.com/Roman2K/scat/stores/copies"
 	"gitlab.com/Roman2K/scat/stores/quota"
 	"gitlab.com/Roman2K/scat/stripe"
@@ -22,7 +23,7 @@ type stripeP struct {
 	finish func() error
 }
 
-func NewStripe(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
+func New(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
 	reg := copies.NewReg()
 	ress := copiersRes(qman.Resources(0))
 	ids := ress.ids()
@@ -31,10 +32,10 @@ func NewStripe(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
 		rrItems[i] = id
 	}
 	seq := &stripe.RR{Items: rrItems}
-	ml := MultiLister(ress.listers())
-	err := ml.AddEntriesTo([]LsEntryAdder{
-		QuotaEntryAdder{Qman: qman},
-		CopiesEntryAdder{Reg: reg},
+	ml := stores.MultiLister(ress.listers())
+	err := ml.AddEntriesTo([]stores.LsEntryAdder{
+		stores.QuotaEntryAdder{Qman: qman},
+		stores.CopiesEntryAdder{Reg: reg},
 	})
 	dynp := &stripeP{
 		cfg:    cfg,
@@ -173,10 +174,10 @@ func (p chunkArgProc) Process(*scat.Chunk) <-chan procs.Res {
 
 type copiersRes []quota.Res
 
-func (ress copiersRes) listers() (lsers []Lister) {
-	lsers = make([]Lister, len(ress))
+func (ress copiersRes) listers() (lsers []stores.Lister) {
+	lsers = make([]stores.Lister, len(ress))
 	for i, res := range ress {
-		lsers[i] = res.(Lister)
+		lsers[i] = res.(stores.Lister)
 	}
 	return
 }
@@ -197,10 +198,10 @@ func (ress copiersRes) finishFuncs() (fns concur.Funcs) {
 	return
 }
 
-func (ress copiersRes) copiersById() map[interface{}]Copier {
-	cps := make(map[interface{}]Copier, len(ress))
+func (ress copiersRes) copiersById() map[interface{}]stores.Copier {
+	cps := make(map[interface{}]stores.Copier, len(ress))
 	for _, res := range ress {
-		cps[res.Id()] = res.(Copier)
+		cps[res.Id()] = res.(stores.Copier)
 	}
 	return cps
 }

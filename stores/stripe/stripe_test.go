@@ -1,4 +1,4 @@
-package stores_test
+package stripe_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/stores"
 	"gitlab.com/Roman2K/scat/stores/quota"
+	storestripe "gitlab.com/Roman2K/scat/stores/stripe"
 	"gitlab.com/Roman2K/scat/stripe"
 	"gitlab.com/Roman2K/scat/testutil"
 )
@@ -40,7 +41,7 @@ func TestStripe(t *testing.T) {
 	var tester *stripeTester
 	setTester := func(striper stripe.Striper) {
 		tester = newStripeTester(func(qman *quota.Man) procs.DynProcer {
-			sp, err := stores.NewStripe(striper, qman)
+			sp, err := storestripe.New(striper, qman)
 			assert.NoError(t, err)
 			return sp
 		})
@@ -162,7 +163,7 @@ func TestStripeDataUse(t *testing.T) {
 	}
 
 	striper := &testStriper{}
-	sp, err := stores.NewStripe(striper, qman)
+	sp, err := storestripe.New(striper, qman)
 	assert.NoError(t, err)
 
 	// a: OK (2 of 2)
@@ -195,7 +196,7 @@ func TestStripeFinish(t *testing.T) {
 		qman := quota.NewMan()
 		qman.AddRes(stores.Copier{1, stores.SliceLister{}, procs.Nop})
 		qman.AddRes(stores.Copier{2, stores.SliceLister{}, proc})
-		sp, err := stores.NewStripe(stripe.Config{0, 1}, qman)
+		sp, err := storestripe.New(stripe.Config{0, 1}, qman)
 		assert.NoError(t, err)
 		return sp
 	})
