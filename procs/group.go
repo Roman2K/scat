@@ -22,9 +22,9 @@ type Group interface {
 
 type metaKey int
 
-var (
-	metaGroup    metaKey = 0
-	metaGroupErr metaKey = 1
+const (
+	metaGroup metaKey = iota
+	metaGroupErr
 )
 
 func NewGroup(size int) Group {
