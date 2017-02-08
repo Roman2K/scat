@@ -20,6 +20,13 @@ type Group interface {
 	ErrProc
 }
 
+type metaKey int
+
+var (
+	metaGroup    metaKey = 0
+	metaGroupErr metaKey = 1
+)
+
 func NewGroup(size int) Group {
 	const min = 1
 	if size < min {
@@ -32,7 +39,7 @@ func NewGroup(size int) Group {
 }
 
 func (g *group) ProcessErr(c *scat.Chunk, err error) <-chan Res {
-	c.Meta().Set("err", err)
+	c.Meta().Set(metaGroupErr, err)
 	return g.Process(c)
 }
 
@@ -45,7 +52,7 @@ func (g *group) Process(c *scat.Chunk) <-chan Res {
 	} else if ok {
 		agg := scat.NewChunk(head, nil)
 		agg.SetTargetSize(grouped[0].TargetSize())
-		agg.Meta().Set("group", grouped)
+		agg.Meta().Set(metaGroup, grouped)
 		ch <- Res{Chunk: agg}
 	}
 	return ch
@@ -98,4 +105,14 @@ func (g *group) Finish() error {
 		return ErrShort
 	}
 	return nil
+}
+
+func GetGroup(c *scat.Chunk) (group []*scat.Chunk, ok bool) {
+	group, ok = c.Meta().Get(metaGroup).([]*scat.Chunk)
+	return
+}
+
+func GetGroupErr(c *scat.Chunk) (err error, ok bool) {
+	err, ok = c.Meta().Get(metaGroupErr).(error)
+	return
 }

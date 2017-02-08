@@ -3,10 +3,10 @@ package procs_test
 import (
 	"testing"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestGroup(t *testing.T) {
@@ -26,7 +26,8 @@ func TestGroup(t *testing.T) {
 
 	chunk := chunks[0]
 	assert.Equal(t, 0, chunk.Num())
-	grp := chunk.Meta().Get("group").([]*scat.Chunk)
+	grp, ok := procs.GetGroup(chunk)
+	assert.True(t, ok)
 	assert.Equal(t, 2, len(grp))
 	assert.Equal(t, 0, grp[0].Num())
 	assert.Equal(t, 1, grp[1].Num())
@@ -37,7 +38,8 @@ func TestGroup(t *testing.T) {
 
 	chunk = chunks[0]
 	assert.Equal(t, 1, chunk.Num())
-	grp = chunk.Meta().Get("group").([]*scat.Chunk)
+	grp, ok = procs.GetGroup(chunk)
+	assert.True(t, ok)
 	assert.Equal(t, 2, len(grp))
 	assert.Equal(t, 2, grp[0].Num())
 	assert.Equal(t, 3, grp[1].Num())

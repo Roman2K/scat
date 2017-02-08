@@ -4,35 +4,42 @@ import (
 	"errors"
 	"testing"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
-	assert "github.com/stretchr/testify/require"
+	"gitlab.com/Roman2K/scat/testutil"
 )
 
 func TestParityNonIntegrityError(t *testing.T) {
 	parity, err := procs.NewParity(1, 1)
 	assert.NoError(t, err)
-	chunk := scat.NewChunk(0, nil)
 	shardChunks := []*scat.Chunk{
 		scat.NewChunk(0, nil),
-		scat.NewChunk(0, nil),
+		scat.NewChunk(1, nil),
 	}
-	chunk.Meta().Set("group", shardChunks)
+	chunk, err := testutil.Group(shardChunks)
+	assert.NoError(t, err)
 	someErr := errors.New("some non-integrity err")
 
-	shardChunks[1].Meta().Set("err", someErr)
+	setGroupErr(shardChunks[1], someErr)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Equal(t, someErr, err)
 
-	shardChunks[1].Meta().Set("err", procs.ErrIntegrityCheckFailed)
+	setGroupErr(shardChunks[1], procs.ErrIntegrityCheckFailed)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, procs.ErrIntegrityCheckFailed, err)
 
-	shardChunks[1].Meta().Set("err", nil)
+	setGroupErr(shardChunks[1], nil)
 	err = getErr(t, parity.Unproc().Process(chunk))
 	assert.Error(t, err)
 	assert.NotEqual(t, someErr, err)
+}
+
+func setGroupErr(c *scat.Chunk, err error) {
+	ch := procs.NewGroup(1).ProcessErr(c, err)
+	for range ch {
+	}
 }
 
 func TestParityChunkNums(t *testing.T) {

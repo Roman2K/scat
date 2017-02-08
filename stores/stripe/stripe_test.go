@@ -47,8 +47,10 @@ func TestStripe(t *testing.T) {
 		})
 	}
 
-	chunk1 := chunkWithHash(checksum.SumBytes([]byte("hash1")))
-	chunk2 := chunkWithHash(checksum.SumBytes([]byte("hash2")))
+	chunk1 := scat.NewChunk(0, nil)
+	chunk1.SetHash(checksum.SumBytes([]byte("hash1")))
+	chunk2 := scat.NewChunk(1, nil)
+	chunk2.SetHash(checksum.SumBytes([]byte("hash2")))
 
 	// unknown copier ID
 	setTester(&testStriper{s: stripe.S{
@@ -111,11 +113,11 @@ func TestStripe(t *testing.T) {
 	tester.setCopier("a")
 	tester.setCopier("b")
 	tester.reset()
-	chunk := scat.NewChunk(0, nil)
-	chunk.Meta().Set("group", []*scat.Chunk{
+	chunk, err := testutil.Group([]*scat.Chunk{
 		chunk1,
 		chunk2,
 	})
+	assert.NoError(t, err)
 	tester.testM(t, chunk, callM{
 		chunk1.Hash(): []string{"a"},
 		chunk2.Hash(): []string{"b"},
@@ -176,15 +178,15 @@ func TestStripeDataUse(t *testing.T) {
 
 	// a: !! (3 of 2)
 	// b: OK (3 of 4)
-	chunk = scat.NewChunk(0, nil)
 	chunk1 := scat.NewChunk(0, bytes(2))
 	chunk1.SetHash(hash1)
-	chunk2 := scat.NewChunk(0, bytes(1))
+	chunk2 := scat.NewChunk(1, bytes(1))
 	chunk2.SetHash(hash2)
-	chunk.Meta().Set("group", []*scat.Chunk{
+	chunk, err = testutil.Group([]*scat.Chunk{
 		chunk1,
 		chunk2,
 	})
+	assert.NoError(t, err)
 	_, err = sp.Procs(chunk)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(striper.calls))
@@ -216,12 +218,6 @@ func processByAll(c *scat.Chunk, procs []procs.Proc) ([]*scat.Chunk, error) {
 		all = append(all, chunks...)
 	}
 	return all, err
-}
-
-func chunkWithHash(h checksum.Hash) (c *scat.Chunk) {
-	c = scat.NewChunk(0, nil)
-	c.SetHash(h)
-	return
 }
 
 type stripeTester struct {

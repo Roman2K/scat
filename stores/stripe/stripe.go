@@ -49,7 +49,7 @@ func New(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
 
 func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 	chunks := map[checksum.Hash]*scat.Chunk{}
-	if group, ok := chunk.Meta().Get("group").([]*scat.Chunk); ok {
+	if group, ok := procs.GetGroup(chunk); ok {
 		for _, c := range group {
 			chunks[c.Hash()] = c
 		}

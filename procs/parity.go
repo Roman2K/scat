@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"gitlab.com/Roman2K/scat"
 	"github.com/klauspost/reedsolomon"
+	"gitlab.com/Roman2K/scat"
 )
 
 type parity struct {
@@ -121,7 +121,7 @@ func (p *parity) join(c *scat.Chunk) (joined []byte, err error) {
 }
 
 func getGroup(c *scat.Chunk, size int) (chunks []*scat.Chunk, err error) {
-	chunks, ok := c.Meta().Get("group").([]*scat.Chunk)
+	chunks, ok := GetGroup(c)
 	switch {
 	case !ok:
 		err = errors.New("missing group")
@@ -132,7 +132,7 @@ func getGroup(c *scat.Chunk, size int) (chunks []*scat.Chunk, err error) {
 }
 
 func parityRecoverableErr(c *scat.Chunk) (err error, ok bool) {
-	err, ok = c.Meta().Get("err").(error)
+	err, ok = GetGroupErr(c)
 	if !ok {
 		return
 	}
