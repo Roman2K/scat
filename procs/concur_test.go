@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestConcur(t *testing.T) {
@@ -41,6 +41,13 @@ func TestConcur(t *testing.T) {
 	assert.True(t, elapsed < 65*time.Millisecond)
 }
 
+func TestConcurFinish(t *testing.T) {
+	testutil.TestFinishErrForward(t, func(proc procs.Proc) testutil.Finisher {
+		dynp := testProcDynProcer{proc}
+		return procs.NewConcur(0, dynp)
+	})
+}
+
 type testDynProcer struct {
 	procs []procs.Proc
 	err   error
@@ -52,4 +59,12 @@ func (dynp testDynProcer) Procs(*scat.Chunk) ([]procs.Proc, error) {
 
 func (dynp testDynProcer) Finish() error {
 	panic("Finish() not implemented")
+}
+
+type testProcDynProcer struct {
+	procs.Proc
+}
+
+func (dynp testProcDynProcer) Procs(*scat.Chunk) ([]procs.Proc, error) {
+	return []procs.Proc{dynp.Proc}, nil
 }
