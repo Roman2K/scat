@@ -12,7 +12,7 @@ func TestStripe(t *testing.T) {
 	defer func() {
 		sortItems = origSortItems
 	}()
-	sortItems = func(items []Item) {
+	sortItems = func(items []item) {
 		str := func(i int) string {
 			return items[i].(string)
 		}

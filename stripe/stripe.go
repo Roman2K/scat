@@ -2,22 +2,36 @@ package stripe
 
 import "fmt"
 
-type S map[Item]Locs
-type Item interface{}
-type Locs map[Loc]struct{}
-type Loc interface{}
+type S map[item]Locs
+
+type item interface{}
+
+type Locs map[loc]struct{}
+type loc interface{}
+
+func NewLocs(locs ...loc) (res Locs) {
+	res = make(Locs, len(locs))
+	for _, loc := range locs {
+		res[loc] = struct{}{}
+	}
+	return
+}
+
+func (locs Locs) Add(loc loc) {
+	locs[loc] = struct{}{}
+}
 
 type Seq interface {
 	Next() interface{}
 }
 
 // var for tests
-var sortItems = func([]Item) {}
+var sortItems = func([]item) {}
 
 func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
-	items := make([]Item, 0, len(s))
+	items := make([]item, 0, len(s))
 	exist := make(S, len(s))
-	prios := make(map[Loc]uint)
+	prios := make(map[loc]uint)
 	for it, locs := range s {
 		items = append(items, it)
 		got := make(Locs, len(locs))
@@ -25,7 +39,7 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 			if _, ok := dests[loc]; !ok {
 				continue
 			}
-			got[loc] = struct{}{}
+			got.Add(loc)
 			prios[loc]++
 		}
 		exist[it] = got
@@ -39,12 +53,12 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 		}
 		newLocs := make(Locs, min)
 		res[it] = newLocs
-		old := make([]Loc, 0, len(got))
+		old := make([]loc, 0, len(got))
 		for loc := range got {
 			old = append(old, loc)
 		}
 		seen := make(Locs, len(dests))
-		next := func() (Loc, error) {
+		next := func() (loc, error) {
 			if len(old) > 0 {
 				new := old[0]
 				old = old[1:]
@@ -68,7 +82,7 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 				}
 				return nil, err
 			}
-			seen[new] = struct{}{}
+			seen.Add(new)
 			return new, nil
 		}
 		for len(newLocs) < min {
@@ -83,7 +97,7 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 				if _, ok := newLocs[new]; ok {
 					continue
 				}
-				newLocs[new] = struct{}{}
+				newLocs.Add(new)
 				if len(newLocs) <= distinct && !res.exclusive(it) {
 					delete(newLocs, new)
 					continue
@@ -100,7 +114,7 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 	return res, nil
 }
 
-func (s S) exclusive(it Item) bool {
+func (s S) exclusive(it item) bool {
 	locs, ok := s[it]
 	if !ok {
 		return true
@@ -145,12 +159,4 @@ var _ Striper = Config{}
 
 func (cfg Config) Stripe(s S, locs Locs, seq Seq) (S, error) {
 	return s.Stripe(locs, seq, cfg.Distinct, cfg.Min)
-}
-
-func NewLocs(locs ...Loc) (res Locs) {
-	res = make(Locs, len(locs))
-	for _, loc := range locs {
-		res[loc] = struct{}{}
-	}
-	return
 }

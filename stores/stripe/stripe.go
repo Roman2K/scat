@@ -63,7 +63,7 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 		owners := copies.Owners()
 		locs := make(stripe.Locs, len(owners))
 		for _, o := range owners {
-			locs[o.Id()] = struct{}{}
+			locs.Add(o.Id())
 		}
 		curStripe[c] = locs
 	}
@@ -78,7 +78,7 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 	all := copiersRes(sp.qman.Resources(dataUse)).copiersById()
 	dests := make(stripe.Locs, len(all))
 	for _, cp := range all {
-		dests[cp.Id()] = struct{}{}
+		dests.Add(cp.Id())
 	}
 	sp.seqMu.Lock()
 	newStripe, err := sp.cfg.Stripe(curStripe, dests, sp.seq)
