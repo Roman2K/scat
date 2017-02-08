@@ -92,6 +92,13 @@ func Process(proc Proc, chunk *scat.Chunk) error {
 	return proc.Finish()
 }
 
+func SingleRes(c *scat.Chunk, err error) <-chan Res {
+	ch := make(chan Res, 1)
+	defer close(ch)
+	ch <- Res{c, err}
+	return ch
+}
+
 func finishFuncs(procs []Proc) (fns concur.Funcs) {
 	fns = make(concur.Funcs, len(procs))
 	for i, p := range procs {

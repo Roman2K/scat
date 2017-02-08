@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestChain(t *testing.T) {
@@ -44,10 +44,7 @@ func TestChainEndProc(t *testing.T) {
 	mu := sync.Mutex{}
 	a := enderProc{
 		proc: procs.ProcFunc(func(*scat.Chunk) <-chan procs.Res {
-			ch := make(chan procs.Res, 1)
-			defer close(ch)
-			ch <- procs.Res{Chunk: scat.NewChunk(11, nil)}
-			return ch
+			return procs.SingleRes(scat.NewChunk(11, nil), nil)
 		}),
 		onFinal: func(c, final *scat.Chunk) error {
 			mu.Lock()
@@ -98,23 +95,14 @@ func TestChainErrRecovery(t *testing.T) {
 		return someErr
 	})
 	errpNoChunk := procs.ProcFunc(func(*scat.Chunk) <-chan procs.Res {
-		ch := make(chan procs.Res, 1)
-		defer close(ch)
-		ch <- procs.Res{Err: someErr}
-		return ch
+		return procs.SingleRes(nil, someErr)
 	})
 	recover := errProcFunc(func(c *scat.Chunk, err error) <-chan procs.Res {
-		ch := make(chan procs.Res, 1)
-		defer close(ch)
-		ch <- procs.Res{Chunk: c}
 		recovered = append(recovered, err)
-		return ch
+		return procs.SingleRes(c, nil)
 	})
 	recoverFail := errProcFunc(func(c *scat.Chunk, err error) <-chan procs.Res {
-		ch := make(chan procs.Res, 1)
-		defer close(ch)
-		ch <- procs.Res{Chunk: c, Err: err}
-		return ch
+		return procs.SingleRes(c, err)
 	})
 
 	// no recovery

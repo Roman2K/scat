@@ -55,11 +55,7 @@ func (mrd mrd) Process(c *scat.Chunk) <-chan procs.Res {
 		}}
 	}
 	if len(casc) == 0 {
-		ch := make(chan procs.Res, 1)
-		defer close(ch)
-		err := procs.MissingDataError{errMultiReaderNoneAvail}
-		ch <- procs.Res{Chunk: c, Err: err}
-		return ch
+		return procs.SingleRes(c, procs.MissingDataError{errMultiReaderNoneAvail})
 	}
 	return casc.Process(c)
 }

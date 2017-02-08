@@ -22,10 +22,7 @@ func NewConcur(max int, dynp DynProcer) Proc {
 func (concp concurProc) Process(c *scat.Chunk) <-chan Res {
 	procs, err := concp.dynp.Procs(c)
 	if err != nil {
-		ch := make(chan Res, 1)
-		defer close(ch)
-		ch <- Res{Chunk: c, Err: err}
-		return ch
+		return SingleRes(c, err)
 	}
 	out := make(chan Res)
 	wg := sync.WaitGroup{}

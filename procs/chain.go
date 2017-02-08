@@ -20,9 +20,7 @@ func (chain Chain) Process(c *scat.Chunk) <-chan Res {
 		newProcs[len(newProcs)-1] = ecp
 		procs = newProcs
 	}
-	in := make(chan Res, 1)
-	in <- Res{Chunk: c}
-	close(in)
+	in := SingleRes(c, nil)
 	var out chan Res
 	for _, proc := range procs {
 		out = make(chan Res)
