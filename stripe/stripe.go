@@ -1,11 +1,11 @@
 package stripe
 
-import "fmt"
+import "errors"
+
+var ErrShort = errors.New("not enough target locations to satisfy requirements")
 
 type S map[item]Locs
-
 type item interface{}
-
 type Locs map[loc]struct{}
 type loc interface{}
 
@@ -30,85 +30,77 @@ var sortItems = func([]item) {}
 
 func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 	items := make([]item, 0, len(s))
-	exist := make(S, len(s))
-	prios := make(map[loc]uint)
-	for it, locs := range s {
+	prios := make(map[loc]int)
+	for it, got := range s {
 		items = append(items, it)
-		got := make(Locs, len(locs))
-		for loc, _ := range locs {
-			if _, ok := dests[loc]; !ok {
-				continue
-			}
-			got.Add(loc)
+		for loc := range got {
 			prios[loc]++
 		}
-		exist[it] = got
 	}
 	sortItems(items)
 	res := make(S, len(items))
 	for _, it := range items {
-		got, ok := exist[it]
+		got, ok := s[it]
 		if !ok {
-			panic("invalid item")
+			panic("unknown item")
 		}
-		newLocs := make(Locs, min)
-		res[it] = newLocs
-		old := make([]loc, 0, len(got))
-		for loc := range got {
-			old = append(old, loc)
+		old := make(Locs, len(got))
+		for k, v := range got {
+			old[k] = v
 		}
 		seen := make(Locs, len(dests))
 		next := func() (loc, error) {
-			if len(old) > 0 {
-				new := old[0]
-				old = old[1:]
-				return new, nil
+			for loc := range old {
+				delete(old, loc)
+				return loc, nil
 			}
 			new := seq.Next()
-			if _, ok := dests[new]; !ok {
-				return nil, nil
-			}
-			if _, ok := got[new]; !ok {
-				if prio, ok := prios[new]; ok && prio > 0 {
-					prios[new]--
+			if _, ok := seen[new]; ok {
+				delete(prios, new)
+				if len(prios) > 0 {
 					return nil, nil
 				}
-			}
-			if _, ok := seen[new]; ok {
-				err := ShortError{
-					Distinct: distinct,
-					Min:      min,
-					Avail:    len(newLocs),
-				}
-				return nil, err
+				return nil, ErrShort
 			}
 			seen.Add(new)
 			return new, nil
 		}
+		newLocs := make(Locs, min)
+		res[it] = newLocs
 		for len(newLocs) < min {
-			for {
-				new, err := next()
-				if err != nil {
-					return nil, err
+			new, err := next()
+			if err != nil {
+				return nil, err
+			}
+			if new == nil {
+				continue
+			}
+			if _, ok := got[new]; !ok {
+				if prio, ok := prios[new]; ok {
+					if prio > 0 {
+						prios[new]--
+						delete(seen, new)
+						continue
+					}
+					delete(prios, new)
 				}
-				if new == nil {
-					continue
-				}
-				if _, ok := newLocs[new]; ok {
-					continue
-				}
-				newLocs.Add(new)
-				if len(newLocs) <= distinct && !res.exclusive(it) {
-					delete(newLocs, new)
-					continue
-				}
-				break
+			}
+			if _, ok := newLocs[new]; ok {
+				continue
+			}
+			if _, ok := dests[new]; !ok {
+				continue
+			}
+			newLocs.Add(new)
+			if len(newLocs) <= distinct && !res.exclusive(it) {
+				delete(newLocs, new)
+				continue
 			}
 		}
 	}
-	for it, new := range res {
-		for loc := range exist[it] {
-			delete(new, loc)
+	for it, got := range s {
+		for old := range got {
+			delete(res[it], old)
 		}
 	}
 	return res, nil
@@ -134,17 +126,6 @@ func (s S) exclusive(it item) bool {
 		}
 	}
 	return true
-}
-
-type ShortError struct {
-	Distinct, Min, Avail int
-}
-
-func (e ShortError) Error() string {
-	return fmt.Sprintf("not enough target locations for"+
-		" distinct=%d min=%d avail=%d",
-		e.Distinct, e.Min, e.Avail,
-	)
 }
 
 type Striper interface {
