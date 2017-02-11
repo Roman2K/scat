@@ -29,58 +29,58 @@ func TestStripe(t *testing.T) {
 
 	test(t, `
 		// nothing to do
-		distinct=0 min=0 a,b _
+		excl=0 min=0 a,b _
 		chunk1 () []
 
 		// empty dests but nothing to do
-		distinct=0 min=0 [] a,b
+		excl=0 min=0 [] a,b
 		chunk1 () []
 
 		// empty dests
-		distinct=0 min=1 [] a,b
+		excl=0 min=1 [] a,b
 		chunk1 () .
 		err=ErrShort
 
 		// empty seq
-		distinct=0 min=1 a,b []
+		excl=0 min=1 a,b []
 		chunk1 () .
 		err=ErrShort
 
-		distinct=0 min=1 a,b _
+		excl=0 min=1 a,b _
 		chunk1 () a
 		chunk2 () b
 		chunk3 () a
 
 		// ignore locs outside of dests
-		distinct=0 min=1 a,b a,b,XXX
+		excl=0 min=1 a,b a,b,XXX
 		chunk1 () a
 		chunk2 () b
 		chunk3 () a
 
 		// reuse old locs first
-		distinct=0 min=1 a,b,c _
+		excl=0 min=1 a,b,c _
 		chunk1 (b) []
 		chunk2 () a
 		chunk3 () c
 
 		// ignore old locs outside of dests
-		distinct=0 min=1 a,b,c _
+		excl=0 min=1 a,b,c _
 		chunk1 (XXX) a
 		chunk2 () b
 		chunk3 () c
 
-		distinct=0 min=2 a,b,c _
+		excl=0 min=2 a,b,c _
 		chunk1 () a,b
 		chunk2 () c,a
 		chunk3 () b,c
 
 		// spread to less used first
-		distinct=0 min=2 a,b,c _
+		excl=0 min=2 a,b,c _
 		chunk1 (a,b) []
 		chunk2 (a) c
 		chunk3 () c,b
 
-		distinct=1 min=1 a,b,c _
+		excl=1 min=1 a,b,c _
 		chunk1 () a
 		chunk2 () b
 		chunk3 () c
@@ -88,35 +88,35 @@ func TestStripe(t *testing.T) {
 		chunk5 () b
 		chunk6 () a
 
-		distinct=1 min=1 a,b,c _
+		excl=1 min=1 a,b,c _
 		chunk1 (b) []
 		chunk2 (b) []
 		chunk3 () a
 
-		distinct=2 min=1 a,b,c _
+		excl=2 min=1 a,b,c _
 		chunk1 (b) []
 		chunk2 (b) c
 		chunk3 () a
 
-		distinct=1 min=2 a,b,c _
+		excl=1 min=2 a,b,c _
 		chunk1 () a,b
 		chunk2 () c .
 		err=ErrShort
 
-		distinct=1 min=2 a,b,c,d _
+		excl=1 min=2 a,b,c,d _
 		chunk1 () a,b
 		chunk2 () c,d
 		chunk3 () a,b
 		chunk4 () a,b
 
-		distinct=2 min=1 a,b,c _
+		excl=2 min=1 a,b,c _
 		chunk1 () a
 		chunk2 () b
 		chunk3 () c
 		chunk4 () a
 		chunk5 () a
 
-		distinct=2 min=2 a,b,c,d _
+		excl=2 min=2 a,b,c,d _
 		chunk1 () a,b
 		chunk2 () c,d
 		chunk3 () .
@@ -132,7 +132,7 @@ func test(t *testing.T, spec string) {
 	)
 	var (
 		commentRe = regexp.MustCompile(`^//`)
-		configRe  = regexp.MustCompile(`^distinct=(\d+) min=(\d+) (.+) (.+)?$`)
+		configRe  = regexp.MustCompile(`^excl=(\d+) min=(\d+) (.+) (.+)?$`)
 		itemRe    = regexp.MustCompile(`^(.+) \((.*)\) (.+)?$`)
 		errRe     = regexp.MustCompile(`^err=(.+)$`)
 		errors    = map[string]error{
@@ -170,7 +170,7 @@ func test(t *testing.T, spec string) {
 		var (
 			subLine     = 0
 			blank       = 0
-			distinct    = -1
+			excl        = -1
 			min         = -1
 			seq         Seq
 			dests       Locs
@@ -180,14 +180,14 @@ func test(t *testing.T, spec string) {
 		)
 		run := func() {
 			fmt.Printf("running test at line %d\n", lineNr)
-			fmt.Printf("  distinct=%d\n", distinct)
+			fmt.Printf("  excl=%d\n", excl)
 			fmt.Printf("  min=%d\n", min)
 			fmt.Printf("  seq=%v\n", seq)
 			fmt.Printf("  dests=%v\n", dests)
 			fmt.Printf("  s=%v\n", s)
 			fmt.Printf("  expected=%v\n", expected)
 			fmt.Printf("  expectedErr=%v\n", expectedErr)
-			res, err := s.Stripe(dests, seq, distinct, min)
+			res, err := s.Stripe(dests, seq, excl, min)
 			if expectedErr != nil {
 				assert.Equal(t, expectedErr, err, fmt.Sprintf("returned %v", res))
 			} else {
@@ -201,7 +201,7 @@ func test(t *testing.T, spec string) {
 			line := strings.TrimSpace(scan.Text())
 			if len(line) == 0 {
 				blank++
-				if blank > 0 && distinct > -1 {
+				if blank > 0 && excl > -1 {
 					run()
 					break
 				}
@@ -212,9 +212,9 @@ func test(t *testing.T, spec string) {
 				continue
 			}
 			if m := configRe.FindStringSubmatch(line); m != nil {
-				distinctS, minS, destsS, seqS := m[1], m[2], m[3], m[4]
+				exclS, minS, destsS, seqS := m[1], m[2], m[3], m[4]
 				var err error
-				distinct, err = strconv.Atoi(distinctS)
+				excl, err = strconv.Atoi(exclS)
 				assert.NoError(t, err)
 				min, err = strconv.Atoi(minS)
 				assert.NoError(t, err)

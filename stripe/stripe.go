@@ -20,7 +20,7 @@ type Seq interface {
 // var for tests
 var sortItems = func([]item) {}
 
-func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
+func (s S) Stripe(dests Locs, seq Seq, excl, min int) (S, error) {
 	items := make([]item, 0, len(s))
 	prios := make(map[loc]int)
 	for it, got := range s {
@@ -90,12 +90,12 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 				if _, ok := dests[new]; !ok {
 					continue
 				}
-				minDistinct := distinct
-				if max := len(res); minDistinct > max {
-					minDistinct = max
+				nexcl := excl
+				if max := len(res); nexcl > max {
+					nexcl = max
 				}
 				newLocs.Add(new)
-				if res.distincts() < minDistinct {
+				if res.exclusives() < nexcl {
 					delete(newLocs, new)
 					if pass == 0 {
 						break
@@ -113,7 +113,7 @@ func (s S) Stripe(dests Locs, seq Seq, distinct, min int) (S, error) {
 	return res, nil
 }
 
-func (s S) distincts() (count int) {
+func (s S) exclusives() (count int) {
 	counts := map[loc]uint{}
 	for _, locs := range s {
 		for loc := range locs {
@@ -140,11 +140,11 @@ type Striper interface {
 }
 
 type Config struct {
-	Distinct, Min int
+	Excl, Min int
 }
 
 var _ Striper = Config{}
 
 func (cfg Config) Stripe(s S, locs Locs, seq Seq) (S, error) {
-	return s.Stripe(locs, seq, cfg.Distinct, cfg.Min)
+	return s.Stripe(locs, seq, cfg.Excl, cfg.Min)
 }

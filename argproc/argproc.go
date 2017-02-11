@@ -233,8 +233,8 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 			qman.AddResQuota(res.copier, res.max)
 		}
 		cfg := stripe.Config{
-			Distinct: d,
-			Min:      min,
+			Excl: d,
+			Min:  min,
 		}
 		return storestripe.New(cfg, qman)
 	}
@@ -246,12 +246,12 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 				ap.ArgVariadic{argQuota},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
-				const distinct = 0
+				const excl = 0
 				var (
 					min   = args[0].(int)
 					iress = args[1].([]interface{})
 				)
-				return newStripe(distinct, min, iress)
+				return newStripe(excl, min, iress)
 			},
 		},
 		"stripe": ap.ArgLambda{
@@ -262,11 +262,11 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
-					distinct = args[0].(int)
-					min      = args[1].(int)
-					iress    = args[2].([]interface{})
+					excl  = args[0].(int)
+					min   = args[1].(int)
+					iress = args[2].([]interface{})
 				)
-				return newStripe(distinct, min, iress)
+				return newStripe(excl, min, iress)
 			},
 		},
 	}
