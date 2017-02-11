@@ -20,7 +20,7 @@ type Seq interface {
 // var for tests
 var sortItems = func([]item) {}
 
-func (s S) Stripe(dests Locs, seq Seq, excl, min int) (S, error) {
+func (s S) Stripe(dests Locs, seq Seq, min, excl int) (S, error) {
 	items := make([]item, 0, len(s))
 	prios := make(map[loc]int)
 	for it, got := range s {
@@ -140,11 +140,11 @@ type Striper interface {
 }
 
 type Config struct {
-	Excl, Min int
+	Min, Excl int
 }
 
 var _ Striper = Config{}
 
-func (cfg Config) Stripe(s S, locs Locs, seq Seq) (S, error) {
-	return s.Stripe(locs, seq, cfg.Excl, cfg.Min)
+func (cfg Config) Stripe(s S, dests Locs, seq Seq) (S, error) {
+	return s.Stripe(dests, seq, cfg.Min, cfg.Excl)
 }

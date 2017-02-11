@@ -187,7 +187,7 @@ func test(t *testing.T, spec string) {
 			fmt.Printf("  s=%v\n", s)
 			fmt.Printf("  expected=%v\n", expected)
 			fmt.Printf("  expectedErr=%v\n", expectedErr)
-			res, err := s.Stripe(dests, seq, excl, min)
+			res, err := s.Stripe(dests, seq, min, excl)
 			if expectedErr != nil {
 				assert.Equal(t, expectedErr, err, fmt.Sprintf("returned %v", res))
 			} else {

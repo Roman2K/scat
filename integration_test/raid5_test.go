@@ -116,14 +116,14 @@ func TestRecoveryRaid5(t *testing.T) {
 	resetStores()
 
 	// sanity check
-	index := write(stripe.Config{0, 1})
+	index := write(stripe.Config{Min: 1, Excl: 0})
 	assert.Equal(t, hex(hashIn), hex(read(index)))
 
 	resetStores()
 
 	// delete a whole store
 	for _, i := range rand.Perm(len(copiers)) {
-		index = write(stripe.Config{ndata, 1})
+		index = write(stripe.Config{Min: 1, Excl: ndata})
 		assert.Equal(t, hex(hashIn), hex(read(index)))
 		empty(copiers[i])
 		assert.Equal(t, hex(hashIn), hex(read(index)))

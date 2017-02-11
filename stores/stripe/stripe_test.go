@@ -214,7 +214,7 @@ func TestStripeFinish(t *testing.T) {
 		qman := quota.NewMan()
 		qman.AddRes(stores.Copier{1, stores.SliceLister{}, procs.Nop})
 		qman.AddRes(stores.Copier{2, stores.SliceLister{}, proc})
-		sp, err := storestripe.New(stripe.Config{0, 1}, qman)
+		sp, err := storestripe.New(stripe.Config{Min: 1, Excl: 0}, qman)
 		assert.NoError(t, err)
 		return sp
 	})

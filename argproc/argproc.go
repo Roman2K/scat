@@ -219,7 +219,7 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 }
 
 func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
-	newStripe := func(d, min int, iress []interface{}) (procs.DynProcer, error) {
+	newS := func(min, excl int, iress []interface{}) (procs.DynProcer, error) {
 		qman := quota.NewMan()
 		if b.stats != nil {
 			qman.OnUse = func(res quota.Res, use, max uint64) {
@@ -232,10 +232,7 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 			res := ires.(quotaRes)
 			qman.AddResQuota(res.copier, res.max)
 		}
-		cfg := stripe.Config{
-			Excl: d,
-			Min:  min,
-		}
+		cfg := stripe.Config{Min: min, Excl: excl}
 		return storestripe.New(cfg, qman)
 	}
 	argQuota := b.newArgQuota(b.newArgCopier(argStore, getProc))
@@ -251,7 +248,7 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 					min   = args[0].(int)
 					iress = args[1].([]interface{})
 				)
-				return newStripe(excl, min, iress)
+				return newS(min, excl, iress)
 			},
 		},
 		"stripe": ap.ArgLambda{
@@ -262,11 +259,11 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 			},
 			Run: func(args []interface{}) (interface{}, error) {
 				var (
-					excl  = args[0].(int)
-					min   = args[1].(int)
+					min   = args[0].(int)
+					excl  = args[1].(int)
 					iress = args[2].([]interface{})
 				)
-				return newStripe(excl, min, iress)
+				return newS(min, excl, iress)
 			},
 		},
 	}
