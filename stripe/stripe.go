@@ -9,14 +9,6 @@ type item interface{}
 type Locs map[loc]struct{}
 type loc interface{}
 
-func NewLocs(locs ...loc) (res Locs) {
-	res = make(Locs, len(locs))
-	for _, loc := range locs {
-		res[loc] = struct{}{}
-	}
-	return
-}
-
 func (locs Locs) Add(loc loc) {
 	locs[loc] = struct{}{}
 }

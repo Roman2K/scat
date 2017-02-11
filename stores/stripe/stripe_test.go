@@ -54,7 +54,7 @@ func TestStripe(t *testing.T) {
 
 	// unknown copier ID
 	setTester(&testStriper{s: stripe.S{
-		chunk1: stripe.NewLocs("b", "c", "d"),
+		chunk1: testLocs("b", "c", "d"),
 	}})
 	tester.setCopier("a", chunk1)
 	tester.setCopier("b")
@@ -71,7 +71,7 @@ func TestStripe(t *testing.T) {
 
 	// ok
 	striper := &testStriper{s: stripe.S{
-		chunk1: stripe.NewLocs("b", "c"),
+		chunk1: testLocs("b", "c"),
 	}}
 	setTester(striper)
 	tester.setCopier("a", chunk1)
@@ -81,7 +81,7 @@ func TestStripe(t *testing.T) {
 	tester.test(t, chunk1, []string{"b", "c"})
 	assert.Equal(t, 1, len(striper.calls))
 	assert.Equal(t, stripe.S{
-		chunk1: stripe.NewLocs("a"),
+		chunk1: testLocs("a"),
 	}, striper.calls[0].s)
 
 	// copies mutex has been unlocked
@@ -106,8 +106,8 @@ func TestStripe(t *testing.T) {
 
 	// group
 	striper = &testStriper{s: stripe.S{
-		chunk1: stripe.NewLocs("a"),
-		chunk2: stripe.NewLocs("b"),
+		chunk1: testLocs("a"),
+		chunk2: testLocs("b"),
 	}}
 	setTester(striper)
 	tester.setCopier("a")
@@ -124,13 +124,13 @@ func TestStripe(t *testing.T) {
 	})
 	assert.Equal(t, 1, len(striper.calls))
 	assert.Equal(t, stripe.S{
-		chunk1: stripe.NewLocs(),
-		chunk2: stripe.NewLocs(),
+		chunk1: testLocs(),
+		chunk2: testLocs(),
 	}, striper.calls[0].s)
 
 	// seen
 	setTester(&testStriper{s: stripe.S{
-		chunk2: stripe.NewLocs("a"),
+		chunk2: testLocs("a"),
 	}})
 	tester.setCopier("a")
 	tester.reset()
@@ -174,7 +174,7 @@ func TestStripeDataUse(t *testing.T) {
 	_, err = sp.Procs(chunk)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(striper.calls))
-	assert.Equal(t, stripe.NewLocs("a", "b"), striper.calls[0].dests)
+	assert.Equal(t, testLocs("a", "b"), striper.calls[0].dests)
 
 	// a: !! (3 of 2)
 	// b: OK (3 of 4)
@@ -190,7 +190,7 @@ func TestStripeDataUse(t *testing.T) {
 	_, err = sp.Procs(chunk)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(striper.calls))
-	assert.Equal(t, stripe.NewLocs("b"), striper.calls[1].dests)
+	assert.Equal(t, testLocs("b"), striper.calls[1].dests)
 }
 
 func TestStripeGroupErr(t *testing.T) {
@@ -348,4 +348,12 @@ func (t *stripeTester) testME(tt *testing.T, c *scat.Chunk, calls callM) error {
 		assert.Equal(tt, ids, t.called[h])
 	}
 	return err
+}
+
+func testLocs(locs ...interface{}) (res stripe.Locs) {
+	res = make(stripe.Locs, len(locs))
+	for _, loc := range locs {
+		res.Add(loc)
+	}
+	return
 }
