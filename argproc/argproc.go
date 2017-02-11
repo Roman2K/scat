@@ -246,11 +246,12 @@ func (b builder) newArgDynProc(argStore ap.Parser) ap.ArgFn {
 				ap.ArgVariadic{argQuota},
 			},
 			Run: func(args []interface{}) (interface{}, error) {
+				const distinct = 0
 				var (
 					min   = args[0].(int)
 					iress = args[1].([]interface{})
 				)
-				return newStripe(0, min, iress)
+				return newStripe(distinct, min, iress)
 			},
 		},
 		"stripe": ap.ArgLambda{
