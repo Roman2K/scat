@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"gitlab.com/Roman2K/scat/argparse"
 	assert "github.com/stretchr/testify/require"
+	"gitlab.com/Roman2K/scat/argparse"
 )
 
 func TestArgLambdaArgErr(t *testing.T) {
@@ -61,4 +61,36 @@ func TestArgLambdaWrongArgsType(t *testing.T) {
 	_, _, err := arg.Parse("[a]")
 	expected := `Args parser.*is string.* not \[\]interface {}`
 	assert.Regexp(t, expected, err.Error())
+}
+
+func TestArgLambdaCustomBrackets(t *testing.T) {
+	const (
+		open  = '{'
+		close = '}'
+	)
+	assert.NotEqual(t, argparse.ArgLambda{}.Open, open)
+	arg1 := argparse.ArgLambda{
+		Args: argparse.Args{argparse.ArgStr},
+		Run: func(args []interface{}) (interface{}, error) {
+			return args[0], nil
+		},
+		Open:  open,
+		Close: close,
+	}
+	arg2 := argparse.ArgLambda{
+		Args: argparse.Args{arg1, arg1},
+		Run: func(args []interface{}) (interface{}, error) {
+			return args, nil
+		},
+		Open:  open,
+		Close: close,
+	}
+	str := "{{xxx} {yyy}}"
+	res, n, err := arg2.Parse(str)
+	assert.NoError(t, err)
+	vals := res.([]interface{})
+	assert.Equal(t, len(str), n)
+	assert.Equal(t, 2, len(vals))
+	assert.Equal(t, "xxx", vals[0])
+	assert.Equal(t, "yyy", vals[1])
 }

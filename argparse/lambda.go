@@ -16,14 +16,20 @@ var (
 )
 
 type ArgLambda struct {
-	Args Parser
-	Run  RunFn
+	Args  Parser
+	Run   RunFn
+	Open  rune
+	Close rune
 }
 
 type RunFn func([]interface{}) (interface{}, error)
 
 func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
-	if len(str) < 2 || []rune(str)[0] != lambdaOpen {
+	open, close := lambdaOpen, lambdaClose
+	if a.Open != 0 && a.Close != 0 {
+		open, close = a.Open, a.Close
+	}
+	if len(str) < 2 || []rune(str)[0] != open {
 		err = ErrInvalidSyntax
 		return
 	}
@@ -31,9 +37,9 @@ func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
 	nest := 1
 	i := strings.IndexFunc(str, func(r rune) bool {
 		switch r {
-		case lambdaOpen:
+		case open:
 			nest++
-		case lambdaClose:
+		case close:
 			nest--
 			if nest == 0 {
 				return true
