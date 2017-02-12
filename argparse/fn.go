@@ -27,9 +27,10 @@ func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
 	}
 	nparsed = len(name)
 	nparsedAdjust := 0
-	if argsStr == "" {
-		argsStr = "[]"
-		nparsedAdjust -= len(argsStr)
+	if len(argsStr) == 0 {
+		nparsed += countLeftSpaces(str[nparsed:])
+		argsStr = "[" + str[nparsed:] + "]"
+		nparsedAdjust -= 2
 	}
 	var n int
 	res, n, err = parser.Parse(argsStr)

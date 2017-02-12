@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"gitlab.com/Roman2K/scat/argparse"
 	assert "github.com/stretchr/testify/require"
+	"gitlab.com/Roman2K/scat/argparse"
 )
 
 func TestArgFn(t *testing.T) {
@@ -69,16 +69,26 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, argparse.ErrTooFewArgs, errDet.Err)
 	assert.Equal(t, len(str), errDet.NParsed)
 	str = "abc xyz"
-	_, _, err = argparse.ArgVariadic{argFn}.Parse(str)
+	_, _, err = argFn.Parse(str)
 	errDet = err.(argparse.ErrDetails)
-	assert.Equal(t, argparse.ErrTooFewArgs, errDet.Err.(argparse.ErrDetails).Err)
-	assert.Equal(t, len(str), errDet.NParsed)
+	assert.Equal(t, argparse.ErrTooManyArgs, errDet.Err)
+	assert.Equal(t, 4, errDet.NParsed)
 
 	// with args
 	str = "xyz[1kib 2kib]"
 	res, n, err = argFn.Parse(str)
 	assert.NoError(t, err)
 	vals := res.([]interface{})
+	assert.Equal(t, 2, len(vals))
+	assert.Equal(t, uint64(1024), vals[0].(uint64))
+	assert.Equal(t, uint64(2048), vals[1].(uint64))
+	assert.Equal(t, len(str), n)
+
+	// with args, optional brackets
+	str = "xyz \n 1kib 2kib"
+	res, n, err = argFn.Parse(str)
+	assert.NoError(t, err)
+	vals = res.([]interface{})
 	assert.Equal(t, 2, len(vals))
 	assert.Equal(t, uint64(1024), vals[0].(uint64))
 	assert.Equal(t, uint64(2048), vals[1].(uint64))
