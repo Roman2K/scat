@@ -12,33 +12,37 @@ import (
 )
 
 func TestConcur(t *testing.T) {
-	a := procs.InplaceFunc(func(c *scat.Chunk) error {
-		time.Sleep(20 * time.Millisecond)
-		return nil
-	})
-	b := procs.InplaceFunc(func(c *scat.Chunk) error {
-		time.Sleep(30 * time.Millisecond)
+	const wait = 40 * time.Millisecond
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		time.Sleep(wait)
+	}()
+	proc := procs.InplaceFunc(func(*scat.Chunk) error {
+		<-done
+		time.Sleep(wait)
 		return nil
 	})
 
 	// error
 	someErr := errors.New("some err")
-	dynp := testDynProcer{[]procs.Proc{a, a, b}, someErr}
-	conc := procs.NewConcur(2, dynp)
+	dynp := testDynProcer{[]procs.Proc{proc, proc}, someErr}
+	conc := procs.NewConcur(len(dynp.procs), dynp)
 	_, err := testutil.ReadChunks(conc.Process(scat.NewChunk(0, nil)))
 	assert.Equal(t, someErr, err)
 
-	// no error
-	dynp = testDynProcer{[]procs.Proc{a, a, b}, nil}
+	// ok
+	dynp = testDynProcer{[]procs.Proc{proc, proc}, nil}
 	c := scat.NewChunk(0, nil)
-	conc = procs.NewConcur(2, dynp)
+	conc = procs.NewConcur(len(dynp.procs), dynp)
 	start := time.Now()
 	chunks, err := testutil.ReadChunks(conc.Process(c))
 	assert.NoError(t, err)
-	assert.Equal(t, []*scat.Chunk{c, c, c}, chunks)
+	assert.Equal(t, []*scat.Chunk{c, c}, chunks)
 	elapsed := time.Now().Sub(start)
-	assert.True(t, elapsed > 20*time.Millisecond)
-	assert.True(t, elapsed < 65*time.Millisecond)
+	assert.True(t, elapsed > wait)
+	assert.True(t, elapsed < wait*(time.Duration(1+len(dynp.procs))))
 }
 
 func TestConcurFinish(t *testing.T) {
