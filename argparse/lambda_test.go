@@ -15,7 +15,7 @@ func TestArgLambdaArgErr(t *testing.T) {
 			return nil, nil
 		},
 	}
-	_, _, err := arg.Parse("[a]")
+	_, _, err := arg.Parse("(a)")
 	assert.Regexp(t, "some err", err)
 }
 
@@ -33,7 +33,7 @@ func TestArgLambdaNested(t *testing.T) {
 		},
 	}
 
-	str := "[[a] [b]]"
+	str := "((a) (b))"
 	res, n, err := arg2.Parse(str)
 	assert.NoError(t, err)
 	vals := res.([]interface{})
@@ -42,11 +42,11 @@ func TestArgLambdaNested(t *testing.T) {
 	assert.Equal(t, "b", vals[1].(string))
 	assert.Equal(t, len(str), n)
 
-	str = "[[]"
+	str = "(()"
 	_, _, err = arg2.Parse(str)
 	assert.Equal(t, argparse.ErrUnclosedBracket, err)
 
-	str = "[]]"
+	str = "())"
 	res, n, err = arg2.Parse(str)
 	assert.NoError(t, err)
 	vals = res.([]interface{})
@@ -58,7 +58,7 @@ func TestArgLambdaWrongArgsType(t *testing.T) {
 	arg := argparse.ArgLambda{
 		Args: argparse.ArgStr,
 	}
-	_, _, err := arg.Parse("[a]")
+	_, _, err := arg.Parse("(a)")
 	expected := `Args parser.*is string.* not \[\]interface {}`
 	assert.Regexp(t, expected, err.Error())
 }

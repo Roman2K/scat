@@ -8,7 +8,11 @@ import (
 var fnRe *regexp.Regexp
 
 func init() {
-	fnRe = regexp.MustCompile(`\A(\w+)(\[.*\])?`)
+	var (
+		open  = regexp.QuoteMeta(string(lambdaOpen))
+		close = regexp.QuoteMeta(string(lambdaClose))
+	)
+	fnRe = regexp.MustCompile(`\A(\w+)(` + open + `.*` + close + `)?`)
 }
 
 type ArgFn map[string]Parser
@@ -29,7 +33,7 @@ func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
 	nparsedAdjust := 0
 	if len(argsStr) == 0 {
 		nparsed += countLeftSpaces(str[nparsed:])
-		argsStr = "[" + str[nparsed:] + "]"
+		argsStr = string(lambdaOpen) + str[nparsed:] + string(lambdaClose)
 		nparsedAdjust -= 2
 	}
 	var n int

@@ -18,9 +18,9 @@ func (arg ArgPiped) Parse(str string) (interface{}, int, error) {
 		}
 		argStr := str[nparsed:]
 		nparsedAdjust := 0
-		if i := strings.IndexRune(str[nparsed:], Pipe); i != -1 {
+		if i := strings.IndexRune(argStr, Pipe); i != -1 {
 			argStr = argStr[:i]
-			nparsedAdjust += len(string(Pipe))
+			nparsedAdjust += 1
 		}
 		val, n, err := arg.Arg.Parse(argStr)
 		if err != nil {

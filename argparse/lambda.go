@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	lambdaOpen  = '['
-	lambdaClose = ']'
+	lambdaOpen  = '('
+	lambdaClose = ')'
 )
 
 var (

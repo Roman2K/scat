@@ -37,7 +37,7 @@ func TestArgFn(t *testing.T) {
 
 	// without args
 	reset()
-	str := "abc[]"
+	str := "abc()"
 	res, n, err := argFn.Parse(str)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(received))
@@ -51,7 +51,7 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, someErr, err.(argparse.ErrDetails).Err)
 
 	// too many args
-	str = "abc[xxx]"
+	str = "abc(xxx)"
 	_, _, err = argFn.Parse(str)
 	assert.Equal(t, argparse.ErrTooManyArgs, err.(argparse.ErrDetails).Err)
 
@@ -75,7 +75,7 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, 4, errDet.NParsed)
 
 	// with args
-	str = "xyz[1kib 2kib]"
+	str = "xyz(1kib 2kib)"
 	res, n, err = argFn.Parse(str)
 	assert.NoError(t, err)
 	vals := res.([]interface{})
@@ -95,7 +95,7 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, len(str), n)
 
 	// spaces
-	str = "xyz[ 1kib 2kib ]"
+	str = "xyz( 1kib 2kib )"
 	res, n, err = argFn.Parse(str)
 	assert.NoError(t, err)
 	vals = res.([]interface{})
@@ -103,12 +103,12 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, len(str), n)
 
 	// too few args
-	str = "xyz[1kib]"
+	str = "xyz(1kib)"
 	_, _, err = argFn.Parse(str)
 	assert.Equal(t, argparse.ErrTooFewArgs, err.(argparse.ErrDetails).Err)
 
 	// inexistent function
-	str = "xxx[]"
+	str = "xxx()"
 	_, _, err = argFn.Parse(str)
 	assert.Equal(t, `no such function: "xxx"`, err.Error())
 }
