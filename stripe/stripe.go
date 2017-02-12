@@ -114,16 +114,10 @@ func (s S) Stripe(dests Locs, seq Seq, min, excl int) (S, error) {
 }
 
 func (s S) exclusives() (count int) {
-	counts := map[loc]uint{}
-	for _, locs := range s {
-		for loc := range locs {
-			counts[loc]++
-		}
-	}
-	for _, locs := range s {
+	for a, aLocs := range s {
 		excl := true
-		for loc := range locs {
-			if counts[loc] > 1 {
+		for b, bLocs := range s {
+			if a != b && equal(aLocs, bLocs) {
 				excl = false
 				break
 			}
@@ -133,6 +127,18 @@ func (s S) exclusives() (count int) {
 		}
 	}
 	return
+}
+
+func equal(a, b Locs) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for loc := range a {
+		if _, ok := b[loc]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 type Striper interface {

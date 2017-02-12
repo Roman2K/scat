@@ -30,11 +30,11 @@ func TestStripe(t *testing.T) {
 	test(t, `
 		// nothing to do
 		excl=0 min=0 a,b _
-		chunk1 () []
+		chunk1 ()
 
 		// empty dests but nothing to do
 		excl=0 min=0 [] a,b
-		chunk1 () []
+		chunk1 ()
 
 		// empty dests
 		excl=0 min=1 [] a,b
@@ -59,7 +59,7 @@ func TestStripe(t *testing.T) {
 
 		// reuse old locs first
 		excl=0 min=1 a,b,c _
-		chunk1 (b) []
+		chunk1 (b)
 		chunk2 () a
 		chunk3 () c
 
@@ -76,7 +76,7 @@ func TestStripe(t *testing.T) {
 
 		// spread to less used first
 		excl=0 min=2 a,b,c _
-		chunk1 (a,b) []
+		chunk1 (a,b)
 		chunk2 (a) c
 		chunk3 () c,b
 
@@ -89,25 +89,17 @@ func TestStripe(t *testing.T) {
 		chunk6 () a
 
 		excl=1 min=1 a,b,c _
-		chunk1 (b) []
-		chunk2 (b) []
-		chunk3 () a
-
-		excl=2 min=1 a,b,c _
-		chunk1 (b) []
-		chunk2 (b) c
-		chunk3 () a
+		chunk1 (b)
+		chunk2 (b) a
+		chunk3 (b)
 
 		excl=1 min=2 a,b,c _
 		chunk1 () a,b
-		chunk2 () c .
-		err=ErrShort
-
-		excl=1 min=2 a,b,c,d _
-		chunk1 () a,b
-		chunk2 () c,d
-		chunk3 () a,b
+		chunk2 () c,a
+		chunk3 () b,c
 		chunk4 () a,b
+		chunk5 () c,a
+		chunk6 () b,a
 
 		excl=2 min=1 a,b,c _
 		chunk1 () a
@@ -119,7 +111,27 @@ func TestStripe(t *testing.T) {
 		excl=2 min=2 a,b,c,d _
 		chunk1 () a,b
 		chunk2 () c,d
-		chunk3 () .
+		chunk3 () a,d
+		chunk4 () c,d
+		chunk5 () a,b
+		chunk6 () b,c
+
+		excl=2 min=1 a,b,c _
+		chunk1 (b)
+		chunk2 (b) c
+		chunk3 () a
+
+		excl=3 min=2 a,b,c,d _
+		chunk1 () a,b
+		chunk2 () c,d
+		chunk3 () a,c
+		chunk4 () c,b
+
+		excl=3 min=2 a,b,c _
+		chunk1 (a,b)
+		chunk2 (a,b) a .
+		chunk3 (a,b)
+		chunk4 () c,a
 		err=ErrShort
 	`)
 }
@@ -133,7 +145,7 @@ func test(t *testing.T, spec string) {
 	var (
 		commentRe = regexp.MustCompile(`^//`)
 		configRe  = regexp.MustCompile(`^excl=(\d+) min=(\d+) (.+) (.+)?$`)
-		itemRe    = regexp.MustCompile(`^(.+) \((.*)\) (.+)?$`)
+		itemRe    = regexp.MustCompile(`^(.+) \((.*)\)(?: (.*))?$`)
 		errRe     = regexp.MustCompile(`^err=(.+)$`)
 		errors    = map[string]error{
 			"ErrShort": ErrShort,
