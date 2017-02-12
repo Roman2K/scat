@@ -121,10 +121,22 @@ func TestRecoveryRaid5(t *testing.T) {
 
 	resetStores()
 
-	// delete a whole store
+	// RAID 5: delete 1 whole store
 	for _, i := range rand.Perm(len(copiers)) {
 		index = write(stripe.Config{Min: 1, Excl: ndata})
 		assert.Equal(t, hex(hashIn), hex(read(index)))
+		empty(copiers[i])
+		assert.Equal(t, hex(hashIn), hex(read(index)))
+	}
+
+	resetStores()
+
+	// RAID 1+5: delete 2 whole stores
+	for _, i := range rand.Perm(len(copiers)) {
+		index = write(stripe.Config{Min: 2, Excl: nshards})
+		assert.Equal(t, hex(hashIn), hex(read(index)))
+		empty(copiers[i])
+		i = (i + 1) % len(copiers)
 		empty(copiers[i])
 		assert.Equal(t, hex(hashIn), hex(read(index)))
 	}
