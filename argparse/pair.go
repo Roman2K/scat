@@ -10,7 +10,7 @@ type ArgPair struct {
 
 const pairSep = '='
 
-func (arg ArgPair) Parse(str string) (res interface{}, nparsed int, err error) {
+func (arg ArgPair) Parse(str string) (res interface{}, pos int, err error) {
 	skipSep := 0
 	if _, ok := arg.Left.(ArgPair); ok {
 		skipSep++
@@ -31,14 +31,14 @@ func (arg ArgPair) Parse(str string) (res interface{}, nparsed int, err error) {
 	}
 	left, n, err := arg.Left.Parse(str[:i])
 	if err != nil {
-		err = ErrDetails{err, str, nparsed + n}
+		err = ErrDetails{err, str, pos + n}
 		return
 	}
-	nparsed += i + 1
-	right, n, err := arg.Right.Parse(str[nparsed:])
-	nparsed += n
+	pos += i + 1
+	right, n, err := arg.Right.Parse(str[pos:])
+	pos += n
 	if err != nil {
-		err = ErrDetails{err, str, nparsed}
+		err = ErrDetails{err, str, pos}
 		return
 	}
 	res, err = arg.Run(left, right)

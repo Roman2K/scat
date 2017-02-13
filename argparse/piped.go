@@ -17,14 +17,14 @@ const Pipe = '|'
 
 func (arg ArgPiped) Parse(str string) (interface{}, int, error) {
 	values := make([]interface{}, 0, strings.Count(str, string(Pipe))+1)
-	nparsed, inLen := 0, len(str)
+	pos, inLen := 0, len(str)
 	for {
-		nparsed += countLeftSpaces(str[nparsed:])
-		if nparsed >= inLen {
+		pos += countLeftSpaces(str[pos:])
+		if pos >= inLen {
 			break
 		}
-		argStr := str[nparsed:]
-		nparsedAdjust := 0
+		argStr := str[pos:]
+		posAdjust := 0
 		match := func(r rune) bool {
 			return r == Pipe
 		}
@@ -46,15 +46,15 @@ func (arg ArgPiped) Parse(str string) (interface{}, int, error) {
 		}
 		if i := strings.IndexFunc(argStr, match); i != -1 {
 			argStr = argStr[:i]
-			nparsedAdjust += 1
+			posAdjust += 1
 		}
 		val, n, err := arg.Arg.Parse(argStr)
 		if err != nil {
-			err = ErrDetails{err, str, nparsed + n}
-			return nil, nparsed, err
+			err = ErrDetails{err, str, pos + n}
+			return nil, pos, err
 		}
-		nparsed += len(argStr) + nparsedAdjust
+		pos += len(argStr) + posAdjust
 		values = append(values, val)
 	}
-	return values, nparsed, nil
+	return values, pos, nil
 }

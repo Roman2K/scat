@@ -24,7 +24,7 @@ type ArgLambda struct {
 
 type RunFn func([]interface{}) (interface{}, error)
 
-func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
+func (a ArgLambda) Parse(str string) (res interface{}, pos int, err error) {
 	open, close := lambdaOpen, lambdaClose
 	if a.Open != 0 && a.Close != 0 {
 		open, close = a.Open, a.Close
@@ -68,7 +68,7 @@ func (a ArgLambda) Parse(str string) (res interface{}, nparsed int, err error) {
 		return
 	}
 	res, err = a.run()(args)
-	nparsed = i + 2
+	pos = i + 2
 	return
 }
 

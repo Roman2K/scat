@@ -17,7 +17,7 @@ func init() {
 
 type ArgFn map[string]Parser
 
-func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
+func (a ArgFn) Parse(str string) (res interface{}, pos int, err error) {
 	m := fnRe.FindStringSubmatch(str)
 	if m == nil {
 		err = ErrInvalidSyntax
@@ -29,20 +29,20 @@ func (a ArgFn) Parse(str string) (res interface{}, nparsed int, err error) {
 		err = fmt.Errorf("no such function: %q", name)
 		return
 	}
-	nparsed = len(name)
-	nparsedAdjust := 0
+	pos = len(name)
+	posAdjust := 0
 	if len(argsStr) == 0 {
-		nparsed += countLeftSpaces(str[nparsed:])
-		argsStr = string(lambdaOpen) + str[nparsed:] + string(lambdaClose)
-		nparsedAdjust -= 2
+		pos += countLeftSpaces(str[pos:])
+		argsStr = string(lambdaOpen) + str[pos:] + string(lambdaClose)
+		posAdjust -= 2
 	}
 	var n int
 	res, n, err = parser.Parse(argsStr)
-	nparsed += n
+	pos += n
 	if err != nil {
-		err = ErrDetails{err, str, nparsed}
+		err = ErrDetails{err, str, pos}
 		return
 	}
-	nparsed += nparsedAdjust
+	pos += posAdjust
 	return
 }

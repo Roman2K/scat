@@ -67,36 +67,36 @@ func (test argVariadicTest) run(t *testing.T) {
 	_, _, err = arg.Parse("x")
 	assert.Equal(t, someErr, err.(ap.ErrDetails).Err)
 
-	// err nparsed
+	// err pos
 	someErr = errors.New("some err")
 	strs := []string{"xxx", "yyy"}
 	str = test.newStr(strs)
 	arg = test.newArg(&argFailAfter{
-		arg:     ap.ArgStr,
-		after:   1,
-		nparsed: 2,
-		err:     someErr,
+		arg:   ap.ArgStr,
+		after: 1,
+		pos:   2,
+		err:   someErr,
 	})
 	_, _, err = arg.Parse(str)
 	errDet, ok := err.(ap.ErrDetails)
 	assert.True(t, ok)
 	assert.Equal(t, someErr, errDet.Err)
-	assert.Equal(t, len(str)-len(strs[1])+2, errDet.NParsed)
+	assert.Equal(t, len(str)-len(strs[1])+2, errDet.Pos)
 }
 
 type argFailAfter struct {
-	arg     ap.Parser
-	after   uint
-	nparsed int
-	err     error
-	cur     uint
+	arg   ap.Parser
+	after uint
+	pos   int
+	err   error
+	cur   uint
 }
 
 func (arg *argFailAfter) Parse(str string) (val interface{}, n int, err error) {
 	arg.cur++
 	val, n, err = arg.arg.Parse(str)
 	if arg.cur > arg.after {
-		n = arg.nparsed
+		n = arg.pos
 		err = arg.err
 	}
 	return

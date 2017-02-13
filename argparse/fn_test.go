@@ -67,12 +67,12 @@ func TestArgFn(t *testing.T) {
 	_, _, err = argFn.Parse(str)
 	errDet := err.(argparse.ErrDetails)
 	assert.Equal(t, argparse.ErrTooFewArgs, errDet.Err)
-	assert.Equal(t, len(str), errDet.NParsed)
+	assert.Equal(t, len(str), errDet.Pos)
 	str = "abc xyz"
 	_, _, err = argFn.Parse(str)
 	errDet = err.(argparse.ErrDetails)
 	assert.Equal(t, argparse.ErrTooManyArgs, errDet.Err)
-	assert.Equal(t, 4, errDet.NParsed)
+	assert.Equal(t, 4, errDet.Pos)
 
 	// with args
 	testXyz := func(str string) {

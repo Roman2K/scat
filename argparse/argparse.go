@@ -32,17 +32,17 @@ func spaceEndIndex(str string) int {
 }
 
 type ErrDetails struct {
-	Err     error
-	Str     string
-	NParsed int
+	Err error
+	Str string
+	Pos int
 }
 
 func (e ErrDetails) Error() string {
-	msg := e.Err.Error()
-	if strings.Contains(msg, "\n") {
-		return msg
+	if det, ok := e.Err.(ErrDetails); ok {
+		return det.Error()
 	}
-	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.Str, e.NParsed+6, " ")
+	msg := e.Err.Error()
+	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.Str, e.Pos+6, " ")
 }
 
 func OriginalErr(err error) error {

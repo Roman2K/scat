@@ -11,12 +11,12 @@ type Args []Parser
 
 var _ Parser = Args{}
 
-func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
+func (args Args) Parse(str string) (res interface{}, pos int, err error) {
 	values := make([]interface{}, len(args))
 	inLen := len(str)
 	for i, arg := range args {
-		nparsed += countLeftSpaces(str[nparsed:])
-		if nparsed >= inLen {
+		pos += countLeftSpaces(str[pos:])
+		if pos >= inLen {
 			if ep, ok := arg.(EmptyParser); ok {
 				val, e := ep.Empty()
 				if e != nil {
@@ -29,17 +29,17 @@ func (args Args) Parse(str string) (res interface{}, nparsed int, err error) {
 			err = ErrTooFewArgs
 			return
 		}
-		val, n, e := arg.Parse(str[nparsed:])
-		nparsed += n
+		val, n, e := arg.Parse(str[pos:])
+		pos += n
 		if e != nil {
-			err = ErrDetails{e, str, nparsed}
+			err = ErrDetails{e, str, pos}
 			return
 		}
 		values[i] = val
 	}
-	nparsed += countLeftSpaces(str[nparsed:])
+	pos += countLeftSpaces(str[pos:])
 	res = values
-	if nparsed != inLen {
+	if pos != inLen {
 		err = ErrTooManyArgs
 	}
 	return

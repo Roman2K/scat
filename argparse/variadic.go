@@ -10,19 +10,19 @@ func (ArgVariadic) Empty() (interface{}, error) {
 
 func (arg ArgVariadic) Parse(str string) (interface{}, int, error) {
 	values := []interface{}{}
-	nparsed, inLen := 0, len(str)
+	pos, inLen := 0, len(str)
 	for {
-		nparsed += countLeftSpaces(str[nparsed:])
-		if nparsed >= inLen {
+		pos += countLeftSpaces(str[pos:])
+		if pos >= inLen {
 			break
 		}
-		val, n, err := arg.Arg.Parse(str[nparsed:])
-		nparsed += n
+		val, n, err := arg.Arg.Parse(str[pos:])
+		pos += n
 		if err != nil {
-			err = ErrDetails{err, str, nparsed}
-			return nil, nparsed, err
+			err = ErrDetails{err, str, pos}
+			return nil, pos, err
 		}
 		values = append(values, val)
 	}
-	return values, nparsed, nil
+	return values, pos, nil
 }
