@@ -75,32 +75,19 @@ func TestArgFn(t *testing.T) {
 	assert.Equal(t, 4, errDet.NParsed)
 
 	// with args
-	str = "xyz(1kib 2kib)"
-	res, n, err = argFn.Parse(str)
-	assert.NoError(t, err)
-	vals := res.([]interface{})
-	assert.Equal(t, 2, len(vals))
-	assert.Equal(t, uint64(1024), vals[0].(uint64))
-	assert.Equal(t, uint64(2048), vals[1].(uint64))
-	assert.Equal(t, len(str), n)
-
-	// with args, optional brackets
-	str = "xyz \n 1kib 2kib"
-	res, n, err = argFn.Parse(str)
-	assert.NoError(t, err)
-	vals = res.([]interface{})
-	assert.Equal(t, 2, len(vals))
-	assert.Equal(t, uint64(1024), vals[0].(uint64))
-	assert.Equal(t, uint64(2048), vals[1].(uint64))
-	assert.Equal(t, len(str), n)
-
-	// spaces
-	str = "xyz( 1kib 2kib )"
-	res, n, err = argFn.Parse(str)
-	assert.NoError(t, err)
-	vals = res.([]interface{})
-	assert.Equal(t, 2, len(vals))
-	assert.Equal(t, len(str), n)
+	testXyz := func(str string) {
+		res, n, err := argFn.Parse(str)
+		assert.NoError(t, err)
+		vals := res.([]interface{})
+		assert.Equal(t, 2, len(vals))
+		assert.Equal(t, uint64(1024), vals[0].(uint64))
+		assert.Equal(t, uint64(2048), vals[1].(uint64))
+		assert.Equal(t, len(str), n)
+	}
+	testXyz("xyz(1kib 2kib)")      // with brackets
+	testXyz("xyz \n 1kib 2kib")    // optional brackets
+	testXyz("xyz( 1kib 2kib )")    // spaces
+	testXyz("xyz(1kib \n 2kib\n)") // with brackets
 
 	// too few args
 	str = "xyz(1kib)"

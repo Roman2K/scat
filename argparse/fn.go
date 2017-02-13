@@ -12,7 +12,7 @@ func init() {
 		open  = regexp.QuoteMeta(string(lambdaOpen))
 		close = regexp.QuoteMeta(string(lambdaClose))
 	)
-	fnRe = regexp.MustCompile(`\A(\w+)(` + open + `.*` + close + `)?`)
+	fnRe = regexp.MustCompile(`\A(\w+)((?s)` + open + `.*` + close + `)?`)
 }
 
 type ArgFn map[string]Parser
