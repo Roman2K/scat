@@ -72,7 +72,7 @@ func (idx *indexProc) ProcessFinal(c, final *scat.Chunk) error {
 	entry := indexEntry{
 		num:        final.Num(),
 		hash:       final.Hash(),
-		targetSize: c.TargetSize(),
+		targetSize: final.TargetSize(),
 	}
 	finals, ok := idx.getFinals(c.Hash())
 	if !ok {

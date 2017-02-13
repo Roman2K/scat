@@ -30,6 +30,11 @@ func (p *parity) Proc() Proc {
 }
 
 func (p *parity) process(c *scat.Chunk) <-chan Res {
+	sz, ok := c.Data().(scat.Sizer)
+	if !ok {
+		err := errors.New("sized-data required to determine target size")
+		return SingleRes(c, err)
+	}
 	ch := make(chan Res)
 	go func() {
 		defer close(ch)
@@ -40,6 +45,7 @@ func (p *parity) process(c *scat.Chunk) <-chan Res {
 		}
 		for i, shard := range shards {
 			chunk := scat.NewChunk(c.Num()*p.nshards+i, scat.BytesData(shard))
+			chunk.SetTargetSize(sz.Size())
 			ch <- Res{Chunk: chunk}
 		}
 	}()

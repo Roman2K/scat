@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/checksum"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestIndex(t *testing.T) {
@@ -135,8 +135,8 @@ func TestIndexFinalsOutOfOrder(t *testing.T) {
 	idx.ProcessEnd(c0)
 
 	expectedIndex := "" +
-		sumStr("c2") + " 0\n" +
-		sumStr("c3") + " 0\n" +
+		sumStr("c2") + " 2\n" +
+		sumStr("c3") + " 3\n" +
 		sumStr("c1") + " 1\n"
 	assert.Equal(t, expectedIndex, buf.String())
 }

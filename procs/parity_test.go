@@ -10,6 +10,21 @@ import (
 	"gitlab.com/Roman2K/scat/testutil"
 )
 
+func TestParityTargetSize(t *testing.T) {
+	var (
+		data = scat.BytesData("abc")
+	)
+	parity, err := procs.NewParity(1, 1)
+	assert.NoError(t, err)
+	c := scat.NewChunk(0, data)
+	c.SetTargetSize(99)
+	chunks, err := testutil.ReadChunks(parity.Proc().Process(c))
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(chunks))
+	assert.Equal(t, len(data), chunks[0].TargetSize())
+	assert.Equal(t, len(data), chunks[1].TargetSize())
+}
+
 func TestParityNonIntegrityError(t *testing.T) {
 	parity, err := procs.NewParity(1, 1)
 	assert.NoError(t, err)
