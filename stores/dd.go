@@ -209,6 +209,9 @@ func NewScp(host string, dir Dir) Store {
 	return Dd{
 		Dir: dir,
 		Command: func(name string, args ...string) *exec.Cmd {
+			for i, arg := range args {
+				args[i] = strings.Replace(arg, `\`, `\\`, -1)
+			}
 			args = append([]string{host, name}, args...)
 			return exec.Command("ssh", args...)
 		},
