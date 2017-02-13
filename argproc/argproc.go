@@ -17,27 +17,22 @@ import (
 	"gitlab.com/Roman2K/scat/tmpdedup"
 )
 
-func New(tmp *tmpdedup.Dir, stats *stats.Statsd) ap.Parser {
-	return builder{tmp, stats}.argProc()
-}
+var chainBrackets = ap.Brackets{'{', '}'}
 
-func NewArgChain(argProc ap.Parser) ap.Parser {
+func New(tmp *tmpdedup.Dir, stats *stats.Statsd) ap.Parser {
+	argProc := builder{tmp, stats}.argProc()
 	return ap.ArgFilter{
-		Parser: ap.ArgVariadic{argProc},
+		Parser: ap.ArgPiped{Arg: argProc, Nest: chainBrackets},
 		Filter: func(val interface{}) (interface{}, error) {
-			slice := procSlice(val.([]interface{}))
-			if len(slice) == 1 {
-				return slice[0], nil
-			}
-			return procs.Chain(slice), nil
+			return newChain(val.([]interface{})), nil
 		},
 	}
 }
 
-func procSlice(args []interface{}) (slice []procs.Proc) {
-	slice = make([]procs.Proc, len(args))
+func newChain(args []interface{}) (chain procs.Chain) {
+	chain = make(procs.Chain, len(args))
 	for i, p := range args {
-		slice[i] = p.(procs.Proc)
+		chain[i] = p.(procs.Proc)
 	}
 	return
 }
@@ -49,24 +44,33 @@ type builder struct {
 
 func (b builder) argProc() ap.Parser {
 	var (
-		argProc    = ap.ArgFn{}                // procs.Procs
+		argProc    = make(ap.ArgOr, 2)         // procs.Procs
 		argStore   = b.newArgStore()           // stores.Stores
 		argDynProc = b.newArgDynProc(argStore) // procs.DynProcers
 	)
 
-	update(argProc, b.newArgProc(argProc, argDynProc, argStore))
-
-	for k, v := range argStore {
-		argProc[k] = newArgStoreProc(v, getProc)
-		argProc["u"+k] = newArgStoreProc(v, getUnproc)
+	argChain := ap.ArgLambda{
+		Open:  chainBrackets.Open,
+		Close: chainBrackets.Close,
+		Args:  ap.ArgPiped{Arg: argProc, Nest: chainBrackets},
+		Run: func(args []interface{}) (interface{}, error) {
+			return newChain(args), nil
+		},
 	}
 
+	procFns := b.newArgProc(argProc, argDynProc, argStore)
+	for k, v := range argStore {
+		procFns[k] = newArgStoreProc(v, getProc)
+		procFns["u"+k] = newArgStoreProc(v, getUnproc)
+	}
 	if b.stats != nil {
-		for k, v := range argProc {
-			argProc[k] = b.newArgStatsProc(v, k)
+		for k, v := range procFns {
+			procFns[k] = b.newArgStatsProc(v, k)
 		}
 	}
 
+	argProc[0] = argChain
+	argProc[1] = procFns
 	return argProc
 }
 
@@ -140,12 +144,6 @@ func (b builder) newArgProc(argProc, argDynp, argStore ap.Parser) ap.ArgFn {
 					proc   = args[1].(procs.Proc)
 				)
 				return procs.NewBacklog(nslots, proc), nil
-			},
-		},
-		"chain": ap.ArgLambda{
-			Args: ap.ArgVariadic{argProc},
-			Run: func(args []interface{}) (interface{}, error) {
-				return procs.Chain(procSlice(args)), nil
 			},
 		},
 		"concur": ap.ArgLambda{
@@ -442,12 +440,6 @@ func getProc(p procs.ProcUnprocer) procs.Proc {
 
 func getUnproc(p procs.ProcUnprocer) procs.Proc {
 	return p.Unproc()
-}
-
-func update(dst, src ap.ArgFn) {
-	for k, v := range src {
-		dst[k] = v
-	}
 }
 
 type quotaRes struct {

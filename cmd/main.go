@@ -60,20 +60,18 @@ func start() (err error) {
 	var statsd *stats.Statsd
 	if args.stats {
 		statsd = stats.New()
-		{
-			w := ansirefresh.NewWriter(os.Stderr)
-			// w := ansirefresh.NewWriter(ioutil.Discard)
-			t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
-			defer t.Stop()
-		}
+		w := ansirefresh.NewWriter(os.Stderr)
+		// w := ansirefresh.NewWriter(ioutil.Discard)
+		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
+		defer t.Stop()
 	}
 
-	argProc := argproc.NewArgChain(argproc.New(tmp, statsd))
-	res, _, err := argparse.Args{argProc}.Parse(args.procStr)
+	argProc := argproc.New(tmp, statsd)
+	res, _, err := argProc.Parse(args.procStr)
 	if err != nil {
 		return
 	}
-	proc := res.([]interface{})[0].(procs.Proc)
+	proc := res.(procs.Proc)
 	seed := scat.NewChunk(0, scat.NewReaderData(os.Stdin))
 
 	return procs.Process(proc, seed)
