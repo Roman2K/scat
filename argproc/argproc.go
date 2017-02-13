@@ -312,16 +312,17 @@ func (b builder) newArgStore() ap.ArgFn {
 }
 
 func (b builder) newArgCopier(argStore ap.Parser, getProc getProcFn) ap.Parser {
-	return ap.ArgLambda{
-		Args: ap.Args{ap.ArgStr, argStore},
-		Run: func(args []interface{}) (interface{}, error) {
+	return ap.ArgPair{
+		Left:  ap.ArgStr,
+		Right: argStore,
+		Run: func(iid, istore interface{}) (interface{}, error) {
 			var (
-				id  = args[0].(string)
-				lsp = args[1].(stores.Store)
+				id    = iid.(string)
+				store = istore.(stores.Store)
 			)
 			var (
-				lser stores.Lister = lsp
-				proc procs.Proc    = getProc(lsp)
+				lser stores.Lister = store
+				proc procs.Proc    = getProc(store)
 			)
 			if b.stats != nil {
 				lser = quotaInitReport{
@@ -336,12 +337,13 @@ func (b builder) newArgCopier(argStore ap.Parser, getProc getProcFn) ap.Parser {
 }
 
 func (b builder) newArgQuota(argCopier ap.Parser) ap.Parser {
-	argQuotaMax := ap.ArgLambda{
-		Args: ap.Args{argCopier, ap.ArgBytes},
-		Run: func(args []interface{}) (interface{}, error) {
+	argQuotaMax := ap.ArgPair{
+		Left:  argCopier,
+		Right: ap.ArgBytes,
+		Run: func(icp, ibytes interface{}) (interface{}, error) {
 			qr := quotaRes{
-				copier: args[0].(stores.Copier),
-				max:    args[1].(uint64),
+				copier: icp.(stores.Copier),
+				max:    ibytes.(uint64),
 			}
 			return qr, nil
 		},

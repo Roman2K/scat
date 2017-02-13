@@ -26,13 +26,7 @@ const url = "https://gitlab.com/Roman2K/scat#usage"
 func main() {
 	if err := start(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		for {
-			if argErr, ok := err.(argparse.ErrDetails); ok {
-				err = argErr.Err
-				continue
-			}
-			break
-		}
+		err = argparse.OriginalErr(err)
 		if exit, ok := err.(*exec.ExitError); ok {
 			fmt.Fprintf(os.Stderr, "stderr:\n%s\n", exit.Stderr)
 		}

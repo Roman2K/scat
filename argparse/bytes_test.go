@@ -1,11 +1,10 @@
 package argparse_test
 
 import (
-	"strconv"
 	"testing"
 
-	"gitlab.com/Roman2K/scat/argparse"
 	assert "github.com/stretchr/testify/require"
+	"gitlab.com/Roman2K/scat/argparse"
 )
 
 func TestArgBytes(t *testing.T) {
@@ -23,6 +22,5 @@ func TestArgBytes(t *testing.T) {
 
 	str = " 1kib"
 	_, _, err = argparse.ArgBytes.Parse(str)
-	assert.Error(t, err)
-	assert.IsType(t, &strconv.NumError{}, err)
+	assert.Equal(t, argparse.ErrInvalidSyntax, err)
 }

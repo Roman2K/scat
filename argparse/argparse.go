@@ -44,3 +44,14 @@ func (e ErrDetails) Error() string {
 	}
 	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.Str, e.NParsed+6, " ")
 }
+
+func OriginalErr(err error) error {
+	for {
+		argErr, ok := err.(ErrDetails)
+		if !ok {
+			break
+		}
+		err = argErr.Err
+	}
+	return err
+}
