@@ -1,7 +1,6 @@
 package stripe_test
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -54,7 +53,7 @@ func TestStripe(t *testing.T) {
 
 	// unknown copier ID
 	setTester(&testStriper{s: stripe.S{
-		chunk1: testLocs("b", "c", "d"),
+		chunk1.Hash(): testLocs("b", "c", "d"),
 	}})
 	tester.setCopier("a", chunk1)
 	tester.setCopier("b")
@@ -71,7 +70,7 @@ func TestStripe(t *testing.T) {
 
 	// ok
 	striper := &testStriper{s: stripe.S{
-		chunk1: testLocs("b", "c"),
+		chunk1.Hash(): testLocs("b", "c"),
 	}}
 	setTester(striper)
 	tester.setCopier("a", chunk1)
@@ -81,7 +80,7 @@ func TestStripe(t *testing.T) {
 	tester.test(t, chunk1, []string{"b", "c"})
 	assert.Equal(t, 1, len(striper.calls))
 	assert.Equal(t, stripe.S{
-		chunk1: testLocs("a"),
+		chunk1.Hash(): testLocs("a"),
 	}, striper.calls[0].s)
 
 	// copies mutex has been unlocked
@@ -98,7 +97,7 @@ func TestStripe(t *testing.T) {
 
 	// nothing to do
 	setTester(&testStriper{s: stripe.S{
-		chunk1: stripe.Locs{},
+		chunk1.Hash(): stripe.Locs{},
 	}})
 	tester.setCopier("a")
 	tester.reset()
@@ -106,31 +105,30 @@ func TestStripe(t *testing.T) {
 
 	// group
 	striper = &testStriper{s: stripe.S{
-		chunk1: testLocs("a"),
-		chunk2: testLocs("b"),
+		chunk1.Hash(): testLocs("a"),
+		chunk2.Hash(): testLocs("b"),
 	}}
 	setTester(striper)
 	tester.setCopier("a")
 	tester.setCopier("b")
 	tester.reset()
-	chunk, err := testutil.Group([]*scat.Chunk{
+	chunk := testutil.Group([]*scat.Chunk{
 		chunk1,
 		chunk2,
 	})
-	assert.NoError(t, err)
 	tester.testM(t, chunk, callM{
 		chunk1.Hash(): []string{"a"},
 		chunk2.Hash(): []string{"b"},
 	})
 	assert.Equal(t, 1, len(striper.calls))
 	assert.Equal(t, stripe.S{
-		chunk1: testLocs(),
-		chunk2: testLocs(),
+		chunk1.Hash(): testLocs(),
+		chunk2.Hash(): testLocs(),
 	}, striper.calls[0].s)
 
 	// seen
 	setTester(&testStriper{s: stripe.S{
-		chunk2: testLocs("a"),
+		chunk2.Hash(): testLocs("a"),
 	}})
 	tester.setCopier("a")
 	tester.reset()
@@ -141,7 +139,7 @@ func TestStripe(t *testing.T) {
 		}()
 		tester.sp.Procs(chunk1)
 	}()
-	assert.Equal(t, "unknown chunk", panicMsg)
+	assert.Equal(t, "unknown chunk hash", panicMsg)
 
 	// Stripe() error
 	someErr = errors.New("some err")
@@ -150,47 +148,59 @@ func TestStripe(t *testing.T) {
 	assert.Equal(t, someErr, err)
 }
 
-func TestStripeDataUse(t *testing.T) {
+func TestStripeQuota(t *testing.T) {
 	cp1 := stores.Copier{"a", stores.SliceLister{}, procs.Nop}
 	cp2 := stores.Copier{"b", stores.SliceLister{}, procs.Nop}
-	hash1 := checksum.SumBytes([]byte("hash1"))
-	hash2 := checksum.SumBytes([]byte("hash2"))
 
 	qman := quota.NewMan()
-	qman.AddResQuota(cp1, 2)
-	qman.AddResQuota(cp2, 4)
+	qman.AddResQuota(cp1, 4)
+	qman.AddResQuota(cp2, 8)
 
-	bytes := func(n int) scat.Data {
-		return scat.BytesData(bytes.Repeat([]byte("a"), n))
+	// dests
+	testDests := func(sizes []int, expected stripe.Locs) {
+		striper := &testStriper{}
+		sp, err := storestripe.New(striper, qman)
+		assert.NoError(t, err)
+		group := make([]*scat.Chunk, len(sizes))
+		for i, sz := range sizes {
+			c := scat.NewChunk(i, make(scat.BytesData, sz))
+			c.SetHash(checksum.SumBytes([]byte{byte(i)}))
+			group[i] = c
+		}
+		chunk := testutil.Group(group)
+		sp.Procs(chunk)
+		assert.Equal(t, 1, len(striper.calls))
+		assert.Equal(t, expected, striper.calls[0].dests)
 	}
+	testDests([]int{1, 4}, testLocs("b"))
+	testDests([]int{1, 3}, testLocs("a", "b"))
 
-	striper := &testStriper{}
+	// data use
+	chunk1 := scat.NewChunk(0, make(scat.BytesData, 1))
+	chunk1.SetHash(checksum.SumBytes([]byte("chunk1")))
+	chunk2 := scat.NewChunk(1, make(scat.BytesData, 3))
+	chunk2.SetHash(checksum.SumBytes([]byte("chunk2")))
+	striper := &testStriper{s: stripe.S{
+		chunk1.Hash(): testLocs("a"),
+		chunk2.Hash(): testLocs("b"),
+	}}
 	sp, err := storestripe.New(striper, qman)
 	assert.NoError(t, err)
-
-	// a: OK (2 of 2)
-	// b: OK (2 of 4)
-	chunk := scat.NewChunk(0, bytes(2))
-	_, err = sp.Procs(chunk)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(striper.calls))
-	assert.Equal(t, testLocs("a", "b"), striper.calls[0].dests)
-
-	// a: !! (3 of 2)
-	// b: OK (3 of 4)
-	chunk1 := scat.NewChunk(0, bytes(2))
-	chunk1.SetHash(hash1)
-	chunk2 := scat.NewChunk(1, bytes(1))
-	chunk2.SetHash(hash2)
-	chunk, err = testutil.Group([]*scat.Chunk{
+	chunk := testutil.Group([]*scat.Chunk{
 		chunk1,
 		chunk2,
 	})
+	procs, err := sp.Procs(chunk)
 	assert.NoError(t, err)
-	_, err = sp.Procs(chunk)
+	uses := map[interface{}]uint64{}
+	qman.OnUse = func(res quota.Res, use, _ uint64) {
+		uses[res.Id()] = use
+	}
+	_, err = processByAll(chunk, procs)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(striper.calls))
-	assert.Equal(t, testLocs("b"), striper.calls[1].dests)
+	assert.Equal(t, 2, len(uses))
+	assert.Equal(t, 1, int(uses["a"]))
+	assert.Equal(t, 3, int(uses["b"]))
 }
 
 func TestStripeGroupErr(t *testing.T) {
@@ -198,11 +208,10 @@ func TestStripeGroupErr(t *testing.T) {
 	chunk2 := scat.NewChunk(1, nil)
 	someErr := errors.New("some err")
 	testutil.SetGroupErr(chunk2, someErr)
-	chunk, err := testutil.Group([]*scat.Chunk{
+	chunk := testutil.Group([]*scat.Chunk{
 		chunk1,
 		chunk2,
 	})
-	assert.NoError(t, err)
 	sp, err := storestripe.New(stripe.Config{}, quota.NewMan())
 	assert.NoError(t, err)
 	_, err = sp.Procs(chunk)

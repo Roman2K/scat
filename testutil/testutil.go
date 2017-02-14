@@ -92,13 +92,13 @@ func TestFinishErrForward(t *testing.T, getFinisher getFinisherFn) {
 	assert.Equal(t, someErr, err)
 }
 
-func Group(chunks []*scat.Chunk) (*scat.Chunk, error) {
+func Group(chunks []*scat.Chunk) *scat.Chunk {
 	group := procs.NewGroup(len(chunks))
 	for i, c := range chunks {
 		ch := group.Process(c)
 		res, err := ReadChunks(ch)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		switch len(res) {
 		case 0:
@@ -106,7 +106,7 @@ func Group(chunks []*scat.Chunk) (*scat.Chunk, error) {
 			if i != len(chunks)-1 {
 				panic("unexpected group chunk")
 			}
-			return res[0], nil
+			return res[0]
 		default:
 			panic("expected a single group chunk")
 		}

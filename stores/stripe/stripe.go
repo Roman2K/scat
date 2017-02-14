@@ -48,19 +48,33 @@ func New(cfg stripe.Striper, qman *quota.Man) (procs.DynProcer, error) {
 }
 
 func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
-	chunks := map[checksum.Hash]*scat.Chunk{}
-	if group, ok := procs.GetGroup(chunk); ok {
-		for _, c := range group {
-			if err, ok := procs.GetGroupErr(c); ok && err != nil {
-				return nil, err
-			}
-			chunks[c.Hash()] = c
+	type chunkInfo struct {
+		chunk    *scat.Chunk
+		quotaUse uint64
+	}
+	group, ok := procs.GetGroup(chunk)
+	if !ok {
+		group = []*scat.Chunk{chunk}
+	}
+	chunks := map[checksum.Hash]chunkInfo{}
+	quotaUse := uint64(0)
+	for _, c := range group {
+		if err, ok := procs.GetGroupErr(c); ok && err != nil {
+			return nil, err
 		}
-	} else {
-		chunks[chunk.Hash()] = chunk
+		qUse, err := calcQuotaUse(c.Data())
+		if err != nil {
+			return nil, err
+		}
+		inf := chunkInfo{
+			chunk:    c,
+			quotaUse: qUse,
+		}
+		chunks[c.Hash()] = inf
+		quotaUse += qUse
 	}
 	curStripe := make(stripe.S, len(chunks))
-	for hash, c := range chunks {
+	for hash := range chunks {
 		copies := sp.reg.List(hash)
 		copies.Mu.Lock()
 		owners := copies.Owners()
@@ -68,17 +82,9 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 		for _, o := range owners {
 			locs.Add(o.Id())
 		}
-		curStripe[c] = locs
+		curStripe[hash] = locs
 	}
-	var dataUse uint64
-	for _, c := range chunks {
-		use, err := calcDataUse(c.Data())
-		if err != nil {
-			return nil, err
-		}
-		dataUse += use
-	}
-	all := copiersRes(sp.qman.Resources(dataUse)).copiersById()
+	all := copiersRes(sp.qman.Resources(quotaUse)).copiersById()
 	dests := make(stripe.Locs, len(all))
 	for _, cp := range all {
 		dests.Add(cp.Id())
@@ -96,16 +102,16 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 	cpProcs := make([]procs.Proc, 1, nprocs+1)
 	{
 		proc := make(sliceProc, 0, len(chunks))
-		for _, c := range chunks {
-			proc = append(proc, c)
+		for _, ci := range chunks {
+			proc = append(proc, ci.chunk)
 		}
 		cpProcs[0] = proc
 	}
 	for item, locs := range newStripe {
-		chunk := item.(*scat.Chunk)
-		hash := chunk.Hash()
-		if _, ok := chunks[hash]; !ok {
-			panic("unknown chunk")
+		hash := item.(checksum.Hash)
+		ci, ok := chunks[hash]
+		if !ok {
+			panic("unknown chunk hash")
 		}
 		copies := sp.reg.List(hash)
 		cProcs := make([]procs.Proc, 0, len(locs))
@@ -121,7 +127,7 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 				panic("unknown copier ID")
 			}
 			var proc procs.Proc = copier
-			proc = chunkArgProc{proc, chunk}
+			proc = chunkArgProc{proc, ci.chunk}
 			proc = procs.DiscardChunks{proc}
 			proc = procs.OnEnd{proc, func(err error) {
 				defer wg.Done()
@@ -130,7 +136,7 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 					return
 				}
 				copies.Add(copier)
-				sp.qman.AddUse(copier, dataUse)
+				sp.qman.AddUse(copier, ci.quotaUse)
 			}}
 			cProcs = append(cProcs, proc)
 		}
@@ -139,7 +145,7 @@ func (sp *stripeP) Procs(chunk *scat.Chunk) ([]procs.Proc, error) {
 	return cpProcs, nil
 }
 
-func calcDataUse(d scat.Data) (uint64, error) {
+func calcQuotaUse(d scat.Data) (uint64, error) {
 	sz, ok := d.(scat.Sizer)
 	if !ok {
 		return 0, errors.New("sized-data required for calculating data use")

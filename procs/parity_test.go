@@ -32,8 +32,7 @@ func TestParityNonIntegrityError(t *testing.T) {
 		scat.NewChunk(0, nil),
 		scat.NewChunk(1, nil),
 	}
-	chunk, err := testutil.Group(shardChunks)
-	assert.NoError(t, err)
+	chunk := testutil.Group(shardChunks)
 	someErr := errors.New("some non-integrity err")
 
 	testutil.SetGroupErr(shardChunks[1], someErr)
