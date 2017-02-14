@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCmdFunc(t *testing.T) {
@@ -74,6 +74,24 @@ func TestCmdOutFuncError(t *testing.T) {
 	testCmdFuncError(t, func(fn procs.CmdFunc) procs.Proc {
 		return procs.CmdOutFunc(fn)
 	})
+}
+
+func TestCmdOutFuncCustomStderr(t *testing.T) {
+	const errOut = "xxx"
+	errBuf := &bytes.Buffer{}
+	fn := procs.CmdFunc(func(*scat.Chunk) (*exec.Cmd, error) {
+		cmd := exec.Command("bash", "-c", fmt.Sprintf(
+			`echo -n %q >&2; exit 1`, errOut,
+		))
+		cmd.Stderr = errBuf
+		return cmd, nil
+	})
+	c := scat.NewChunk(0, nil)
+	_, err := testutil.ReadChunks(fn.Process(c))
+	exit, ok := err.(*exec.ExitError)
+	assert.True(t, ok)
+	assert.Equal(t, 0, len(exit.Stderr))
+	assert.Equal(t, errOut, errBuf.String())
 }
 
 func testCmdFuncError(t *testing.T, getProc func(procs.CmdFunc) procs.Proc) {
