@@ -7,42 +7,50 @@
 [godocbadge]:https://godoc.org/gitlab.com/Roman2K/scat?status.svg
 [godoc]:https://godoc.org/gitlab.com/Roman2K/scat
 
-> Scatter your data away before [loosing][gitlabincident] it
+> Scatter your data away [before][codinghorrorincident] [loosing][gitlabincident] [it][githubincident]
 
+[codinghorrorincident]:https://blog.codinghorror.com/international-backup-awareness-day/
 [gitlabincident]:https://about.gitlab.com/2017/02/01/gitlab-dot-com-database-incident/
+[githubincident]:https://github.com/blog/744-today-s-outage
 
-Backup tool featuring:
+Backup tool that treats storage hosts as throwaway, untrustworthy commodity
+
+## Features
 
 * **Decentralization:** avoid trusting any one third-party with all your data
 
-	* data divided into chunks **distributed** anywhere there's space available
-	* mix and match **cloud** and local storage in a RAID-like fashion
-	* ex: *spread 15GiB of data over 2GiB in Google Drive, 5GiB on a VPS and the rest on an HDD*
+	* Round-Robin interleave across uneven storage capacities ~JBOD
+	* mesh heterogenous storage hosts: local/remote, big/small, fast/slow
+	* automatic redistribution: add/remove hosts later
+	* ex: *back up 15GiB of data over 2GiB in Google Drive, 5GiB on spare VPS disk space and the rest on my HDD*
 
 * Block-level **de-duplication**
 
 	* [CDC][cdc]-based detection of duplicate blocks, from [restic][restic]
 	* **incremental**, immutable backups
-	* reuse identical blocks of unrelated backups from common remotes
+	* reuse identical blocks of unrelated backups from common hosts
 	* ex: *back up a 10GiB sparse disk image with 2GiB used, backup takes <2GiB*
-	* ex: *back up VM b, fresh install of the same OS as VM a, backup takes ~MiBs*
 	* ex: *append 1 byte to a 1GiB file, next backup takes ~1MiB (last block)*
 
 * RAID-like **error correction**
 
-	* block-level striping with distributed parity ~RAID 5/6
+	* striping with distributed parity ~RAID 5/6
+	* grow/shrink array later
+	* SHA256-based integrity checks
 	* [Reed-Solomon][b2reedsolomon] erasure coding
-	* SHA256-based integrity checks ensure data is retrieved unadulterated
-	* ex: *backup with 1 parity shard to Google, Backblaze and my HDD*
+	* ex: *backup with 1 parity block among Drive, Backblaze and my HDD*
+		* *some block comes back corrupted from my HDD, recover from Drive and B2*
 		* *I'm locked out of my Google account, recover from B2 and my HDD*
-		* *some chunk comes back corrupted from B2, recover from my HDD and Drive*
 
-* **Redundancy:** N-copies duplication, auto-failover on restore
+* **Redundancy:** N-copies duplication
 
-  * Round-Robin spread across eligible remotes ~RAID 0
-  * increase fault-tolerance of erasure coding ~RAID 0+5/6
-  * ex: *backup with 1 parity shard in 2 copies to Google, Backblaze and my HDD*
-		* *my HDD died and I forgot my Google password, recover Backblaze*
+	* ensure N+ copies exist at all times ~RAID 1
+	* automatic failover on restore
+	* increase fault-tolerance from erasure coding ~RAID 1+5/6
+	* ex: *backup in 2 copies among Drive, Backblaze and my HDD*
+		* *my HDD died, recover from Drive and B2*
+		* *with 1 parity block*
+			* *my HDD died and I forgot my Google password, recover from B2*
 
 * **Stream**-based: less is more
 
@@ -58,7 +66,7 @@ Backup tool featuring:
 
 	* compression
 	* multithreaded: configurable concurrency
-	* resumable both ways
+	* idempotent backup: **resumable**, run often
 	* easy to setup, use, and hack on
 	* **cross-platform**: binaries for Linux, macOS, Windows, [etc.][builds]
 
@@ -84,7 +92,7 @@ Such modularity enables unlimited flexibility: stream data from anywhere (local/
                  +---------------------------------+
 ```
 
-...where `seed` may be a tar stream and procs 0..n would be split, checksum, parity, gzip, scp, etc.
+...where `seed` may be a tar stream and procs 0..n would be split, checksum, parity, gzip, scp, etc. part of a chain that is itself a proc also.
 
 ## Setup
 
@@ -100,113 +108,119 @@ Stream processing, like performing a backup from a tar stream, is done via a pro
 Hello World:
 
 ```sh
-$ echo "Hello World" | scat "write[-]"
+$ echo "Hello World" | scat "write -"
 Hello World
 
-$ echo -n | scat "cmdout[echo Hello World] write[-]"
+$ scat "cmdout echo Hello World | write -" < /dev/null
 Hello World
 
-$ echo -n "Hello " | scat "cmd[cat] write[-] cmdout[echo World] write[-]"
+$ echo -n "Hello " | scat "cmd cat | write - | cmdout echo World | write -"
 Hello World
 
-$ echo "Hello World" | scat "cmd[gpg -e -r 00828C1D] cmd[gpg -d] write[-]"
+$ echo "Hello World" | scat "cmd gpg -e -r 00828C1D | cmd gpg -d --batch | write -"
 Hello World
 
-$ echo "Hello World" | scat "cmdin[tee out]" && cat out
+$ echo "Hello World" | scat "cmdin tee hello" && cat hello
 Hello World
 ```
 
-Split `foo`, write chunks to `bar/`:
+Split file `foo`, write chunks to `bar/`:
 
 ```sh
-$ echo "hello" > foo
-$ scat foo "split chain[checksum index[foo_index] cp[bar]]"
+$ echo hello > foo
+$ scat "split | { checksum | index - | cp bar }" < foo > foo_index
 $ ls bar
 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
 ```
 
-For restoring, we need a list of all the chunks produced during backup. Proc `index` does that: it lists checksums of chunks output by its containing chain, preserving original order. Note it's part of a subchain following `split`, see [`index`][procindex] for why.
+For restoring, we need a list of all the chunks produced during backup. Proc `index` does that: it lists checksums of chunks output by its containing chain, preserving original order. **Note** it's part of a subchain (`{}`), following `split`: see [`index`][procindex].
 
 Re-create `foo` from chunk files in `bar/`:
 
 ```sh
-$ scat foo_index "uindex ucp[bar] uchecksum join[foo]"
+$ scat "uindex | ucp bar | uchecksum | join -" < foo_index > foo
 $ cat foo
 hello
 ```
 
-The following examples showcase some procs. See [Proc string][procstr] for the full list.
+The above are just generic examples to get familiar with the proc string. As to how to actually back up and restore, one would specify such a proc string employing the procs tailored to their particular needs. See [Proc string][procstr] for the full list.
+
+The following examples are good starting points for typical needs. Copy them in shell scripts and play around with them, backing up and restoring test files until fully understanding the mechanics under the hood and reaching desired behaviours. It's important to get comfortable both ways to both back up often and not fear potential moments restoring gets necessary.
 
 ### Example: backup
 
-Example of backing up dir `foo/` to 2 Google Drive accounts and 1 VPS (2 data shards, 1 parity shard, compress, encrypt, checksum, 2 copies, upload - using 8 threads, 4 concurrent transfers)
+Example of backing up dir `foo/` in a RAID 5 fashion to 2 Google Drive accounts and 1 VPS (compress, encrypt, 2 data shards, 1 parity shard, upload >= 2 distinct copies - using 8 threads, 4 concurrent transfers)
 
-* seed (stdin): tar stream of `foo/`
-* procs: split, compress, parity-split, encrypt, checksum, upload, write index
-* output (stdout): index
+* **seed ← stdin:** tar stream of `foo/`
+* **procs:** split, checksum, index track, compress, parity-split, checksum, encrypt, striped upload, index write (implicit)
+* **output → stdout:** index
 
 Command:
 
 ```sh
-$ tar c foo | scat " \
-    split \
-    backlog[8 chain[ \
-        checksum \
-        index[foo_index] \
-        gzip \
-        parity[2 1] \
-        cmd[gpg -e -r 00828C1D] \
-        checksum \
-	    concur[4 mincopies[2 \
-	        [[drive rclone[drive:tmp]] 7gib] \
-	        [[drive2 rclone[drive2:tmp]] 14gib] \
-	        [bankmon scp[bankmon tmp]] \
-	    ]]
-	]]"
+$ tar c foo | scat -stats "split | backlog 8 {
+  checksum
+  | index foo_index
+  | gzip
+  | parity 2 1
+  | checksum
+  | cmd gpg -e -r 00828C1D
+  | group 3
+  | concur 4 stripe(1 2
+      mydrive=rclone(drive:tmp)=7gib
+      mydrive2=rclone(drive2:tmp)=14gib
+      myvps=scp(bankmon tmp)
+    )
+  }"
 ```
 
-Order matters. Notably:
+The combination of `parity`, `group` and `stripe` creates a RAID 5:
 
-* split before compressing or encrypting to better detect identical chunks
-* compress before parity-split for better ratio
-* checksum right after split, before index and at the end, to properly track output chunks: see [`index`][procindex]
-* upload within the same chain as `index` so chunks are appended to the index only once successfully uploaded
+1. `parity(2 1)`: split into `2` data shards and `1` parity shard
+2. `group(3)`: aggregate all `3` shards for striping
+3. `stripe(1 2 ...)`: interleave those across given hosts, making `1` copy of each, ensuring at least `2` of 3 are on distinct hosts from the others so we can afford to lose any one of them
 
-**Note** both `backlog` and `concur` are being used above. The former limits the number of concurrent instances of `chain` to 8, while the latter limits the number of concurrent uploads by `mincopies` to 4. They may appear redundant, why not one or the other for both? They actually take different types of arguments and have distinct purposes: see [`backlog`][procbacklog] and [`concur`][procconcur].
+**Note** that order matters. Notably:
 
-**Note** the different args in `rclone[drive:tmp]` and `scp[bankmon tmp]`. The former takes a "remote" argument (passed as-is to rclone), while the latter's arguments are "[user@]host" (passed as-is to ssh) and remote directory. See [`rclone`][procrclone] and [`scp`][procscp].
+* split before compression and encryption to correctly detect identical chunks
+* checksum right after split, before index and after the last producer proc, to properly track output chunks: see [`index`][procindex]
+	* but encrypt after final checksum as `gpg -e` is not idempotent, to avoid re-uploading identical chunks
+* compress before parity-split and encryption for better ratio
+* group before striping: see [`stripe`][procstripe]
+
+**Note** both `backlog` and `concur` are being used above. The former limits the number of concurrent instances of a chain proc (`{}`) to 8, while the latter limits the number of concurrent transfers by `stripe` to 4. They may appear redundant, why not one or the other for both? They actually take different types of arguments and have distinct purposes: see [`backlog`][procbacklog] and [`concur`][procconcur].
+
+**Note** the different args in `rclone(drive:tmp)` and `scp(bankmon tmp)`. The former takes a "remote" argument (passed as-is to rclone), while the latter's arguments are "[user@]host" (passed as-is to ssh) and remote directory. See [`rclone`][procrclone] and [`scp`][procscp].
 
 ### Example: restore
 
 Reverse chain:
 
-* seed (stdin): index
-* procs: read index, download, integrity check, decrypt, parity-join, uncompress, join
-* output (stdout): tar stream of `foo`
+* **seed ← stdin:** index
+* **procs:** index read, download, decrypt, integrity check, parity-join, uncompress, join
+* **output → stdout:** tar stream of `foo`
 
 Command:
 
 ```sh
-$ scat " \
-    uindex \
-    backlog[4 multireader[ \
-        [drive rclone[drive:tmp]] \
-        [drive2 rclone[drive2:tmp]] \
-        [bankmon scp[bankmon tmp]] \
-    ]]
-    backlog[8 chain[ \
-        uchecksum \
-        cmd[gpg -d] \
-        group[3] \
-        uparity[2 1] \
-		ugzip \
-        join[-] \
-    ]]" < foo_index | tar x
+$ scat -stats "uindex | backlog 8 {
+  backlog 4 multireader(
+    drive=rclone(drive:tmp)
+    drive2=rclone(drive2:tmp)
+    bankmon=scp(bankmon tmp)
+  )
+  | cmd gpg -d --batch
+  | uchecksum
+  | group 3
+  | uparity 2 1
+  | ugzip
+  | join -
+}" < foo_index | tar x
 ```
 
 ### Snapshots
 
-Making snapshots is as easy as versioning the index file in a git repository:
+Making snapshots boils down to versioning the index file in a git repository:
 
 ```sh
 $ git init
@@ -214,14 +228,14 @@ $ git add foo_index
 $ git commit -m "backup of foo"
 ```
 
-Restoring a snapshot boils down to checking out a particular commit and restoring using the old index file:
+Restoring a snapshot consists in checking out a particular commit and restoring using the old index file:
 
 ```sh
 $ git checkout <commit-ish>
-$ # ...use foo_index, see Restore
+$ # ...use foo_index: see restore example
 ```
 
-You could have a single repository for all your backups and commit index files after each backup.
+You could have a single repository for all your backups and commit index files after each backup, as well as the backup and restore scripts used to write and read these particular indexes. This allows for modifying proc strings from one backup to the next, while reusing identical chunks if any, and still be able to restore an old snapshot created with a potentially different proc string, without having to remember what it was at the time.
 
 ### Command
 
@@ -237,7 +251,7 @@ Options:
 
 Args:
 
-* `<proc>` proc string, see [Proc string][procstr]
+* `<proc>` proc string: see [Proc string][procstr]
 
 ## Rationale
 
@@ -272,31 +286,25 @@ I wanted to be able to:
 
 without:
 
-* trusting any third-pary (cloud host, hard drive, VPS host) for reliable storage/retrieval nor privacy
+* trusting any third-pary (hard drive, server/cloud provider, etc.) for reliable storage/retrieval nor privacy
 * having to divide at the file-level myself: some dir here, other dir there, that big file doesn't fit anywhere without splitting it
 * having to keep track of what's where, let alone copies
 
 I believe scat achieves these objectives 🤓
 
-## Future
+## Upcoming
 
-I'm very excited to finally have a way to perform backups like I always wanted. I will strive to keep on maintaining it, making sure it stays as simple as possible and fun to hack on.
-
-Should the project be abandoned, existing backups would remain usable with with older versions as well independently of scat using existing tools (shasum, ssh, rclone, gunzip, gpg, cat, etc.).
-
-Upcoming:
-
-* clearer proc string syntax, probably something like piped commands in shells
-	* ex:  `foo | bar a b | { baz x | qux y }`
-		* instead of `foo bar[a b] chain[baz[x] qux[y]]`
 * purge
-	* free up space on remotes by garbage-collecting chunks unreachable by given snapshot indexes
+	* free up space on hosts by garbage-collecting chunks unreachable by given snapshot indexes
 		* equivalent of deleting a snapshot in restic and COW filesystems
-* streaming file listing
-	* lists of existing files are currently buffered due to bad initial decision
-		* shouldn't have too much of an impact on memory usage below ~terabytes of data but still feels wrong
-* missing unit tests
+* code cleanups
+	* streaming file listing
+		* lists of existing files are currently buffered due to bad initial decision
+			* shouldn't have too much of an impact on memory usage below ~terabytes of data but still feels wrong
+	* finer grained quota filling for exclusive striping
+		* currently, if chunks are grouped before striping, the total size is used to determine if there's space available, not the size of each chunk individually
 * logging
+* missing unit tests
 * comments for godoc (once the internal API stablized)
 
 ## Thanks
@@ -317,5 +325,6 @@ Upcoming:
 [procindex]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#index
 [procbacklog]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#backlog
 [procconcur]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#concur
-[procrclone]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#concur
-[procscp]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#concur
+[procrclone]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#rclone
+[procscp]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#scp
+[procstripe]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#stripe
