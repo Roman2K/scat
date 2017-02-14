@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/Roman2K/scat/slidecnt"
 	humanize "github.com/dustin/go-humanize"
+	"gitlab.com/Roman2K/scat/slidecnt"
 )
 
 const (
@@ -19,20 +19,20 @@ const (
 )
 
 type Statsd struct {
-	counters   map[Id]*Counter
+	counters   map[id]*Counter
 	countersMu sync.RWMutex
 	nextPos    uint32
 }
 
-type Id interface{}
+type id interface{}
 
 func New() *Statsd {
 	return &Statsd{
-		counters: make(map[Id]*Counter),
+		counters: make(map[id]*Counter),
 	}
 }
 
-func (st *Statsd) Counter(id Id) *Counter {
+func (st *Statsd) Counter(id id) *Counter {
 	st.countersMu.Lock()
 	defer st.countersMu.Unlock()
 	if _, ok := st.counters[id]; !ok {
@@ -46,14 +46,14 @@ func (st *Statsd) Counter(id Id) *Counter {
 }
 
 type sortedCounter struct {
-	id  Id
+	id  id
 	cnt *Counter
 }
 
 func (st *Statsd) sortedCounters() (scnts []sortedCounter) {
 	st.countersMu.RLock()
 	defer st.countersMu.RUnlock()
-	ids := make([]Id, 0, len(st.counters))
+	ids := make([]id, 0, len(st.counters))
 	for id := range st.counters {
 		ids = append(ids, id)
 	}

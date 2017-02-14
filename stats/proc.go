@@ -7,7 +7,7 @@ import (
 
 type Proc struct {
 	D  *Statsd
-	Id Id
+	Id id
 	procs.Proc
 }
 
