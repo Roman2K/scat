@@ -198,7 +198,7 @@ type env []string
 func (env env) exports() (names []string) {
 	names = make([]string, 0, len(env))
 	for _, s := range env {
-		if idx := strings.IndexRune(s, '='); idx > -1 {
+		if idx := strings.IndexRune(s, '='); idx != -1 {
 			names = append(names, s[:idx])
 		}
 	}

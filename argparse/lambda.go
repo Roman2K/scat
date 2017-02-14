@@ -6,9 +6,8 @@ import (
 	"strings"
 )
 
-const (
-	lambdaOpen  = '('
-	lambdaClose = ')'
+var (
+	lambdaBrackets = Brackets{'(', ')'}
 )
 
 var (
@@ -16,20 +15,19 @@ var (
 )
 
 type ArgLambda struct {
-	Args  Parser
-	Run   RunFn
-	Open  rune
-	Close rune
+	Args     Parser
+	Run      RunFn
+	Brackets Brackets
 }
 
 type RunFn func([]interface{}) (interface{}, error)
 
 func (a ArgLambda) Parse(str string) (res interface{}, pos int, err error) {
-	open, close := lambdaOpen, lambdaClose
-	if a.Open != 0 && a.Close != 0 {
-		open, close = a.Open, a.Close
+	brackets := lambdaBrackets
+	if a.Brackets != noBrackets {
+		brackets = a.Brackets
 	}
-	if len(str) < 2 || []rune(str)[0] != open {
+	if len(str) < 2 || []rune(str)[0] != brackets.Open {
 		err = ErrInvalidSyntax
 		return
 	}
@@ -37,9 +35,9 @@ func (a ArgLambda) Parse(str string) (res interface{}, pos int, err error) {
 	nest := 1
 	i := strings.IndexFunc(str, func(r rune) bool {
 		switch r {
-		case open:
+		case brackets.Open:
 			nest++
-		case close:
+		case brackets.Close:
 			nest--
 			if nest == 0 {
 				return true

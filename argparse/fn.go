@@ -9,8 +9,8 @@ var fnRe *regexp.Regexp
 
 func init() {
 	var (
-		open  = regexp.QuoteMeta(string(lambdaOpen))
-		close = regexp.QuoteMeta(string(lambdaClose))
+		open  = regexp.QuoteMeta(string(lambdaBrackets.Open))
+		close = regexp.QuoteMeta(string(lambdaBrackets.Close))
 	)
 	fnRe = regexp.MustCompile(`\A(\w+)((?s)` + open + `.*` + close + `)?`)
 }
@@ -33,7 +33,8 @@ func (a ArgFn) Parse(str string) (res interface{}, pos int, err error) {
 	posAdjust := 0
 	if len(argsStr) == 0 {
 		pos += countLeftSpaces(str[pos:])
-		argsStr = string(lambdaOpen) + str[pos:] + string(lambdaClose)
+		open, close := string(lambdaBrackets.Open), string(lambdaBrackets.Close)
+		argsStr = open + str[pos:] + close
 		posAdjust -= 2
 	}
 	var n int

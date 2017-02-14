@@ -50,9 +50,8 @@ func (b builder) argProc() ap.Parser {
 	)
 
 	argChain := ap.ArgLambda{
-		Open:  chainBrackets.Open,
-		Close: chainBrackets.Close,
-		Args:  ap.ArgPiped{Arg: argProc, Nest: chainBrackets},
+		Brackets: chainBrackets,
+		Args:     ap.ArgPiped{Arg: argProc, Nest: chainBrackets},
 		Run: func(args []interface{}) (interface{}, error) {
 			return newChain(args), nil
 		},

@@ -64,26 +64,23 @@ func TestArgLambdaWrongArgsType(t *testing.T) {
 }
 
 func TestArgLambdaCustomBrackets(t *testing.T) {
-	const (
-		open  = '{'
-		close = '}'
+	var (
+		customBrackets = argparse.Brackets{'{', '}'}
 	)
-	assert.NotEqual(t, argparse.ArgLambda{}.Open, open)
+	assert.NotEqual(t, argparse.ArgLambda{}.Brackets.Open, customBrackets.Open)
 	arg1 := argparse.ArgLambda{
 		Args: argparse.Args{argparse.ArgStr},
 		Run: func(args []interface{}) (interface{}, error) {
 			return args[0], nil
 		},
-		Open:  open,
-		Close: close,
+		Brackets: customBrackets,
 	}
 	arg2 := argparse.ArgLambda{
 		Args: argparse.Args{arg1, arg1},
 		Run: func(args []interface{}) (interface{}, error) {
 			return args, nil
 		},
-		Open:  open,
-		Close: close,
+		Brackets: customBrackets,
 	}
 	str := "{{xxx} {yyy}}"
 	res, n, err := arg2.Parse(str)
