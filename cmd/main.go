@@ -55,7 +55,6 @@ func start() (err error) {
 	if args.stats {
 		statsd = stats.New()
 		w := ansirefresh.NewWriter(os.Stderr)
-		// w := ansirefresh.NewWriter(ioutil.Discard)
 		t := ansirefresh.NewWriteTicker(w, statsd, 500*time.Millisecond)
 		defer t.Stop()
 	}

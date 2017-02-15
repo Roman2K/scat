@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 	"gitlab.com/Roman2K/scat"
 	"gitlab.com/Roman2K/scat/procs"
 	"gitlab.com/Roman2K/scat/testutil"
