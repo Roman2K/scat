@@ -38,6 +38,14 @@ func appendData(c *scat.Chunk, b byte) (*scat.Chunk, error) {
 	return c.WithData(append(scat.BytesData(bytes), b)), nil
 }
 
+func TestChainEmpty(t *testing.T) {
+	chain := procs.Chain{}
+	c := scat.NewChunk(0, nil)
+	chunks, err := testutil.ReadChunks(chain.Process(c))
+	assert.NoError(t, err)
+	assert.Equal(t, []*scat.Chunk{c}, chunks)
+}
+
 func TestChainEndProc(t *testing.T) {
 	finals := make(map[*scat.Chunk][]int)
 	ends := make(map[*scat.Chunk][]int)

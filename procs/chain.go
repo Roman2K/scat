@@ -27,6 +27,9 @@ func (chain Chain) Process(c *scat.Chunk) <-chan Res {
 		go process(out, in, proc)
 		in = out
 	}
+	if out == nil {
+		return in
+	}
 	return out
 }
 
