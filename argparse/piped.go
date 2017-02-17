@@ -24,7 +24,6 @@ func (arg ArgPiped) Parse(str string) (interface{}, int, error) {
 			break
 		}
 		argStr := str[pos:]
-		posAdjust := 0
 		match := func(r rune) bool {
 			return r == Pipe
 		}
@@ -44,6 +43,7 @@ func (arg ArgPiped) Parse(str string) (interface{}, int, error) {
 				return false
 			}
 		}
+		posAdjust := 0
 		if i := strings.IndexFunc(argStr, match); i != -1 {
 			argStr = argStr[:i]
 			posAdjust += 1
