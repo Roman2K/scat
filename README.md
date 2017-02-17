@@ -29,7 +29,7 @@ Backup tool that treats its stores as throwaway, untrustworthy commodity
 	* [CDC][cdc]-based detection of duplicate blocks, from [restic][restic]
 	* **incremental**, immutable backups
 	* reuse identical blocks of unrelated backups from common stores
-	* ex: *back up a 10GiB sparse disk image with 2GiB used, backup takes <2GiB*
+	* ex: *back up a 10GiB pre-allocated disk image with 2GiB used, backup takes <2GiB*
 	* ex: *append 1 byte to a 1GiB file, next backup takes ~1MiB (last block)*
 
 * RAID-like **error correction**
@@ -97,7 +97,7 @@ Such modularity enables unlimited flexibility: stream data from anywhere (local/
 ## Setup
 
 1. Download: [latest version][release]
-	- versioning scheme: v0, v1, etc.
+	- flat versioning scheme: v0, v1, etc.
 	- binaries [built][builds] automatically via GitLab's CI
 2. Put `scat` in your `$PATH`
 
@@ -109,7 +109,7 @@ The following example showcase proc strings for typical use cases. They're good 
 
 See [Proc string][procstr] for syntax documentation and the full list of available procs.
 
-### Example: backup
+### Backup
 
 Example of backing up dir `foo/` in a RAID 5 fashion to 2 Google Drive accounts and 1 VPS (compress, encrypt, 2 data shards, 1 parity shard, upload >= 2 exclusive copies - using 8 threads, 4 concurrent transfers)
 
@@ -126,7 +126,7 @@ $ tar c foo | scat -stats "split | backlog 8 {
   | gzip
   | parity 2 1
   | checksum
-  | cmd gpg -e -r 00828C1D
+  | cmd gpg --batch -e -r 00828C1D
   | group 3
   | concur 4 stripe(1 2
       mydrive=rclone(drive:tmp)=7gib
@@ -156,7 +156,7 @@ Order matters. Notably:
 > 
 > * `rclone(drive:tmp)` and `scp(bankmon tmp)` have a different arguments layout. The former takes a "remote" argument (passed as-is to rclone), while the latter's arguments are "[user@]host" (passed as-is to ssh) and remote directory. See [`rclone`][procrclone] and [`scp`][procscp].
 
-### Example: restore
+### Restore
 
 Reverse chain:
 
@@ -173,7 +173,7 @@ $ scat -stats "uindex | backlog 8 {
     drive2=rclone(drive2:tmp)
     bankmon=scp(bankmon tmp)
   )
-  | cmd gpg -d --batch
+  | cmd gpg --batch -d
   | uchecksum
   | group 3
   | uparity 2 1
