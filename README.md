@@ -93,6 +93,7 @@ Such modularity enables unlimited flexibility: stream data from anywhere (local/
 ## Demo
 
 [![demo][gif]][video]
+
 Full-length 4K demo video: [on YouTube][video]
 
 [gif]:https://gist.githubusercontent.com/Roman2K/53452c114718d49d25417067334c8955/raw/f2f6f165372015cb08c0f9ce358ef117d9eba20a/out.gif
