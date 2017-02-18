@@ -7,11 +7,7 @@
 [godocbadge]:https://godoc.org/gitlab.com/Roman2K/scat?status.svg
 [godoc]:https://godoc.org/gitlab.com/Roman2K/scat
 
-> Scatter your data away [before][codinghorrorincident] [loosing][gitlabincident] [it][githubincident]
-
-[codinghorrorincident]:https://blog.codinghorror.com/international-backup-awareness-day/
-[gitlabincident]:https://about.gitlab.com/2017/02/01/gitlab-dot-com-database-incident/
-[githubincident]:https://github.com/blog/744-today-s-outage
+> Scatter private data anywhere there's space available
 
 Backup tool that treats its stores as throwaway, untrustworthy commodity
 
@@ -93,6 +89,14 @@ Such modularity enables unlimited flexibility: stream data from anywhere (local/
 ```
 
 ...where `seed` may be a tar stream and procs 0..n would be split, checksum, parity, gzip, scp, etc. part of a chain that is itself a proc also.
+
+## Demo
+
+[![demo][gif]][video]
+Full-length 4K demo video: [on YouTube][video]
+
+[gif]:https://gist.githubusercontent.com/Roman2K/53452c114718d49d25417067334c8955/raw/f2f6f165372015cb08c0f9ce358ef117d9eba20a/out.gif
+[video]:https://youtu.be/GcJ8BH4J0WM
 
 ## Setup
 
@@ -276,7 +280,8 @@ I wanted to be able to:
 * back up anything (one file/dir, some files)
 * from anywhere (PC, phone)
 * to anywhere (other PC, cloud, vacant space on some VPS)
-* when sensible, rely on tools I'm familiar with (ex: tar, git, ssh, rclone, gpg) instead of trusting whether some new tool properly re-implements what existing battle-tested tools already do well
+* when sensible, rely on tools I'm familiar with (ex: tar, git, ssh, rclone, gpg)
+	* instead of trusting whether some new tool properly re-implements what existing battle-tested tools already do well
 
 without:
 
