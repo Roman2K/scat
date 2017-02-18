@@ -47,7 +47,29 @@ func (e ErrDetails) Error() string {
 		return det.Error()
 	}
 	msg := e.Err.Error()
-	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, e.Str, e.Pos+6, " ")
+	str, pos := shorten(e.Str, e.Pos)
+	return fmt.Sprintf("%s\n  in \"%s\"\n%*s^", msg, str, pos+6, " ")
+}
+
+var etc = ".." // var for tests
+
+func shorten(str string, pos int) (string, int) {
+	const nl = '\n'
+	for i, r := range str {
+		if r == nl && i < pos {
+			i++
+			str = etc + str[i:]
+			pos = len(etc) - i + pos
+			break
+		}
+	}
+	for i, r := range str {
+		if r == nl && i >= pos {
+			str = str[:i] + etc
+			break
+		}
+	}
+	return str, pos
 }
 
 func OriginalErr(err error) error {
