@@ -19,9 +19,14 @@ type EmptyParser interface {
 	Empty() (interface{}, error)
 }
 
-func countLeftSpaces(str string) int {
-	trimmed := strings.TrimLeftFunc(str, unicode.IsSpace)
-	return len(str) - len(trimmed)
+func countLeftSpaces(str string) (count int) {
+	for _, r := range str {
+		if !unicode.IsSpace(r) {
+			break
+		}
+		count++
+	}
+	return
 }
 
 func spaceEndIndex(str string) int {
