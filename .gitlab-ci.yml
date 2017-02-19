@@ -1,4 +1,4 @@
-image: golang:1.8rc3-alpine
+image: golang:1.8.0-alpine
 
 variables:
   SRC:          /go/src/gitlab.com/Roman2K/scat
