@@ -110,7 +110,7 @@ Full-length 4K demo video: [on YouTube][video]
 
 Stream processing, like performing a backup from a tar stream, is done via a proc chain formulated as a proc string.
 
-The following example showcase proc strings for typical use cases. They're good starting points to start playing with. Copy them in shell scripts and play around with them, backing up and restoring test files until fully understanding the mechanics at play and reaching desired behaviours. It's important to get comfortable both ways to both back up often and not fear potential moments restoring gets necessary.
+The following examples showcase proc strings for typical use cases. They're good starting points to start playing with. Copy them in shell scripts and play around with them, backing up and restoring test files until fully understanding the mechanics at play and reaching desired behaviours. It's important to get comfortable both ways to both back up often and not fear potential moments restoring gets necessary.
 
 See [Proc string][procstr] for syntax documentation and the full list of available procs.
 
