@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/Roman2K/scat/concur"
+	"github.com/Roman2K/scat/concur"
 	assert "github.com/stretchr/testify/require"
 )
 

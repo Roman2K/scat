@@ -3,11 +3,11 @@ package stores
 import (
 	"math/rand"
 
-	"gitlab.com/Roman2K/scat/checksum"
-	"gitlab.com/Roman2K/scat/concur"
-	"gitlab.com/Roman2K/scat/procs"
-	"gitlab.com/Roman2K/scat/stores/copies"
-	"gitlab.com/Roman2K/scat/stores/quota"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/concur"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stores/copies"
+	"github.com/Roman2K/scat/stores/quota"
 )
 
 type Store interface {

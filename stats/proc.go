@@ -1,8 +1,8 @@
 package stats
 
 import (
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
 )
 
 type Proc struct {

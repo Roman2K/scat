@@ -3,8 +3,8 @@ package procs
 import (
 	"errors"
 
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
 )
 
 var ErrIntegrityCheckFailed = errors.New("checksum verification failed")

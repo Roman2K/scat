@@ -8,7 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/klauspost/reedsolomon"
-	"gitlab.com/Roman2K/scat"
+	"github.com/Roman2K/scat"
 )
 
 type parity struct {

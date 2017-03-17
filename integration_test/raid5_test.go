@@ -11,13 +11,13 @@ import (
 	"time"
 
 	assert "github.com/stretchr/testify/require"
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/procs"
-	"gitlab.com/Roman2K/scat/stores"
-	"gitlab.com/Roman2K/scat/stores/quota"
-	storestripe "gitlab.com/Roman2K/scat/stores/stripe"
-	"gitlab.com/Roman2K/scat/stripe"
-	"gitlab.com/Roman2K/scat/testutil"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/stores"
+	"github.com/Roman2K/scat/stores/quota"
+	storestripe "github.com/Roman2K/scat/stores/stripe"
+	"github.com/Roman2K/scat/stripe"
+	"github.com/Roman2K/scat/testutil"
 )
 
 const mb = 1024 * 1024

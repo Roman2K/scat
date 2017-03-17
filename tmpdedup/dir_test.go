@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gitlab.com/Roman2K/scat/tmpdedup"
+	"github.com/Roman2K/scat/tmpdedup"
 	assert "github.com/stretchr/testify/require"
 )
 

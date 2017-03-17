@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"gitlab.com/Roman2K/scat/argparse"
+	"github.com/Roman2K/scat/argparse"
 	assert "github.com/stretchr/testify/require"
 )
 

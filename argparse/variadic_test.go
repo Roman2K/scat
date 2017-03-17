@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	ap "gitlab.com/Roman2K/scat/argparse"
+	ap "github.com/Roman2K/scat/argparse"
 )
 
 func TestArgVariadic(t *testing.T) {

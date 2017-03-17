@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/Roman2K/scat"
+	"github.com/Roman2K/scat"
 	"github.com/restic/chunker"
 )
 

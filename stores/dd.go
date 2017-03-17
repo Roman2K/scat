@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/procs"
 )
 
 const ddBsArg = "bs=1048576" // most universal ("1M" on GNU, "1m" on macOS)

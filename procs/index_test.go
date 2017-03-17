@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/checksum"
-	"gitlab.com/Roman2K/scat/procs"
-	"gitlab.com/Roman2K/scat/testutil"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/procs"
+	"github.com/Roman2K/scat/testutil"
 )
 
 func TestIndex(t *testing.T) {

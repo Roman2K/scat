@@ -3,7 +3,7 @@ package stripe_test
 import (
 	"testing"
 
-	"gitlab.com/Roman2K/scat/stripe"
+	"github.com/Roman2K/scat/stripe"
 
 	assert "github.com/stretchr/testify/require"
 )

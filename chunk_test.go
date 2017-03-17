@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/Roman2K/scat"
-	"gitlab.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat"
+	"github.com/Roman2K/scat/checksum"
 	assert "github.com/stretchr/testify/require"
 )
 

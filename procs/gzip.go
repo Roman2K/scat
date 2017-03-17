@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"gitlab.com/Roman2K/scat"
+	"github.com/Roman2K/scat"
 )
 
 type Gzip struct {

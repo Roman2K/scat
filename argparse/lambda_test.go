@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	"gitlab.com/Roman2K/scat/argparse"
+	"github.com/Roman2K/scat/argparse"
 )
 
 func TestArgLambdaArgErr(t *testing.T) {

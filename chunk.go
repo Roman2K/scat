@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"gitlab.com/Roman2K/scat/checksum"
+	"github.com/Roman2K/scat/checksum"
 )
 
 type Chunk struct {

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	"gitlab.com/Roman2K/scat/argparse"
+	"github.com/Roman2K/scat/argparse"
 )
 
 func TestArgBytes(t *testing.T) {
