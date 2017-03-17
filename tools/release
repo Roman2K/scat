@@ -1,7 +1,11 @@
 #!/usr/bin/env ruby
 
-VERSION_PATH = "cmd/VERSION"
-GEN_PACKAGE = "./cmd"
+require 'fileutils'
+
+VERSION_PATH  = "cmd/VERSION"
+GEN_PACKAGE   = "./cmd"
+MAIN_PACKAGE  = "./cmd"
+DIFF_URL      = "https://github.com/Roman2K/scat/compare/%s...%s"
 
 def release
   # ensure clean index
@@ -13,18 +17,19 @@ def release
   # current version
   ver = File.read(VERSION_PATH, encoding: Encoding::UTF_8).chomp
   ver =~ /\A\d+\z/ or raise "invalid format in %s" % VERSION_PATH
-  log "current version: %s" % ver
+  ver = ver.to_i
+  log "current version: %d" % ver
 
   # tag
-  tag = "v%s" % ver
+  tag = "v%d" % ver
   log "new tag: %s" % tag
   system "git", "tag", tag \
     or raise "`git tag` failed"
 
   # new version
-  ver = "%d" % (ver.to_i + 1)
-  log "new version: %s" % ver
-  File.write(VERSION_PATH, "%s\n" % ver)
+  new_ver = ver + 1
+  log "new version: %d" % new_ver
+  File.write(VERSION_PATH, "%d\n" % new_ver)
 
   # generate version.go
   system "go", "generate", GEN_PACKAGE \
@@ -32,10 +37,33 @@ def release
 
   # commit
   log "committing"
-  system "git", "commit", "-e", "-v", "-m", "starting v%s" % ver,
+  system "git", "commit", "-e", "-v", "-m", "starting v%s" % new_ver,
     VERSION_PATH,
     GEN_PACKAGE \
       or raise "`git commit` failed"
+
+  # release message
+  rel_msg = "v%d\n\n[Changelog](%s)" % [
+    ver,
+    DIFF_URL % ["v%d" % (ver-1), "v%d" % ver],
+  ]
+
+  # binaries
+  out_dir = ".gox"
+  Dir.mkdir(out_dir)
+  begin
+    system "gox", "-output=.gox/scat-{{.OS}}-{{.Arch}}", MAIN_PACKAGE \
+      or raise "`gox` failed"
+    files = Dir[out_dir + "/*"]
+
+    # upload
+    system "hub", "release", "create", "--draft", "-m", rel_msg,
+      *files.flat_map { |f| ["-a", f] },
+      "v%d" % ver \
+        or raise "`hub release` failed"
+  ensure
+    FileUtils.rm_r(out_dir)
+  end
 end
 
 def log(msg)
