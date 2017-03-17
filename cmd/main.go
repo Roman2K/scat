@@ -21,7 +21,7 @@ import (
 
 //go:generate ../tools/genversion VERSION _version.go version.go
 
-const url = "https://gitlab.com/Roman2K/scat#usage"
+const url = "https://github.com/Roman2K/scat#usage"
 
 func main() {
 	if err := start(); err != nil {

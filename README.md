@@ -1,13 +1,6 @@
 # scat
 
-[![godoc][buildbadge]][pipelines] [![godoc][godocbadge]][godoc]
-
-[buildbadge]:https://gitlab.com/Roman2K/scat/badges/master/build.svg
-[pipelines]:https://gitlab.com/Roman2K/scat/pipelines
-[godocbadge]:https://godoc.org/gitlab.com/Roman2K/scat?status.svg
-[godoc]:https://godoc.org/gitlab.com/Roman2K/scat
-
-> Scatter private data anywhere there's space available
+> Scatter your data before loosing it
 
 Backup tool that treats its stores as throwaway, untrustworthy commodity
 
@@ -64,7 +57,7 @@ Backup tool that treats its stores as throwaway, untrustworthy commodity
 	* multithreaded: configurable concurrency
 	* idempotent backup: **resumable**, run often
 	* easy to setup, use, and hack on
-	* **cross-platform**: binaries for Linux, macOS, Windows, [etc.][builds]
+	* **cross-platform**: binaries for Linux, macOS, Windows, [etc.][release]
 
 ...pick some or all of the above, apply in any order.
 
@@ -101,9 +94,8 @@ Full-length 4K demo video: [on YouTube][video]
 
 ## Setup
 
-1. Download: [latest version][release]
+1. Download: [latest release][release]
 	- flat versioning scheme: v0, v1, etc.
-	- binaries [built][builds] automatically via GitLab's CI
 2. Put `scat` in your `$PATH`
 
 ## Usage
@@ -294,7 +286,7 @@ I believe scat achieves these objectives 🙂
 
 ## Next
 
-* See [issues][issueconfirm]
+* See [issues][issues]
 * Subscribe to [Announcements][issueannounce] to get notified about future developments
 
 ## Thanks
@@ -310,10 +302,9 @@ I believe scat achieves these objectives 🙂
 [b2reedsolomon]:https://www.backblaze.com/blog/reed-solomon
 [pv]:http://www.ivarch.com/programs/pv.shtml
 
-[release]:https://gitlab.com/Roman2K/scat/tags
-[builds]:https://gitlab.com/Roman2K/scat/builds
-[issueconfirm]:https://gitlab.com/Roman2K/scat/issues?scope=all&sort=priority&state=opened
-[issueannounce]:https://gitlab.com/Roman2K/scat/issues/9
+[release]:https://github.com/Roman2K/scat/releases
+[issues]:https://github.com/Roman2K/scat/issues
+[issueannounce]:https://github.com/Roman2K/scat/issues/1
 [procstr]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94
 [procindex]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#index
 [procbacklog]:https://gist.github.com/Roman2K/cc6fd61027306d73f1f2b193f1ce7e94#backlog
