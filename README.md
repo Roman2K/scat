@@ -201,9 +201,9 @@ Args:
 
 ### Progress
 
-Being stream-based implies not knowing in advance the total size of data to process. Thus, no progress percentage can be reported. However, when transferring files or directories, size can be known by the caller and passed to [pv][pv].
+Being stream-based implies not knowing in advance the total size of the data to process. Thus, no progress percentage can be reported. However, when transferring files or directories, size can be known by the caller and passed to [pv][pv].
 
-> **Note:** When piping from pv, do not pass the `-stats` option to scat. Both commands would step on each other's toes writing to stderr and moving terminal cursor.
+> **Note:** When piping from pv, do not pass the `-stats` option to scat. Both commands would step on each other's toes writing to stderr and moving the terminal cursor.
 
 File backup:
 
@@ -246,27 +246,16 @@ You could have a single repository for all your backups and commit index files a
 
 ## Rationale
 
-scat is born out of frustration from existing backup solutions:
+scat is born out of frustration from existing backup solutions.
 
-* [restic][restic], [Borg](https://borgbackup.readthedocs.io), [ZBackup](http://zbackup.org):
+As of writing the initial version, I had one or more of the following gripes with available solutions:
 
-  * good: easy to use, block-level deduplication, incremental backups
-  * bad: central repository, limited choice of storage engines: local filesystem, SSH, S3
-
-* [git-annex](https://git-annex.branchable.com):
-
-  * good: decentralized, git-based versioning, choice of storage engines (special remotes)
-  * bad: difficult to use, file-level deduplication, PITA to compile
-
-* rsync, Drive/Dropbox desktop client:
-
-  * good: easy to use
-  * bad: centralized, obscure deduplication if any
-
-* all:
-
-  * bad: reinventing the wheel: each have their own implementation of file un-/packing, pattern-based filtering, snapshot management (save for git-annex), storage engines, encryption, etc.
-  * bad: coding style not to my taste, monolythic (if not spaghetti) code base
+* central repository
+* static, inflexible set of storage engines
+	* local filesystem, SSH, S3, etc. vs generic stdout piping
+* only file-level deduplication
+*  reinventing the wheel: own implementation of file un-/packing, pattern-based filtering, snapshot management, storage engines, encryption, etc.
+* coding style not to my taste, monolythic (if not spaghetti) code base
 
 I wanted to be able to:
 
@@ -278,7 +267,7 @@ I wanted to be able to:
 
 without:
 
-* trusting any third-pary (hard drive, server/cloud provider, etc.) for reliable storage/retrieval nor privacy
+* trusting any third-party (hard drive, server/cloud provider, etc.) for reliable storage/retrieval nor privacy
 * having to divide at the file-level myself: some dir here, other dir there, that big file doesn't fit anywhere without splitting it
 * having to keep track of what's where, let alone copies
 
