@@ -8,18 +8,32 @@ import (
 )
 
 func TestArgStr(t *testing.T) {
-	res, n, err := argparse.ArgStr.Parse("abc")
-	assert.NoError(t, err)
-	assert.Equal(t, "abc", res.(string))
-	assert.Equal(t, 3, n)
+	tests := []struct {
+		input    string
+		expect   string
+		consumed int
+	}{
+		{`abc`, "abc", 3},
+		{` abc `, "", 0},
+		{`  `, "", 0},
+		{` "aoeu" `, "", 0},
 
-	res, n, err = argparse.ArgStr.Parse(" abc ")
-	assert.NoError(t, err)
-	assert.Equal(t, "", res.(string))
-	assert.Equal(t, 0, n)
+		// Quotes accepted and removed
+		{`"aoeu"`, `aoeu`, 6},
 
-	res, n, err = argparse.ArgStr.Parse("  ")
-	assert.NoError(t, err)
-	assert.Equal(t, "", res.(string))
-	assert.Equal(t, 0, n)
+		// Malformed quotes aren't accepted
+		// (reducing risks of something that used to work
+		// continuing to work but doing something different)
+		{`"aoeu`, `"aoeu`, 5},
+		{`"aoeu"a`, `"aoeu"a`, 7},
+		// No backslash escaping (otherwise windows paths get weird)
+		{`"aoeu\""`, `"aoeu\""`, 8},
+		{`"aoeu\" "`, `aoeu\`, 7},
+	}
+	for _, tt := range tests {
+		res, n, err := argparse.ArgStr.Parse(tt.input)
+		assert.NoError(t, err)
+		assert.Equal(t, tt.expect, res.(string))
+		assert.Equal(t, tt.consumed, n)
+	}
 }
